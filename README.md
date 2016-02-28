@@ -59,6 +59,10 @@ The library is currently halfway through creation and there is much to be done y
  * [done] Environment
  * [done] Objective
  * [done] Agent architecture
+ * Experiment platform
+  * [global] Experiment setup zoo
+  * [global] Pre-trained model zoo
+  * [medium] one-row experiment running
 * Layers 
  * Memory 
   * Simple RNN done as Lasagne.layers.DenseLayer
@@ -68,7 +72,7 @@ The library is currently halfway through creation and there is much to be done y
  * Resolvers
   * [done] Greedy resolver (as BaseResolver) 
   * [done] Epsilon-greedy resolver
-  * [medium] Softmax resolver
+  * [low] Softmax resolver
  * Q-evaluator
   * Supports any lasagne architecture 
 * Loss functions and training curriculums
@@ -78,3 +82,8 @@ The library is currently halfway through creation and there is much to be done y
 * Experiment setups
  * [done] Wikicat - guessing person's traits based on wikipedia biographies
  * [high] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
+* Visualization tools
+ * [medium] generic tunable session visualizer 
+* Explanatory material
+ * [medium] readthedocs pages
+ * [global] moar sensible examples
