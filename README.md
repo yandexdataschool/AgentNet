@@ -4,7 +4,8 @@ A lightweight library to build and train neural networks for reinforcement learn
 ## Warning
 The library is halfway through development. We maintain a set of runnable examples, but some parts are still missing and others may change significantly with new versions.
 
-__If you wish to get aquainted with the current library state, view some of the ./examples [ADD LINK]__
+__If you wish to get aquainted with the current library state, view some of the ./examples __
+https://github.com/BladeCarrier/AgentNet/blob/master/examples/simple%20synthetic%20problem%20-%20default%20setup.ipynb
 
 If you wish to join the development, we would be eager to accept your help. Current priority development anchors are maintained at the bottom of this readme. 
 
