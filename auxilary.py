@@ -10,10 +10,17 @@ def _shared(name,val,dtype='floatX',strict=True,allow_downcast=True):
         dtype = theano.config.floatX
     return theano.shared(np.array(val,dtype=dtype),
                          name,strict = strict,allow_downcast=allow_downcast)
-        
-def set_shared(var,value):
-    var.set_value(np.array(value,dtype=var.dtype))
 
+
+from theano.sandbox.cuda import CudaNdarray
+def set_shared(var,value):
+    val_array = np.array(value,dtype=var.dtype)
+    if theano.config.device[:3] == 'cpu' or var.ndim !=0:
+        var.set_value(val_array)
+    else:
+        var.set_value(CudaNdarray(val_array.astype(theano.config.floatX) ) )
+        
+        
 
 #vector algebra
 _norm = lambda x: T.sqrt((x**2).sum(axis=-1,keepdims=True))
