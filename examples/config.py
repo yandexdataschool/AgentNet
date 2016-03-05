@@ -8,3 +8,8 @@ except:
 
 print "AgentNet examples will store and seek thier snapshots at",snapshot_path
 
+
+import sys
+
+library_path = "/home/jheuristic/yozhik/"
+sys.path.append(library_path)
