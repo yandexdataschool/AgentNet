@@ -4,7 +4,7 @@ A lightweight library to build and train neural networks for reinforcement learn
 ## Warning
 The library is halfway through development. We maintain a set of runnable examples, but some parts are still missing and others may change significantly with new versions.
 
-#####If you wish to get aquainted with the current library state, view some of the ./examples
+#####If you wish to get acquainted with the current library state, view some of the ./examples
 https://github.com/BladeCarrier/AgentNet/blob/master/examples/Agentnet%20tutorial%20-%20boolean%20reasoning%20problem.ipynb
 
 If you wish to join the development, we would be eager to accept your help. Current priority development anchors are maintained at the bottom of this readme. 
@@ -60,30 +60,41 @@ The library is currently halfway through creation and there is much to be done y
  * [done] Objective
  * [done] Agent architecture
  * Experiment platform
-  * [global] Experiment setup zoo
-  * [global] Pre-trained model zoo
-  * [medium] one-row experiment running
+   * [global] Experiment setup zoo
+   * [global] Pre-trained model zoo
+   * [medium] one-row experiment running
+
 * Layers 
  * Memory 
-  * Simple RNN done as Lasagne.layers.DenseLayer
-  * [done] One-step GRU memory 
-  * [medium] LSTM
-  * [medium] Custom memory layer
+    * Simple RNN done as Lasagne.layers.DenseLayer
+    * [done] One-step GRU memory 
+    * [medium] LSTM
+    * [medium] Custom memory layer
  * Resolvers
-  * [done] Greedy resolver (as BaseResolver) 
-  * [done] Epsilon-greedy resolver
-  * [low] Softmax resolver
+    * [done] Greedy resolver (as BaseResolver) 
+    * [done] Epsilon-greedy resolver
+    * [low] Softmax resolver
  * Q-evaluator
-  * Supports any lasagne architecture 
-* Loss functions and training curriculums
- * Can use any theano/lasagne expressions for loss, gradients and updates
- * [high] Training on interesting sessions pool
- * [low] policy gradient training
+    * Supports any lasagne architecture 
+    * [medium] evaluator with learned baseline
+
+* Loss functions and learning algorithms
+  * [done] Q-learning
+  * Can use any theano/lasagne expressions for loss, gradients and updates
+  * [high] Training on interesting sessions pool
+  * [medium] SARSA
+  * [medium] k-step learning
+  * [low] Actor-critic methods
+  * [low] policy gradient training
+
 * Experiment setups
- * [done] Wikicat - guessing person's traits based on wikipedia biographies
- * [high] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
+  * [done] Wikicat - guessing person's traits based on wikipedia biographies
+  * [high] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
+
 * Visualization tools
- * [medium] generic tunable session visualizer 
+  * [done] basic monitoring tools 
+  * [medium] generic tunable session visualizer
+
 * Explanatory material
  * [medium] readthedocs pages
  * [global] moar sensible examples
