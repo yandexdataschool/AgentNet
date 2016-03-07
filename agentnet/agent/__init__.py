@@ -38,7 +38,7 @@ class Agent:
             input_map = memory.default_input_map
         self.input_map = input_map
         
-    def get_agent_reaction(self,last_memory_state,observation):
+    def get_agent_reaction(self,last_memory_state,observation,additional_outputs = []):
         """
         picks agent's action given:
             last_memory_state float[batch_id, memory_id]: agent's memory state on previous tick
@@ -51,11 +51,13 @@ class Agent:
             
         """
         
-        hidden,Qvalues,action = lasagne.layers.get_output(
-            layer_or_layers=[self.memory,self.q_eval,self.resolver],
+        outputs = lasagne.layers.get_output(
+            layer_or_layers=[self.memory,self.q_eval,self.resolver]+additional_outputs,
             inputs= self.input_map(last_memory_state,observation),
           )
-        return hidden,Qvalues,action
+        hidden,Qvalues,action = outputs[:3]
+        
+        return hidden,Qvalues,action, outputs[3:]
 
     def get_sessions(self, 
                      environment,
@@ -63,6 +65,7 @@ class Agent:
                      batch_size = None,
                      initial_env_state = 'zeros',initial_observation = 'zeros',initial_hidden = 'zeros',
                      initial_qvalues = 'zeros',initial_actions = 'zeros',
+                     additional_output_layers = []
                      ):
         """returns history of agent interaction with environment for given number of turns:
         parameters:
@@ -74,10 +77,12 @@ class Agent:
             Unless you are doing something nasty, initial qvalues and actions will not matter at all
             'zeros' default means filling variable with zeros
             Initial values are NOT included in history sequences
+            additional_output_layers - any layers of a network which outputs need to be added to the outputs
         returns:
-            state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq
+            state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq, [additional_output_0, additional_output_1]
             for environment state, observation, hidden state, agent qvalues and chosen actions respectively
             each of them having dimensions of [batch_i,seq_i,...]
+            
             
             time synchronization policy:
                 state_seq,observation_seq correspond to observation BASED ON WHICH agent generated hidden_seq,qvalues_seq,action_seq
@@ -103,13 +108,15 @@ class Agent:
         def step(time_tick,env_state,observation,last_hidden,last_Qvalues,last_action,
                  *args):
 
-            hidden,Qvalues,action = self.get_agent_reaction(last_hidden,observation)
+            hidden,Qvalues,action,additional_outputs = self.get_agent_reaction(last_hidden,observation,additional_output_layers)
             new_env_state,new_observation = env.get_action_results(env_state,action,time_tick)
 
 
-            return new_env_state,new_observation,hidden,Qvalues,action
+            return [new_env_state,new_observation,hidden,Qvalues,action]+additional_outputs
 
-        outputs_info = [initial_env_state,initial_observation,initial_hidden,initial_qvalues,initial_actions]
+        additional_dummies = [None for i in additional_output_layers]
+        outputs_info = [initial_env_state,initial_observation,initial_hidden,initial_qvalues,initial_actions] + additional_dummies
+        
         history = unroll_scan(step,
             sequences = [time_ticks],
             outputs_info = outputs_info,
@@ -119,10 +126,12 @@ class Agent:
 
         self.history = history
         #from [time,batch,...] to [batch,time,...]
-        history = [ var.dimshuffle([1,0] + range(2,var.ndim)) for var in history]
+        history = [ (var.dimshuffle([1,0] + range(2,var.ndim)) if var.ndim >1 else var) for var in history]
         
         #what's inside:
-        state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq = history
+        state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq = history[:5]
+        
+        additional_output_sequences = tuple(history[5:])
         
         
         #allign time axes: actions come AFTER states with the same index
@@ -132,5 +141,6 @@ class Agent:
         observation_seq = T.concatenate([insert_dim(initial_observation,1),
                            observation_seq[:,:-1]],axis=1)
         
-        return state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq           
+        
+        return (state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq) + additional_output_sequences
                  

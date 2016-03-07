@@ -1,0 +1,1 @@
+__doc__ ="""a module that contains various reinforcement learning algorithms"""
