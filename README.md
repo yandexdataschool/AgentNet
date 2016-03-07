@@ -88,6 +88,7 @@ The library is currently halfway through creation and there is much to be done y
   * [low] policy gradient training
 
 * Experiment setups
+  * [done] boolean reasoning - basic "tutorial" experiment about learning to exploit variable dependencies
   * [done] Wikicat - guessing person's traits based on wikipedia biographies
   * [high] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
 
