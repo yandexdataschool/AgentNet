@@ -38,11 +38,11 @@ import theano
 import theano.tensor as T
 
 
-from AgentNet.objective import BaseObjective
-from AgentNet.environment import BaseEnvironment
+from agentnet.objective import BaseObjective
+from agentnet.environment import BaseEnvironment
 
-from AgentNet.utils.tensor_ops import in1d
-from AgentNet.utils import create_shared,set_shared
+from agentnet.utils.tensor_ops import in1d
+from agentnet.utils import create_shared,set_shared
 
 
 class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):

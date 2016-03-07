@@ -11,5 +11,5 @@ print "AgentNet examples will store and seek thier snapshots at",snapshot_path
 
 import sys
 
-library_path = "/home/jheuristic/yozhik/"
+library_path = "/home/jheuristic/yozhik/AgentNet"
 sys.path.append(library_path)
