@@ -16,6 +16,7 @@ At each turn, agent may decide to
  - "open" one of the hidden factors.
    - if the factor turns out to be 1, agent receives +1 reward for X*, +3 for Y*
    - Otherwise, the reward equals -1 for X*, -3 for Y*
+   - checking a single factor more than once a session will result in -0.5 reward for every attempt but for first one
  - decide to quit session
    - yields reward of 0 and ends the interaction.
    - all farther actions will have no effect until next session
@@ -146,7 +147,7 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         
         observation = T.concatenate([
                 self.joint_data[batch_range,action,None],#uint8[batch,1]
-                ~session_active.reshape([-1,1]), #whether session has been terminated by now
+                T.eq(session_active,0).reshape([-1,1]), #whether session has been terminated by now
                 T.extra_ops.to_one_hot(action,self.joint_data.shape[1]),
             ],axis=1)
         
@@ -187,7 +188,7 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         
         reward_if_first_time = T.switch(
                 has_tried_already,
-                0,
+                -0.5,
                 reward_for_action,
             )
         

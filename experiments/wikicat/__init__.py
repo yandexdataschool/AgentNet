@@ -176,7 +176,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
         observation = T.concatenate([
                 self.joint_data[batch_range,action,None],#uint8[batch,1] response
-                ~session_active.reshape([-1,1]), #whether session is terminated by now
+                T.eq(session_active,0).reshape([-1,1]), #whether session is terminated by now
                 T.extra_ops.to_one_hot(action,self.joint_data.shape[1]), #what action was commited
             ],axis=1)
         
