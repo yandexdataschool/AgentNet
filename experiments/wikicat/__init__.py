@@ -58,7 +58,7 @@ default_rewards["category_positive"] = 3
 default_rewards["category_negative"] = -1
 default_rewards["repeated_poll"]=-0.5
 default_rewards["end_action"]=0
-default_rewards["end_action_if_no_category_predicted"]=-5
+default_rewards["end_action_if_no_category_predicted"]=0
 
 class WikicatEnvironment(BaseObjective,BaseEnvironment):
 
@@ -175,9 +175,9 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
         
         observation = T.concatenate([
-                self.joint_data[batch_range,action,None],#uint8[batch,1]
-                session_active[:,None], #whether session is alive
-                T.extra_ops.to_one_hot(action,self.joint_data.shape[1]),
+                self.joint_data[batch_range,action,None],#uint8[batch,1] response
+                ~session_active.reshape([-1,1]), #whether session is terminated by now
+                T.extra_ops.to_one_hot(action,self.joint_data.shape[1]), #what action was commited
             ],axis=1)
         
         return new_state, observation

@@ -146,7 +146,7 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         
         observation = T.concatenate([
                 self.joint_data[batch_range,action,None],#uint8[batch,1]
-                session_active[:,None], #whether session is alive
+                ~session_active.reshape([-1,1]), #whether session has been terminated by now
                 T.extra_ops.to_one_hot(action,self.joint_data.shape[1]),
             ],axis=1)
         
