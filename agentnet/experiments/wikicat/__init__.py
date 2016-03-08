@@ -32,6 +32,7 @@ implements both BaseEnvironment and BaseObjective.
 """
 
 import os
+import sys
 experiment_path = '/'.join(__file__.split('/')[:-1])
 dataset_path = os.path.join(experiment_path,"musicians_categorized.csv")
 
@@ -59,6 +60,12 @@ default_rewards["category_negative"] = -1
 default_rewards["repeated_poll"]=-0.5
 default_rewards["end_action"]=0
 default_rewards["end_action_if_no_category_predicted"]=0
+
+
+dataset_url = "https://github.com/justheuristic/AgentNet/blob/master/agentnet/experiments/wikicat/musicians_categorized.csv?raw=true"
+
+
+
 
 class WikicatEnvironment(BaseObjective,BaseEnvironment):
 
@@ -104,6 +111,17 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
             attributes: np.array
             wikipedia cetegories: np.array
             action names: list(str)"""
+        
+        
+        if not os.path.isfile(dataset_path):
+            print "loading dataset..."
+            if sys.version_info[0] == 2:
+                from urllib import urlretrieve
+            else:
+                from urllib.request import urlretrieve
+
+            urlretrieve(dataset_url,dataset_path)
+            
         df = pd.DataFrame.from_csv(dataset_path)
         df =  df[df.values.sum(axis=1) > min_occurences]
         
