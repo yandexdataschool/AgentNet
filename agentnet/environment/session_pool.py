@@ -126,7 +126,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             n_samples = T.max(max_n_samples,self.pool_size)
             
         sample_ids = self.rng.choice(size = (n_samples,), a = self.pool_size,dtype='int32',replace=replace)
-        return select_session_batch(sample_ids)
+        return self.select_session_batch(sample_ids)
         
         
         
