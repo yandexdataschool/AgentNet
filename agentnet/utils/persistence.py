@@ -10,8 +10,8 @@ def save(nn,fname):
     
     params = {par.name: par.get_value() for par in param_list}
     
-    assert len(params) == len(param_list)#assert no duplicate layer names
-    
+    if len(params) != len(param_list):#assert no duplicate layer names
+        raise ValueError, "all params must have unique names (todo: fix)"
     with open(fname,'w') as fout:
         pickle.dump(params,fout)
         
