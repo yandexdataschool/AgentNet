@@ -81,7 +81,9 @@ def print_sessions(qvalues_seq,action_seq,reward_seq, action_names = None,
             
             print pattern.format(action=action_name, qpred=qpred, reward=r, qref=qref),
             
-            
+        else:
+            print "reached max session length"
+        
         #plot qvalues, actions, etc
         if plot_qvalues :
             plt.figure(figsize=[16,8])

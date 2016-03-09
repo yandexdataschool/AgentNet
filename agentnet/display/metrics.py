@@ -16,7 +16,7 @@ from collections import defaultdict
 class Metrics(defaultdict):
     def __init__(self):
         defaultdict.__init__(self,dict)
-    def plot(self,title="metrics",figsize=[10,10],legend_loc = 'best'):
+    def plot(self,title="metrics",figsize=[10,10],legend_loc = 'best',show_afterwards = True):
         
         plt.figure(figsize = figsize)
         
@@ -26,4 +26,5 @@ class Metrics(defaultdict):
         plt.title(title)
         plt.grid()
         plt.legend(loc=legend_loc)
-        plt.show()
+        if show_afterwards:
+            plt.show()

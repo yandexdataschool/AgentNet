@@ -143,11 +143,11 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
             last_state
         )
         
-        
+        session_terminated = T.eq(new_state[:,self.end_action_id],1)
         
         observation = T.concatenate([
                 self.joint_data[batch_range,action,None],#uint8[batch,1]
-                T.eq(session_active,0).reshape([-1,1]), #whether session has been terminated by now
+                session_terminated.reshape([-1,1]), #whether session has been terminated by now
                 T.extra_ops.to_one_hot(action,self.joint_data.shape[1]),
             ],axis=1)
         
