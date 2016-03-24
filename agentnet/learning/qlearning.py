@@ -25,7 +25,7 @@ def get_reference(Qvalues,actions,rewards,
                         Defaults at  T.zeros_like(Qvalues[:,0,None,:])
                         If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
                         
-    Aggregation function - a function that takes all Qvalues for "next state qvalues" term and returns what is the "best next Qvalue". 
+    aggregation_function - a function that takes all Qvalues for "next state qvalues" term and returns what is the "best next Qvalue". 
                             Normally you should not touch it.
         
     Returns:

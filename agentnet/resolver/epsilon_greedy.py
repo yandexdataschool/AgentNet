@@ -6,7 +6,9 @@ from base import BaseResolver
 class EpsilonGreedyResolver(BaseResolver):
     """
     instance, that:
-        - determines Q-values for all actions given current agent state and current observation,
+        - determines which action should be taken given agent's policy,
+        - takes maximum policy action with probability 1 - epsilon
+        - takes random action with probability epsilon
     """
     
     def __init__(self,incoming,epsilon,seed = 1234,**kwargs):
