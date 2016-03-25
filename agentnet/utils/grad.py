@@ -12,7 +12,7 @@ import numpy as np
 class ConsiderConstant(theano.compile.ViewOp):
     """treats input as constant when computing grads"""
     def grad(self, args, g_outs):
-        return [T.zeros_like(g_out) for g_out in g_outs]
+        return [T.zeros(g_out.shape,dtype=theano.config.floatX) for g_out in g_outs]
 
 consider_constant = ConsiderConstant()
 register_canonicalize(theano.gof.OpRemove(consider_constant), name='remove_consider_constant_op')

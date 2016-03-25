@@ -8,7 +8,7 @@ class Agent:
                  memory,
                  q_eval,
                  resolver,
-                 input_map = 'default'
+                 input_map = 'default',
                 ):
         """
         A generic agent within MDP abstraction,
@@ -38,22 +38,26 @@ class Agent:
             input_map = memory.default_input_map
         self.input_map = input_map
         
-    def get_agent_reaction(self,last_memory_state,observation,additional_outputs = []):
+    def get_agent_reaction(self,last_memory_state,observation,additional_outputs = [],**flags):
         """
         picks agent's action given:
             last_memory_state float[batch_id, memory_id]: agent's memory state on previous tick
             observation float[batch_id, input_id]: input observation at this tick
-            
+            additional_outputs: any other layers whose output you intend to track throughout the session (appended to the rest).
+            flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+
         returns:
             hidden: float(batch_id, memory_id): agent memory at this tick
             Qvalues float[batch_id, action_id]: qvalues for all actions at this tick
             action: int[batch_id]: picked actions at this tick 
+            
             
         """
         
         outputs = lasagne.layers.get_output(
             layer_or_layers=[self.memory,self.q_eval,self.resolver]+additional_outputs,
             inputs= self.input_map(last_memory_state,observation),
+            **flags
           )
         hidden,Qvalues,action = outputs[:3]
         
@@ -65,7 +69,8 @@ class Agent:
                      batch_size = None,
                      initial_env_state = 'zeros',initial_observation = 'zeros',initial_hidden = 'zeros',
                      initial_qvalues = 'zeros',initial_actions = 'zeros',
-                     additional_output_layers = []
+                     additional_output_layers = [],
+                     **flags
                      ):
         """returns history of agent interaction with environment for given number of turns:
         parameters:
@@ -78,6 +83,9 @@ class Agent:
             'zeros' default means filling variable with zeros
             Initial values are NOT included in history sequences
             additional_output_layers - any layers of a network which outputs need to be added to the outputs
+            flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+
+
         returns:
             state_seq,observation_seq,hidden_seq,qvalues_seq,action_seq, [additional_output_0, additional_output_1]
             for environment state, observation, hidden state, agent qvalues and chosen actions respectively
@@ -108,7 +116,8 @@ class Agent:
         def step(time_tick,env_state,observation,last_hidden,last_Qvalues,last_action,
                  *args):
 
-            hidden,Qvalues,action,additional_outputs = self.get_agent_reaction(last_hidden,observation,additional_output_layers)
+            hidden,Qvalues,action,additional_outputs = self.get_agent_reaction(last_hidden,observation,
+                                                                               additional_output_layers,**flags)
             new_env_state,new_observation = env.get_action_results(env_state,action,time_tick)
 
 
