@@ -8,7 +8,7 @@ __doc__="""Base agent objective class that defines when does agent get reward"""
 class BaseObjective:
     """
     instance, that:
-        - determines Q-values for all actions given current agent state and current observation,
+        - determines rewards for all actions agent takes given environment state and agent action,
     """
     def __init__(self):
         raise NotImplemented

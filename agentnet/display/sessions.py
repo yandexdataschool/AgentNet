@@ -4,29 +4,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def select_action_qvalues(qvalues_seq,action_seq):
-    batch_i = np.arange(qvalues_seq.shape[0])[:,None]
-    time_i = np.arange(qvalues_seq.shape[1])[None,:]
+def select_action_policy(policy_seq,action_seq):
+    batch_i = np.arange(policy_seq.shape[0])[:,None]
+    time_i = np.arange(policy_seq.shape[1])[None,:]
 
-    return qvalues_seq[batch_i,time_i, action_seq]
+    return policy_seq[batch_i,time_i, action_seq]
 
 
-def print_sessions(qvalues_seq,action_seq,reward_seq, action_names = None,
-                   is_alive_seq = None, reference_qvalues_seq= None,
+def print_sessions(policy_seq,action_seq,reward_seq, action_names = None,
+                   is_alive_seq = None, reference_policy_seq= None,
                   pattern = " {action}(qv = {qpred}) -> {reward}{qref} |",
                    
-                  plot_qvalues = True, hidden_seq = None, legend = True,
+                  plot_policy = True, hidden_seq = None, legend = True,
                        qv_line_width = lambda action_i:1
                   ):
-    """prints the sequence of agent actions along with specified predicted Qvalues
+    """prints the sequence of agent actions along with specified predicted policy
     
     parameters:
-        qvalues_seq - qvalues for every [batch,tick,action]
+        policy_seq - policy for every [batch,tick,action]
         action_seq - actions taken on every [batch,tick]
         reward_seq - rewards given for action_seq on [batch,tick]
         action_names - names of all [actions]. Defaults to "action #i"
         is_alive_seq - whether or not session is terminated by [batch,tick]. Defaults to always alive
-        reference_qvalues_seq - qvalues reference  for CHOSEN actions for each [batch,tick]
+        reference_policy_seq - policy reference  for CHOSEN actions for each [batch,tick]
         pattern - how to print a single action cycle. Can use action, qpred, reward and qref variables.
         """
 
@@ -34,33 +34,33 @@ def print_sessions(qvalues_seq,action_seq,reward_seq, action_names = None,
         action_names = map("action #{}".format,range(np.max(action_seq)))
     if is_alive_seq is None:
         is_alive_seq = np.ones_like(action_seq)
-    if reference_qvalues_seq is None:
+    if reference_policy_seq is None:
         #dummy values
-        reference_qvalues_seq = qvalues_seq
+        reference_policy_seq = policy_seq
         print_reference = False
     else:
         print_reference = True
         
     #if we are on;y given one session, reshape everithing as a 1-session batch
     if len(action_seq.shape) ==1:
-        qvalues_seq,action_seq,reward_seq,is_alive_seq,reference_qvalues_seq =\
-            map(lambda v: v[None,:], [qvalues_seq,action_seq,reward_seq,is_alive_seq,reference_qvalues_seq])
+        policy_seq,action_seq,reward_seq,is_alive_seq,reference_policy_seq =\
+            map(lambda v: v[None,:], [policy_seq,action_seq,reward_seq,is_alive_seq,reference_policy_seq])
 
-    #if all qvalues are given for [batch,tick,action], select only qvalues for taken actions
-    assert len(qvalues_seq.shape)==3
-    if len(reference_qvalues_seq.shape) ==3:
-        reference_qvalues_seq = select_action_qvalues(reference_qvalues_seq,action_seq)
+    #if all policy values are given for [batch,tick,action], select policy values for taken actions
+    assert len(policy_seq.shape)==3
+    if len(reference_policy_seq.shape) ==3:
+        reference_policy_seq = select_action_policy(reference_policy_seq,action_seq)
     
 
         
     #loop over sessions
-    for s_i in range(qvalues_seq.shape[0]):
+    for s_i in range(policy_seq.shape[0]):
         
                 
-        time_range = np.arange(qvalues_seq.shape[1])
-        session_tuples = zip(qvalues_seq[s_i,time_range, action_seq[s_i]],
+        time_range = np.arange(policy_seq.shape[1])
+        session_tuples = zip(policy_seq[s_i,time_range, action_seq[s_i]],
                              action_seq[s_i],reward_seq[s_i],
-                             reference_qvalues_seq[s_i],is_alive_seq[s_i])
+                             reference_policy_seq[s_i],is_alive_seq[s_i])
         
         
         #print session log
@@ -84,8 +84,8 @@ def print_sessions(qvalues_seq,action_seq,reward_seq, action_names = None,
         else:
             print "reached max session length"
         
-        #plot qvalues, actions, etc
-        if plot_qvalues :
+        #plot policy, actions, etc
+        if plot_policy :
             plt.figure(figsize=[16,8])
             
             
@@ -99,7 +99,7 @@ def print_sessions(qvalues_seq,action_seq,reward_seq, action_names = None,
 
             
             
-            q_values = qvalues_seq[s_i].T
+            q_values = policy_seq[s_i].T
             for a in range(q_values.shape[0]):
                 plt.plot(q_values[a],label=action_names[a],linewidth =  qv_line_width(a))
 

@@ -6,7 +6,7 @@ from ..utils import insert_dim
 class Agent:
     def __init__(self,
                  memory,
-                 q_eval,
+                 policy,
                  resolver,
                  input_map = 'default',
                 ):
@@ -15,8 +15,8 @@ class Agent:
             memory - memory.BaseAgentMemory child instance that
                 - generates first (a-priori) agent state
                 - determines new agent state given previous agent state and an observation
-            q_eval - lasagne.Layer child instance that
-                - determines Q-values for all actions given current agent state and current observation,
+            policy - lasagne.Layer child instance that
+                - determines Q-values or probabilities for all actions given current agent state and current observation,
                 - can .get_output_for(hidden_state)
             resolver - resolver.BaseResolver child instance that
                 - determines agent's action given Q-values for all actions
@@ -32,7 +32,7 @@ class Agent:
                 where self is memory
         """        
         self.memory = memory
-        self.q_eval = q_eval
+        self.policy = policy
         self.resolver = resolver
         if input_map =="default":
             input_map = memory.default_input_map
@@ -55,7 +55,7 @@ class Agent:
         """
         
         outputs = lasagne.layers.get_output(
-            layer_or_layers=[self.memory,self.q_eval,self.resolver]+additional_outputs,
+            layer_or_layers=[self.memory,self.policy,self.resolver]+additional_outputs,
             inputs= self.input_map(last_memory_state,observation),
             **flags
           )

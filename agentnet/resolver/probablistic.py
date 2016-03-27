@@ -39,7 +39,7 @@ class ProbablisticResolver(BaseResolver):
         """
         picks the action with probabilities from policy
         arguments:
-            policy float[batch_id, action_id]: Qvalues for all actions
+            policy float[batch_id, action_id]: policy values for all actions (e.g. Qvalues of action probabilities)
         returns:
             actions int[batch_id]: ids of actions picked  
         """
