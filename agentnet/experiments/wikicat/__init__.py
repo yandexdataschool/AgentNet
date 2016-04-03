@@ -34,7 +34,6 @@ implements both BaseEnvironment and BaseObjective.
 import os
 import sys
 experiment_path = '/'.join(__file__.split('/')[:-1])
-dataset_path = os.path.join(experiment_path,"musicians_categorized.csv")
 
 import pandas as pd
 import numpy as np
@@ -62,7 +61,7 @@ default_rewards["end_action"]=0
 default_rewards["end_action_if_no_category_predicted"]=0
 
 
-dataset_url = "https://github.com/justheuristic/AgentNet/blob/master/agentnet/experiments/wikicat/musicians_categorized.csv?raw=true"
+dataset_url = "https://www.dropbox.com/s/6ymf16w7t2vwpwl/musicians_categorized.csv?dl=1"
 
 
 
@@ -106,12 +105,13 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
     """reading/loading data"""
            
-    def get_dataset(self,min_occurences = 15):
+    def get_dataset(self,min_occurences = 15,experiment_path=experiment_path):
         """loads dataset; returns:
             attributes: np.array
             wikipedia cetegories: np.array
             action names: list(str)"""
-        
+        dataset_path = os.path.join(experiment_path,"musicians_categorized.csv")
+
         
         if not os.path.isfile(dataset_path):
             print "loading dataset..."
@@ -222,11 +222,11 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         end_tick = has_finished_now.nonzero()[0][0]
         
         action_is_categorical = in1d(session_actions, self.category_action_ids)
-        
-        at_least_one_categorical_action = T.any(action_is_categorical[:end_tick])
-        
-        
+                
         response = self.joint_data[batch_i,session_actions].ravel()
+        
+        at_least_one_category_guessed = T.any(action_is_categorical[:end_tick] & (response[:end_tick]>0))
+
         
         #categorical and attributes
         reward_for_intermediate_action = T.switch(
@@ -241,7 +241,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
             )
 
         #ending session
-        reward_for_end_action = T.switch(at_least_one_categorical_action, #if chosen at least 1 category
+        reward_for_end_action = T.switch(at_least_one_category_guessed, #if chosen at least 1 category
                                           self.rw["end_action"],   #do not penalize
                                           self.rw["end_action_if_no_category_predicted"])  #else punish
         

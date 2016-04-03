@@ -1,0 +1,24 @@
+    <div id="widget4">
+    </div>
+    <script>
+        function getPosition(str, m, i) {
+           // get ith occurence of m in str
+           return str.split(m, i).join(m).length;
+        };
+
+        var url = window.location.href;
+        var hostname = url.substring(0,getPosition(url,":",2) );
+        
+        var div = document.getElementById("widget4")
+        var bokeh_script = document.createElement("script");
+        bokeh_script.setAttribute("src",hostname+":7010/bokeh/autoload.js/d0a9d63c-5f46-4d82-9d25-aa7df9746031");
+        bokeh_script.setAttribute("data-bokeh-public","true");
+        bokeh_script.setAttribute("data-bokeh-docid","981cf18e-2c69-4866-bd19-cc20857b826f");
+        bokeh_script.setAttribute("data-bokeh-loglevel","info");
+        bokeh_script.setAttribute("data-bokeh-modelid","fee74100-45f4-4f0a-ba0c-59b36e583f4a");
+        bokeh_script.setAttribute("data-bokeh-root-url",hostname+":7010/");
+        bokeh_script.setAttribute("async","true");
+        bokeh_script.setAttribute("id","d0a9d63c-5f46-4d82-9d25-aa7df9746031");
+        bokeh_script.setAttribute("data-bokeh-data","server");
+        div.appendChild(bokeh_script);
+    </script>

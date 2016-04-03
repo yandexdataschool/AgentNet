@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>anet-demo</title>   
+  
+  <link rel="stylesheet" href="static/css/jquery-ui.css" />
+  <script src="static/js/jquery-1.9.1.js"></script>
+  <script src="static/js/jquery-ui.js"></script>
+  <link href='static/css/sofia.css' rel='stylesheet' type='text/css'>
+  <strong>
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/lean-slider.css') }}">
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/sample-styles.css') }}">
+ </strong>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 class="logo" >anet-demo
+      </h1>
+      <strong><nav>
+        <ul class="menu">
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+        </ul>
+      </nav></strong>
+    </div>
+  </header>
+
+
+  <div class="container">
+    {% block content %}
+    {% endblock %}
+  </div>
+</body>
+
+</html>
