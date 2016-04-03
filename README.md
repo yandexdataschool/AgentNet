@@ -4,6 +4,22 @@ A lightweight library to build and train neural networks for reinforcement learn
 ## Warning
 The library is halfway through development. We maintain a set of runnable examples, but some parts are still missing and others may change significantly with new versions.
 
+## Installation
+Currently the minimal dependencies are bleeding edge Theano and Lasagne
+```
+ git clone https://github.com/justheuristic/AgentNet
+ pip install --upgrade https://github.com/Theano/Theano/archive/master.zip
+ pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip
+ cd AgentNet
+ python setup.py develop
+``` 
+
+In order to run all the examples you will also need
+* numpy, pandas, matplotlib, other pythonese
+* jupyter
+* luck
+
+
 #####If you wish to get acquainted with the current library state, view some of the ./examples
 https://github.com/BladeCarrier/AgentNet/blob/master/examples/Agentnet%20tutorial%20-%20boolean%20reasoning%20problem.ipynb
 
