@@ -4,20 +4,20 @@ A lightweight library to build and train neural networks for reinforcement learn
 ## Warning
 The library is halfway through development. We maintain a set of runnable examples, but some parts are still missing and others may change significantly with new versions.
 
-## Installation
-Currently the minimal dependencies are bleeding edge Theano and Lasagne
+## Ubuntu Installation
+This far the instalation was only tested on Ubuntu, yet an experienced user is unlikely to have problems installing it onto other Linux or Mac OS Machine
+Currently the minimal dependencies are bleeding edge Theano and Lasagne.
 ```
- git clone https://github.com/justheuristic/AgentNet
+ sudo apt-get install python-dev python-pip python-nose g++ gfortran liblapack-dev libopenblas-dev git
+ sudo pip install virtualenv
+ virtualenv agentnet_env
+ source agentnet_env/bin/activate
  pip install --upgrade https://github.com/Theano/Theano/archive/master.zip
  pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip
+ git clone https://github.com/justheuristic/AgentNet
  cd AgentNet
  python setup.py develop
 ``` 
-
-In order to run all the examples you will also need
-* numpy, pandas, matplotlib, other pythonese
-* jupyter
-* luck
 
 
 #####If you wish to get acquainted with the current library state, view some of the ./examples
@@ -94,13 +94,13 @@ The library is currently halfway through creation and there is much to be done y
     * Supports any lasagne architecture 
     * [medium] evaluator with learned baseline
 
-* Loss functions and learning algorithms
+* Learning objectives algorithms
   * [done] Q-learning
   * Can use any theano/lasagne expressions for loss, gradients and updates
   * [high] Training on interesting sessions pool
-  * [medium] SARSA
-  * [medium] k-step learning
-  * [low] Actor-critic methods
+  * [done] SARSA
+  * [done] k-step learning
+  * [done] Actor-critic methods
   * [low] policy gradient training
 
 * Experiment setups
@@ -114,4 +114,4 @@ The library is currently halfway through creation and there is much to be done y
 
 * Explanatory material
  * [medium] readthedocs pages
- * [global] moar sensible examples
+ * [global] MOAR sensible examples
