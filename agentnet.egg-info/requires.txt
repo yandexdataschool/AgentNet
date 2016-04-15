@@ -1,7 +1,0 @@
-numpy >= 1.9
-scipy >= 0.15.0
-pandas >= 0.14.0
-scikit-learn >= 0.15.2
-theano >= 0.8.0.dev0.dev-RELEASE
-lasagne >= 0.2.dev1
-six
