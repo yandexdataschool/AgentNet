@@ -50,6 +50,7 @@ class MDPAgent:
             hidden: float(batch_id, memory_id): agent memory at this tick
             policy float[batch_id, action_id]: policy for all actions at this tick
             action: int[batch_id]: picked actions at this tick 
+            additional_outputs : any additional outputs provided or an empty list(by default)
             
             
         """

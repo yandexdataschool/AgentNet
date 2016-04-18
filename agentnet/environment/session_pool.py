@@ -39,6 +39,16 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
 
         self.actions = create_shared("session.actions_history",np.zeros([10,5]),dtype='int32')
         self.rewards = create_shared("session.rewards_history",np.zeros([10,5]),dtype=theano.config.floatX)
+        
+        
+        self.is_alive = create_shared("session.is_alive",np.zeros([10,5]),dtype='uint8')
+        
+        #agent memory at state 0: floatX[batch_i,unit]
+        self.preceding_agent_memory = create_shared("session.is_alive",np.zeros([10,5]),dtype=theano.config.floatX)
+        
+        
+        
+        
         self.pool_size = self.actions.shape[0]
         self.sequence_length =self.actions.shape[1]
         
@@ -53,7 +63,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     @property 
     def observation_size(self):
         """Single observation size"""
-        return self.padded_observations.shape[2]
+        return self.padded_observations.shape[2].eval()
     
     def get_action_results(self,last_state,action,time_i):
         """
@@ -82,31 +92,47 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     
     
     
-    def load_sessions(self,observation_seq,action_seq,reward_seq):
+    def load_sessions(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None):
         """
         loads a batch of sessions into env. The loaded sessions are that used during agent interactions
         """
         set_shared(self.observations,observation_seq)
         set_shared(self.actions,action_seq)
         set_shared(self.rewards,reward_seq)
+        if is_alive is not None:
+            set_shared(self.is_alive,is_alive)
+        if prev_memory is not None:
+            set_shared(self.preceding_agent_memory,prev_memory)
     
-    def get_session_updates(self,observation_seq,action_seq,reward_seq):
+    def get_session_updates(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None):
         """
         returns a dictionary of updates that will set shared variables to argument state
         """
-        return OrderedDict({
+        updates = OrderedDict({
             self.observations:observation_seq,
             self.actions:action_seq.astype(self.actions.dtype),
             self.rewards:reward_seq
         })
+        if is_alive is not None:
+            updates[self.is_alive]=is_alive
+        if prev_memory is not None:
+            updates[self.preceding_agent_memory] = prev_memory
+
+        
+        
     def select_session_batch(self,selector):
         """
         returns SessionBatchEnvironment with sessions (observations,actions,rewards)
         from pool at given indices
         
+        Note that if this environment did not load is_alive or preceding_memory, 
+        you won't be able to use them at the SessionBatchEnvironment
+        
+        
         """
         
-        return SessionBatchEnvironment(self.observations[selector],self.actions[selector],self.rewards[selector])
+        return SessionBatchEnvironment(self.observations[selector],self.actions[selector],self.rewards[selector],
+                                       self.is_alive[selector],self.preceding_agent_memory[selector])
 
     def sample_session_batch(self,max_n_samples,replace=False):
         """
@@ -123,7 +149,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         if replace:
             n_samples = max_n_samples
         else:
-            n_samples = T.max(max_n_samples,self.pool_size)
+            n_samples = T.minimum(max_n_samples,self.pool_size)
             
         sample_ids = self.rng.choice(size = (n_samples,), a = self.pool_size,dtype='int32',replace=replace)
         return self.select_session_batch(sample_ids)

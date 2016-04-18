@@ -9,7 +9,7 @@ from collections import OrderedDict
 from ..utils import create_shared,set_shared
 
 class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
-    def __init__(self,observations,actions,rewards):
+    def __init__(self,observations,actions,rewards,is_alive=None,preceding_agent_memory=None):
         """
         A generic pseudo-environment that replays sessions loaded on creation,
         ignoring agent actions completely.
@@ -23,6 +23,9 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
          - observations, actions and rewards match original ones
          - agent memory states, Qvalues and all in-agent expressions (but for actions) will correspond to what
            agent thinks NOW about the replay.
+         - is_alive [optional] - whether or not session has still not finished by a particular tick
+         - preceding_agent_memory [optional] - what was agent's memory state prior to the first tick of the replay session.
+         
         
         
         Allthough it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
@@ -34,6 +37,8 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
         self.observations = observations
         self.actions = actions
         self.rewards = rewards
+        self.is_alive = is_alive
+        self.preceding_agent_memory = preceding_agent_memory
 
         self.padded_observations = T.concatenate([self.observations,T.zeros_like(self.observations[:,0,None,:])],axis=1)
         self.batch_size = self.actions.shape[0]
