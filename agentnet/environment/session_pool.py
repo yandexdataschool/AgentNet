@@ -44,12 +44,12 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         self.is_alive = create_shared("session.is_alive",np.zeros([10,5]),dtype='uint8')
         
         #agent memory at state 0: floatX[batch_i,unit]
-        self.preceding_agent_memory = create_shared("session.is_alive",np.zeros([10,5]),dtype=theano.config.floatX)
+        self.preceding_agent_memory = create_shared("session.prev_memory",np.zeros([10,5]),dtype=theano.config.floatX)
         
         
         
         
-        self.pool_size = self.actions.shape[0]
+        self.batch_size = self.pool_size = self.actions.shape[0]
         self.sequence_length =self.actions.shape[1]
         
         #rng used to .sample_session_batch
@@ -63,7 +63,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     @property 
     def observation_size(self):
         """Single observation size"""
-        return self.padded_observations.shape[2].eval()
+        return self.padded_observations.shape[-1]
     
     def get_action_results(self,last_state,action,time_i):
         """
@@ -104,9 +104,10 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         if prev_memory is not None:
             set_shared(self.preceding_agent_memory,prev_memory)
     
-    def get_session_updates(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None):
+    def get_session_updates(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None,cast_dtypes=True):
         """
         returns a dictionary of updates that will set shared variables to argument state
+        is cast_dtypes is True, casts all updates to the dtypes of their respective variables
         """
         updates = OrderedDict({
             self.observations:observation_seq,
@@ -118,8 +119,13 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         if prev_memory is not None:
             updates[self.preceding_agent_memory] = prev_memory
 
-        
-        
+        if cast_dtypes:
+            casted_updates = OrderedDict({})
+            for var,upd in updates.items():
+                casted_updates[var] = upd.astype(var.dtype)
+            updates = casted_updates
+            
+        return updates
     def select_session_batch(self,selector):
         """
         returns SessionBatchEnvironment with sessions (observations,actions,rewards)

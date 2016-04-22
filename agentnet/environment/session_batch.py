@@ -50,7 +50,7 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
     @property 
     def observation_size(self):
         """Single observation size"""
-        return self.padded_observations.shape[2]
+        return self.padded_observations.shape[-1]
     
     def get_action_results(self,last_state,action,time_i):
         """
