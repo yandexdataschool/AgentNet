@@ -42,7 +42,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             for i in range(n_observations)
             ]
         self.padded_observations = [
-            T.concatenate([obs,T.zeros_like(self.observations[:,0,None,:])],axis=1)
+            T.concatenate([obs,T.zeros_like(obs[:,0,None])],axis=1)
             for obs in self.observations
             ]
 

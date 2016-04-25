@@ -55,19 +55,16 @@ resolver = EpsilonGreedyResolver(q_eval,epsilon=epsilon,name="resolver")
 
 
 
-#we need to define the new input map because concatenated_memory is a ConcatLayer and does not have default one
 
-def custom_input_map(last_hidden,observation):
-    """just a function that maps memory states to respective inputs"""
-    return {
-        _prev_gru1_layer:last_hidden[:,0:n_hid_1],
-        _prev_gru2_layer:last_hidden[:,n_hid_1:n_hid_1+n_hid_2],
-        _observation_layer:observation
-    }
-
+from collections import OrderedDict
 #all together
-agent = Agent(concatenated_memory,q_eval,resolver,input_map=custom_input_map
-             )
+agent = Agent(_observation_layer,
+              OrderedDict([
+                    (gru1,_prev_gru1_layer),
+                    (gru2,_prev_gru2_layer)
+              ]),
+              [q_eval,concatenated_memory],resolver)
+
 
 
 
@@ -101,10 +98,21 @@ observation = T.vector("observation_input",dtype=floatX)
 
 
 prev_memory_tensor = prev_memory_state.reshape([1,-1])
+prev_gru1 = prev_memory_tensor[:,:n_hid_1]
+prev_gru2 = prev_memory_tensor[:,n_hid_1:]
+
 observation_tensor = observation.reshape([1,-1])
 
 
-new_state_tensor, Qvalues_tensor, action_tensor,_ = agent.get_agent_reaction(prev_memory_tensor,observation_tensor)
+action_channels,_, outputs, = agent.get_agent_reaction(
+    {
+        gru1:prev_gru1,
+        gru2:prev_gru2
+    },observation_tensor,)
+
+action_tensor = action_channels[0]
+Qvalues_tensor =  outputs[0]
+new_state_tensor = outputs[1] #concatenated memory
 
 
 new_state, Qvalues, action = new_state_tensor[0],Qvalues_tensor[0],action_tensor[0]

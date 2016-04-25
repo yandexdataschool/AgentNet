@@ -2,6 +2,7 @@ from flask import Flask, render_template, json, request
 import json
 import traceback
 import os
+import sys
 
 
 from threading import Lock
@@ -69,8 +70,11 @@ def show_content():
     with lock:
         return json.dumps({"ans":"<p>"+answer+"</p>", "fname":new_fname})
 
-
 if __name__ == '__main__':
+    if len(sys.argv)>1:
+        port = int(sys.argv[1])
+    else:
+        port = 9753
     print "demo ready"
 
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0',port=port)

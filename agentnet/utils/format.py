@@ -9,15 +9,33 @@ supported_sequences = (tuple,list)
 
 def check_list(variables):
     """ensure that variables is a sequence of a supported type"""
-    if type(variables) not in supported_sequences:
+    if type(variables) in supported_sequences:
+        return variables
+    else:
+        #if it is a numpy or theano array, excluding numpy array of objects
+        if hasattr(variables,'shape'):
+            if hasattr(variables,'dtype'):
+                if variables.dtype != np.object:
+                    return [variables]
+                
+                
+        #elif it is a different kind of sequence
         if hasattr(variables,'__iter__'):
-            #other sequence type
-            warn(str(variables)+ " will be treated as a single input/output tensor, and not a collection of such."\
-                 "If you want otherwise, please cast it to list/tuple")
-        #non-sequence
-        variables = [variables]
-    return variables
-
+            #try casting to tuple. If cannot, treat that it will be treated as an atomic object
+            try:
+                casted_variables = tuple(variables)
+                
+                warn(str(variables)+ " of type "+type(variables)+ " will be treated as a sequence of "+\
+                     len(casted_variables) +"elements, not a single element. If you want otherwise, please"\
+                     " pass it as a single-element list/tuple")
+                return casted_variables
+            except:
+                warn(str(variables)+ " of type "+type(variables)+ " will be treated as a single input/output tensor,"\
+                    "and not a collection of such. If you want otherwise, please cast it to list/tuple")
+                
+        return [variables] 
+    
+    
 def check_ordict(variables):
     """ensure that variables is an OrderedDict"""
     try:

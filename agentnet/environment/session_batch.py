@@ -7,9 +7,10 @@ import theano
 from collections import OrderedDict
 
 from ..utils import create_shared,set_shared
+from ..utils.format import check_list
 
 class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
-    def __init__(self,observations,actions,rewards,is_alive=None,preceding_agent_memory=None):
+    def __init__(self,observations,actions=None,rewards=None,is_alive=None,preceding_agent_memory=None):
         """
         A generic pseudo-environment that replays sessions loaded on creation,
         ignoring agent actions completely.
@@ -34,19 +35,22 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
         """
         
         #setting environmental variables. Their shape is [batch_i,time_i,something]
-        self.observations = observations
-        self.actions = actions
+        self.observations = check_list(observations)
+        if actions is not None:
+            self.actions = check_list(actions)
         self.rewards = rewards
         self.is_alive = is_alive
-        self.preceding_agent_memory = preceding_agent_memory
+        
+        if preceding_agent_memory is not None:
+            self.preceding_agent_memory = check_list(preceding_agent_memory)
 
         self.padded_observations = [
-            T.concatenate([obs,T.zeros_like(self.observations[:,0,None,:])],axis=1)
+            T.concatenate([obs,T.zeros_like(obs[:,0,None])],axis=1)
             for obs in self.observations
         ]
 
-        self.batch_size = self.rewards.shape[0]
-        self.sequence_length =self.rewards.shape[1]
+        self.batch_size = self.observations[0].shape[0]
+        self.sequence_length =self.observations[0].shape[1]
     @property 
     def state_size(self):
         """Environment state size"""

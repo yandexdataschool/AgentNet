@@ -3,6 +3,7 @@ from lasagne.utils import unroll_scan
 from theano import tensor as T
 from ..utils import insert_dim
 
+from ..utils.format import supported_sequences
 
 from base import BaseAgent
 
@@ -15,7 +16,8 @@ class MDPAgent(BaseAgent):
                 ):
         """
         A generic agent within MDP abstraction,
-            memory - OrderedDict{ memory_output: memory_input}, where
+        
+            memory_dict - OrderedDict{ memory_output: memory_input}, where
                 memory_output: lasagne layer
                     - generates first (a-priori) agent state
                     - determines new agent state given previous agent state and an observation
@@ -27,17 +29,13 @@ class MDPAgent(BaseAgent):
                 - can .get_output_for(hidden_state)
             resolver - resolver.BaseResolver child instance that
                 - determines agent's action given Q-values for all actions
-            input map - function(last_hidden,observation),
-                that returns an input dictionary {input_layer:value} to be used for
-                lasagne.get_output_for as a second param
-                If 'default' is used, the input dictionary shall always be 
-                memory.default_input_map result; by default:
-                {
-                    self.prev_state_input: last_state,
-                    self.observation_input:observation,
-                }
-                where self is memory
         """
+        
+        
+        self.single_resolver = type(resolver) not in supported_sequences
+        self.single_policy = type(policy) not in supported_sequences
+        self.single_observation = type(observation_layers) not in supported_sequences
+            
         
         super(MDPAgent, self).__init__(observation_layers,resolver,memory_dict,policy)
         
@@ -67,7 +65,7 @@ class MDPAgent(BaseAgent):
 
 
         returns:
-            state_seq,observation_seq,hidden_seq,policy_seq,action_seq, [additional_output_0, additional_output_1]
+            state_seq,observation_seq,hidden_seq,action_seq,policy_seq, [additional_output_0, additional_output_1]
             for environment state, observation, hidden state, agent policy and chosen actions respectively
             each of them having dimensions of [batch_i,seq_i,...]
             
@@ -77,7 +75,7 @@ class MDPAgent(BaseAgent):
             
         """
         
-        return super(MDPAgent, self).get_sessions(environment=environment,
+        groups = super(MDPAgent, self)(environment=environment,
                                                   session_length=session_length,
                                                   batch_size = batch_size,
                                                   initial_env_states=initial_env_state,
@@ -85,6 +83,15 @@ class MDPAgent(BaseAgent):
                                                   initial_state_variables=initial_hidden,
                                                   **flags
                                                   )
+        env_states,observations,agent_states,actions,policy = groups
         
-        
+        if type(environment.state_size) not in supported_sequences:
+            env_states = env_states[0]
+        if self.single_observation:
+            observations = observations[0]
+        if self.single_resolver:
+            actions = actions[0]
+        if self.single_policy:
+            policy = policy[0]
+        return env_states,observations,agent_states,actions,policy
         

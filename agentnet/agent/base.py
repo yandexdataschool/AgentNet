@@ -7,9 +7,8 @@ import numpy as np
 from collections import OrderedDict
 from warnings import warn
 
-#TODO: warn if environment.*_shape is not a list or tuple of integers, that it will be treated as several 1-dimensional elements and not a shape of a single multidimensional one.
 
-from ..utils.format import check_list,check_ordict,unpack_list,supported_sequences
+from ..utils.format import check_list,check_ordict,unpack_list
 
 
 class BaseAgent(object):
@@ -154,7 +153,6 @@ class BaseAgent(object):
         """
         env = environment
         
-        
         #assert that environment is None if and only if there are no observations
         assert (env is None) == (len(self.observation_layers) == 0)
         
@@ -164,10 +162,15 @@ class BaseAgent(object):
                 
                 initial_env_states = [T.zeros([batch_size,size]) 
                                       for size in check_list(env.state_size)]
+            else:
+                initial_env_states = check_list(initial_env_states)
 
             if initial_observations == 'zeros':
-                initial_observations = [T.zeros([batch_size,obs_size]) 
-                                        for obs_size in check_list(env.observation_size)]
+                initial_observations = [T.zeros((batch_size,)+tuple(obs_layer.shape[1:])) 
+                                        for obs_layer in self.observation_layers]
+            else:
+                initial_observations = check_list(initial_observations)
+                
                 
         else:
             initial_env_states = initial_observations = []
@@ -250,9 +253,11 @@ class BaseAgent(object):
                              len(self.tracked_outputs))
         
         env_state_sequences, observation_sequences, agent_state_sequences,\
-        action_sequences, output_sequences = groups
-                
+            action_sequences, output_sequences = groups
         
+        
+        
+        agent_state_dict = OrderedDict(zip(self.state_variables.keys(),agent_state_sequences))
         
         #allign time axes: actions come AFTER states with the same index
         #add first env turn, crop to session length
@@ -272,4 +277,4 @@ class BaseAgent(object):
             
         
         
-        return env_state_sequences, observation_sequences, agent_state_sequences,action_sequences, output_sequences
+        return env_state_sequences, observation_sequences, agent_state_dict,action_sequences, output_sequences

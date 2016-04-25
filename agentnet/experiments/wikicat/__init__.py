@@ -47,6 +47,7 @@ from agentnet.environment import BaseEnvironment
 
 from agentnet.utils.tensor_ops import in1d
 from agentnet.utils import create_shared,set_shared
+from agentnet.utils.format import check_list
 
 
 from collections import defaultdict
@@ -165,6 +166,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         Returns uint8 [batch,time_tick] where 1 means session is alive and 0 means session ended already.
         Note that session is considered still alive while agent is commiting end_action
         """
+        observation_tensors = check_list(observation_tensors)
         return T.eq(observation_tensors[0][:,:,1],0)
     
     
@@ -174,8 +176,8 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
     def get_action_results(self,last_states,actions,time_i):
         
         #unpack state and action
-        last_state = last_states[0]
-        action = actions[0]
+        last_state = check_list(last_states)[0]
+        action = check_list(actions)[0]
         
         #state is a boolean vector: whether or not i-th action
         #was tried already during this session
@@ -217,8 +219,8 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
             reward float[batch_id]: reward for taking action from the given state
         """
         #unpach states and actions
-        session_states = session_states[0]
-        session_actions = session_actions[0]
+        session_states = check_list(session_states)[0]
+        session_actions = check_list(session_actions)[0]
         
         
         time_range = T.arange(session_actions.shape[0])

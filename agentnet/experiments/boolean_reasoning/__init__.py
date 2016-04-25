@@ -43,6 +43,7 @@ from agentnet.environment import BaseEnvironment
 
 from agentnet.utils.tensor_ops import in1d
 from agentnet.utils import create_shared,set_shared
+from agentnet.utils.format import check_list
 
 
 class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
@@ -124,6 +125,7 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         Returns uint8 [batch,time_tick] where 1 means session is alive and 0 means session ended already.
         Note that session is considered still alive while agent is commiting end_action
         """
+        observation_tensors = check_list(observation_tensors)
         return T.eq(observation_tensors[0][:,:,1],0)
     
     
@@ -135,8 +137,9 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         #was tried already during this session
         #last output[:,end_code] always remains 1 after first being triggered
         
-        last_state = last_states[0]
-        action = actions[0]
+        
+        last_state = check_list(last_states)[0]
+        action = check_list(actions)[0]
         
         batch_range = T.arange(action.shape[0])
 
@@ -171,8 +174,8 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
             reward float[batch_id]: reward for taking action from the given state
         """
         
-        state_sequence = state_sequences[0]
-        action_sequence = action_sequences[0]
+        state_sequence = check_list(state_sequences)[0]
+        action_sequence = check_list(action_sequences)[0]
         
         time_range = T.arange(action_sequence.shape[0])
         

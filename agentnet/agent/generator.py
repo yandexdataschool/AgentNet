@@ -3,50 +3,51 @@ from lasagne.utils import unroll_scan
 from theano import tensor as T
 from ..utils import insert_dim
 
-from mdp_agent import MDPAgent
+from base import BaseAgent
+from ..environment.session_batch import SessionBatchEnvironment
+from ..environment.feedback import  FeedbackEnvironment
 
-class Generator(MDPAgent):
+
+from ..utils.format import supported_sequences,check_list
+
+
+
+
+class Generator(BaseAgent):
     def __init__(self,
-                 memory,
+                 observation_layers,
+                 memory_dict,
                  policy,
                  resolver,
-                 input_map = 'default',
                 ):
         """
         A sequence generator that recurrently spawns sequence elements and observes them as his input next turn,
-            memory - memory.BaseAgentMemory child instance that
-                - generates first (a-priori) agent state
-                - determines new agent state given previous agent state and an observation
+            memory_dict - OrderedDict{ memory_output: memory_input}, where
+                memory_output: lasagne layer
+                    - generates first (a-priori) agent state
+                    - determines new agent state given previous agent state and an observation
+                    
+                memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
             policy - lasagne.Layer child instance that
                 - determines Q-values or probabilities for all actions given current agent state and current observation,
                 - can .get_output_for(hidden_state)
             resolver - resolver.BaseResolver child instance that
                 - determines agent's action given Q-values for all actions
-            input map - function(last_hidden,observation),
-                that returns an input dictionary {input_layer:value} to be used for
-                lasagne.get_output_for as a second param
-                If 'default' is used, the input dictionary shall always be 
-                memory.default_input_map result; by default:
-                {
-                    self.prev_state_input: last_state,
-                    self.observation_input:observation,
-                }
-                where self is memory
         """        
-        self.memory = memory
-        self.policy = policy
-        self.resolver = resolver
-        if input_map =="default":
-            input_map = memory.default_input_map
-        self.input_map = input_map
+        
+        self.single_resolver = type(resolver) not in supported_sequences
+        self.single_policy = type(policy) not in supported_sequences
+        self.single_observation = type(observation_layers) not in supported_sequences
+
+        
+        super(Generator, self).__init__(observation_layers,resolver,memory_dict,policy)
         
 
     def get_sessions(self, 
                      session_length = 10,
                      batch_size = None,
-                     recorded_sequence = None,
-                     initial_hidden = 'zeros',
-                     initial_policy = 'zeros',
+                     recorded_sequences = None,
+                     initial_state_variables = 'zeros',
                      initial_actions = 'zeros',
                      additional_output_layers = [],
                      **flags
@@ -74,13 +75,45 @@ class Generator(MDPAgent):
             each of them having dimensions of [batch_i,seq_i,...]
             
             
-            
         """
+        
+        if recorded_sequences is None:
+            environment = FeedbackEnvironment()
+        else:
+            recorded_sequences = check_list(recorded_sequences)
+            environment = SessionBatchEnvironment(recorded_sequences)
+        
+        
+        groups = super(Generator, self).get_sessions(environment=environment,
+                                                  session_length=session_length,
+                                                  batch_size = batch_size,
+                                                  initial_state_variables=initial_state_variables,
+                                                  initial_observations = initial_actions, #feeding initial_action as observation
+                                                  **flags
+                                                  )
+        
+        env_states,observations,agent_states,actions,policy = groups
+        
+
+        
+        
+        if type(environment.state_size) not in supported_sequences:
+            env_states = env_states[0]
+        if self.single_observation:
+            observations = observations[0]
+        if self.single_resolver:
+            actions = actions[0]
+        if self.single_policy:
+            policy = policy[0]
+            
+        return env_states,observations,agent_states,actions,policy
+        
+        
+        
+        
         if initial_hidden == 'zeros':
             memory_state_shape = lasagne.layers.get_output_shape(self.memory)[1:]
             initial_hidden = T.zeros((batch_size,)+tuple(memory_state_shape))
-        if initial_actions == 'zeros':
-            initial_actions = T.zeros([batch_size],dtype='int32')
         
         time_ticks = T.arange(session_length)
 
