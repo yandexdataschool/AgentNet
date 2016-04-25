@@ -2,6 +2,8 @@ import theano.tensor as T
 import theano
 import numpy as np
 
+from ..utils.format import check_list,unpack_list
+
 
 __doc__="""Base agent objective class that defines when does agent get reward"""
 
@@ -18,7 +20,7 @@ class BaseObjective:
             batch size: size of the new batch
         """
         pass
-    def get_reward(self,last_environment_state,agent_action,batch_i):
+    def get_reward(self,last_environment_states,agent_actions,batch_i):
         """
         WARNING! this function is computed on a session, not on a batch!
         reward given for taking the action in current environment state
@@ -29,7 +31,7 @@ class BaseObjective:
             reward float[time_i]: reward for taking action
         """
         
-        return T.zeros_like(agent_action).astype(theano.config.floatX)
+        return T.zeros_like(agent_actions[0]).astype(theano.config.floatX)
 
     def get_reward_sequences(self,env_state_sessions,agent_action_sessions):
         """
@@ -41,22 +43,21 @@ class BaseObjective:
             rewards float[batch_i,seq_i] - what reward was given to an agent for corresponding action from state in that batch
 
         """
+        env_state_sessions = check_list(env_state_sessions)
+        n_states = len(env_state_sessions)
+        agent_action_sessions = check_list(agent_action_sessions)
+        n_actions = len(agent_action_sessions)
         
-        
-        
-        def compute_reward(batch_i,session_states,session_actions):
+        def compute_reward(batch_i,*args):
+            session_states,session_actions = unpack_list(args, n_states,n_actions)
             return self.get_reward(session_states,session_actions,batch_i)
 
 
 
-        sequences = [
-            T.arange(env_state_sessions.shape[0],),
-            env_state_sessions,
-            agent_action_sessions,
-        ]
+        sequences = [T.arange(env_state_sessions[0].shape[0],),]+env_state_sessions + agent_action_sessions
 
-        rewards,updates = theano.map(compute_reward,
-                              sequences=sequences)
+        rewards,updates = theano.map(compute_reward,sequences=sequences)
+        
         assert len(updates)==0
-        return rewards.reshape(agent_action_sessions.shape) #reshape bach to original
+        return rewards.reshape(agent_action_sessions[0].shape) #reshape bach to original
     

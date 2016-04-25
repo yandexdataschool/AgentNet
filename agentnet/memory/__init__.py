@@ -95,15 +95,6 @@ class BaseMemory(lasagne.layers.MergeLayer):
         last_memory_state, observation = inputs
         
         return self.get_first_state(last_memory_state.shape[0])
-    def default_input_map(self,last_hidden,observation):
-        """
-        returns a dict to be used for lasagne.layers.get_output_for
-        when predicting agent reaction on observation given his memory state
-        """
-        return {
-            self.prev_state_input: last_hidden,
-            self.observation_input:observation,
-            }
     
     
 

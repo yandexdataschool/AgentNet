@@ -17,28 +17,36 @@ class BaseEnvironment:
 
     @property 
     def state_size(self):
-        """Environment state size"""
-        raise NotImplemented
+        """Environment state size: a single shape tuple or several such tuples in a list/tuple """
+        raise []
     @property 
     def observation_size(self):
-        """Single observation size"""
+        """Single observation size: a single shape tuple or several such tuples in a list/tuple """
         #base: mdp with full observability
-        return self.state_size()
+        return []
+    @property
+    def action_size(self):
+        """Single agent action size: a single shape tuple or several such tuples in a list/tuple """
+        return [1]
+    @property
+    def action_dtypes(self):
+        """type of an action: a single theano-compatible dtype or several such dtypes in a list/tuple """
+        return ["int32"]
     
-    def get_action_results(self,last_state,action,time_i):
+    def get_action_results(self,last_states,actions,time_i):
         """
         computes environment state after processing agent's action
         arguments:
-            last_state float[batch_id, memory_id0,[memory_id1],...]: environment state on previous tick
-            action int[batch_id]: agent action after observing last state
+            last_state list(float[batch_id, memory_id0,[memory_id1],...]): environment state on previous tick
+            actions list(int[batch_id]): agent action after observing last state
         returns:
-            new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
-            observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
+            new_states list(float[batch_id, memory_id0,[memory_id1],...]): environment state after processing agent's action
+            observations list(float[batch_id,n_agent_inputs]): what agent observes after commiting the last action
         """
 
         #a dummy update rule where new state is equal to last state
-        new_state = self.get_first_state(last_state.shape[0])
-        observation = new_state #mdp with full observability
-        return new_state, observation
+        new_states = last_states
+        observations = new_states #mdp with full observability
+        return last_states, observations
         
         

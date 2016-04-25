@@ -15,7 +15,10 @@ from ..objective import BaseObjective
 from ..utils import create_shared,set_shared
 
 class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
-    def __init__(self,rng_seed=1337):
+    def __init__(self,n_observations =1,
+                 n_actions=1,action_dtypes=['int32'],
+                 n_agent_memories = 1,
+                 rng_seed=1337):
         """
         A generic pseudo-environment that replays sessions loaded via .load_sessions(...),
         ignoring agent actions completely.
@@ -34,23 +37,42 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         
         """
         #setting environmental variables. Their shape is [batch_i,time_i,something]
-        self.observations = create_shared("sessions.observations_history",np.zeros([10,5,1],dtype=theano.config.floatX))
-        self.padded_observations = T.concatenate([self.observations,T.zeros_like(self.observations[:,0,None,:])],axis=1)
+        self.observations = [
+            create_shared("sessions.observations_history",np.zeros([10,5,1],dtype=theano.config.floatX))
+            for i in range(n_observations)
+            ]
+        self.padded_observations = [
+            T.concatenate([obs,T.zeros_like(self.observations[:,0,None,:])],axis=1)
+            for obs in self.observations
+            ]
 
-        self.actions = create_shared("session.actions_history",np.zeros([10,5]),dtype='int32')
+        
+        if len(action_dtypes) > n_actions:
+            action_dtypes = action_dtypes[:n_actions]
+        elif len(action_dtypes) < n_actions:
+            action_dtypes += action_dtypes[-1:]*(n_actions - len(action_dtypes))
+            
+        self.actions = [
+            create_shared("session.actions_history",np.zeros([10,5]),dtype=dtype)
+            for i,dtype in zip(range(n_actions),action_dtypes)
+            ]
+        
+        
         self.rewards = create_shared("session.rewards_history",np.zeros([10,5]),dtype=theano.config.floatX)
         
         
         self.is_alive = create_shared("session.is_alive",np.zeros([10,5]),dtype='uint8')
         
         #agent memory at state 0: floatX[batch_i,unit]
-        self.preceding_agent_memory = create_shared("session.prev_memory",np.zeros([10,5]),dtype=theano.config.floatX)
+        self.preceding_agent_memories = [
+            create_shared("session.prev_memory",np.zeros([10,5]),dtype=theano.config.floatX)
+            for i in range(n_agent_memories)
+        ]
         
         
         
-        
-        self.batch_size = self.pool_size = self.actions.shape[0]
-        self.sequence_length =self.actions.shape[1]
+        self.batch_size = self.pool_size = self.rewards.shape[0]
+        self.sequence_length =self.rewards.shape[1]
         
         #rng used to .sample_session_batch
         self.rng = T.shared_randomstreams.RandomStreams(rng_seed)
@@ -59,13 +81,13 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     @property 
     def state_size(self):
         """Environment state size"""
-        return 1
+        return []
     @property 
     def observation_size(self):
         """Single observation size"""
-        return self.padded_observations.shape[-1]
+        return [obs.shape[-1] for obs in self.padded_observations]
     
-    def get_action_results(self,last_state,action,time_i):
+    def get_action_results(self,last_states,actions,time_i):
         """
         computes environment state after processing agent's action
         arguments:
@@ -75,7 +97,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
-        return last_state,self.padded_observations[:,time_i+1]
+        return [],[obs[:,time_i+1] for obs in self.padded_observations]
         
     def get_reward(self,session_states,session_actions,batch_i):
         """
@@ -92,33 +114,57 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     
     
     
-    def load_sessions(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None):
+    def load_sessions(self,observation_sequences,action_sequences,reward_seq,is_alive=None,prev_memories=None):
         """
         loads a batch of sessions into env. The loaded sessions are that used during agent interactions
         """
-        set_shared(self.observations,observation_seq)
-        set_shared(self.actions,action_seq)
+        
+        assert len(observation_sequences) == len(self.observations)
+        assert len(action_sequences) == len(self.actions)
+        if prev_memories is not None:
+            assert len(prev_memories) == len(self.preceding_agent_memories)
+        
+        for observation_var,observation_seq in zip(self.observations,observation_sequences):
+            set_shared(observation_var,observation_seq)
+        for action_var, action_seq in zip(self.actions,action_sequences):
+            set_shared(action_var,action_seq)
+            
         set_shared(self.rewards,reward_seq)
+        
         if is_alive is not None:
             set_shared(self.is_alive,is_alive)
-        if prev_memory is not None:
-            set_shared(self.preceding_agent_memory,prev_memory)
+        
+        if prev_memories is not None:
+            for prev_memory_var,prev_memory_value in zip(self.preceding_agent_memories,prev_memories):
+                set_shared(prev_memory_var,prev_memory)
     
     def get_session_updates(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None,cast_dtypes=True):
         """
         returns a dictionary of updates that will set shared variables to argument state
         is cast_dtypes is True, casts all updates to the dtypes of their respective variables
         """
-        updates = OrderedDict({
-            self.observations:observation_seq,
-            self.actions:action_seq.astype(self.actions.dtype),
-            self.rewards:reward_seq
-        })
+        assert len(observation_sequences) == len(self.observations)
+        assert len(action_sequences) == len(self.actions)
+        if prev_memories is not None:
+            assert len(prev_memories) == len(self.preceding_agent_memories)
+        
+        
+        updates = OrderedDict()
+        
+        for observation_var,observation_seq in zip(self.observations,observation_sequences):
+            updates[observation_var] = observation_seq
+        for action_var, action_seq in zip(self.actions,action_sequences):
+            updates[action_var] = action_seq
+            
+        updates[self.rewards] = reward_seq
+        
         if is_alive is not None:
-            updates[self.is_alive]=is_alive
-        if prev_memory is not None:
-            updates[self.preceding_agent_memory] = prev_memory
-
+            updates[self.is_alive] = is_alive
+        
+        if prev_memories is not None:
+            for prev_memory_var,prev_memory_value in zip(self.preceding_agent_memories,prev_memories):
+                updates[prev_memory_var] = prev_memory
+                
         if cast_dtypes:
             casted_updates = OrderedDict({})
             for var,upd in updates.items():
@@ -136,11 +182,14 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         
         
         """
+        selected_observations = [ observation_seq[selector] for observation_seq in self.observations]
+        selected_actions = [ action_seq[selector] for action_seq in self.actions]
+        selected_prev_memories = [ prev_memory[selector] for prev_memory in self.preceding_agent_memory]
         
-        return SessionBatchEnvironment(self.observations[selector],self.actions[selector],self.rewards[selector],
-                                       self.is_alive[selector],self.preceding_agent_memory[selector])
+        return SessionBatchEnvironment(selected_observations,selected_actions,self.rewards[selector],
+                                       self.is_alive[selector],selected_prev_memories)
 
-    def sample_session_batch(self,max_n_samples,replace=False):
+    def sample_session_batch(self,max_n_samples,replace=False,selector_dtype='int32'):
         """
         returns SessionBatchEnvironment with sessions(observations,actions,rewards)
         that will be sampled uniformly from this session pool.
@@ -157,7 +206,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         else:
             n_samples = T.minimum(max_n_samples,self.pool_size)
             
-        sample_ids = self.rng.choice(size = (n_samples,), a = self.pool_size,dtype='int32',replace=replace)
+        sample_ids = self.rng.choice(size = (n_samples,), a = self.pool_size,dtype=selector_dtype,replace=replace)
         return self.select_session_batch(sample_ids)
         
         

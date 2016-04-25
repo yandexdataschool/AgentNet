@@ -40,17 +40,21 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
         self.is_alive = is_alive
         self.preceding_agent_memory = preceding_agent_memory
 
-        self.padded_observations = T.concatenate([self.observations,T.zeros_like(self.observations[:,0,None,:])],axis=1)
-        self.batch_size = self.actions.shape[0]
-        self.sequence_length =self.actions.shape[1]
+        self.padded_observations = [
+            T.concatenate([obs,T.zeros_like(self.observations[:,0,None,:])],axis=1)
+            for obs in self.observations
+        ]
+
+        self.batch_size = self.rewards.shape[0]
+        self.sequence_length =self.rewards.shape[1]
     @property 
     def state_size(self):
         """Environment state size"""
-        return 1
+        return []
     @property 
     def observation_size(self):
         """Single observation size"""
-        return self.padded_observations.shape[-1]
+        return [obs.shape[-1] for obs in self.padded_observations]
     
     def get_action_results(self,last_state,action,time_i):
         """
@@ -62,7 +66,7 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
             new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
-        return last_state,self.padded_observations[:,time_i+1]
+        return [],[obs[:,time_i+1] for obs in self.padded_observations]
         
     def get_reward(self,session_states,session_actions,batch_i):
         """

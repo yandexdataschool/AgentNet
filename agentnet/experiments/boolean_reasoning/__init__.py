@@ -108,28 +108,35 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         
     """dimensions"""
     
+    
+    #flags that denote whether environment should get a single state/action instead of iterable of these
+    
     @property
     def observation_size(self):
-        return int((self.joint_data.shape[1]+2).eval())
+        return [int((self.joint_data.shape[1]+2).eval())]
     @property
     def state_size(self):
-        return int(self.joint_data.shape[1].eval())
+        return [int(self.joint_data.shape[1].eval())]
     
     
-    def get_whether_alive(self,observations_tensor):
+    def get_whether_alive(self,observation_tensors):
         """Given observations, returns whether session has or has not ended.
         Returns uint8 [batch,time_tick] where 1 means session is alive and 0 means session ended already.
         Note that session is considered still alive while agent is commiting end_action
         """
-        return T.eq(observations_tensor[:,:,1],0)
+        return T.eq(observation_tensors[0][:,:,1],0)
+    
+    
     """agent interaction"""
     
-    def get_action_results(self,last_state,action,time_i):
+    def get_action_results(self,last_states,actions,time_i):
         
         #state is a boolean vector: whether or not i-th action
         #was tried already during this session
         #last output[:,end_code] always remains 1 after first being triggered
         
+        last_state = last_states[0]
+        action = actions[0]
         
         batch_range = T.arange(action.shape[0])
 
@@ -153,25 +160,29 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         
         return new_state, observation
 
-    def get_reward(self,session_states,session_actions,batch_i):
+    def get_reward(self,state_sequences,action_sequences,batch_i):
         """
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
         arguments:
-            session_states float[batch_id, memory_id]: environment state before taking action
-            session_actions int[batch_id]: agent action at this tick
+            state_sequence float[batch_id, memory_id]: environment state before taking action
+            action_sequence int[batch_id]: agent action at this tick
         returns:
             reward float[batch_id]: reward for taking action from the given state
         """
-        time_range = T.arange(session_actions.shape[0])
+        
+        state_sequence = state_sequences[0]
+        action_sequence = action_sequences[0]
+        
+        time_range = T.arange(action_sequence.shape[0])
         
 
-        has_tried_already = session_states[time_range,session_actions]
-        session_is_active = T.eq(session_states[:,self.end_action_id],0)
-        has_finished_now = T.eq(session_actions,self.end_action_id)
-        action_is_categorical = in1d(session_actions, self.category_action_ids)
+        has_tried_already = state_sequence[time_range,action_sequence]
+        session_is_active = T.eq(state_sequence[:,self.end_action_id],0)
+        has_finished_now = T.eq(action_sequence,self.end_action_id)
+        action_is_categorical = in1d(action_sequence, self.category_action_ids)
         
-        response = self.joint_data[batch_i,session_actions].ravel()
+        response = self.joint_data[batch_i,action_sequence].ravel()
         
         #categorical and attributes
         reward_for_intermediate_action = T.switch(
