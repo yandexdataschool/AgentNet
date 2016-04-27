@@ -141,7 +141,7 @@ from ..utils import consider_constant
 from lasagne.objectives import squared_error
     
 def _get_objective(policy,state_values,actions,reference_state_values,
-                         is_alive = "always",min_log_proba = -1e6):
+                         is_alive = "always",min_log_proba = -1e50):
     """returns a2v loss sum"""
     if is_alive == "always":
         is_alive = T.ones_like(actions,dtype=theano.config.floatX)
@@ -174,7 +174,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                               consider_value_reference_constant = True,
                               consider_predicted_value_constant=True,
                               scan_dependencies = [], scan_strict = True,
-                              min_log_proba = -1e6):
+                              min_log_proba = -1e50):
     """
     returns crossentropy-like objective function for Actor-Critic method
 
@@ -257,6 +257,8 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                                                     )
         
     
-        return _get_objective(policy,state_values,actions,reference_state_values,
-                         is_alive = is_alive,min_log_proba = min_log_proba)
+        return _get_objective(policy,
+                              state_values,actions,reference_state_values,
+                              is_alive = is_alive,
+                              min_log_proba = min_log_proba)
     

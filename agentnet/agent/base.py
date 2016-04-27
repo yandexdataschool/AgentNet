@@ -256,7 +256,6 @@ class BaseAgent(object):
             action_sequences, output_sequences = groups
         
         
-        
         agent_state_dict = OrderedDict(zip(self.state_variables.keys(),agent_state_sequences))
         
         #allign time axes: actions come AFTER states with the same index

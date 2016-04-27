@@ -7,7 +7,7 @@ from warnings import warn
 
 supported_sequences = (tuple,list)
 
-def check_list(variables):
+def check_list(variables,target_length=None):
     """ensure that variables is a sequence of a supported type"""
     if type(variables) in supported_sequences:
         return variables
@@ -23,6 +23,9 @@ def check_list(variables):
         if hasattr(variables,'__iter__'):
             #try casting to tuple. If cannot, treat that it will be treated as an atomic object
             try:
+                if target_length is not None and len(variables) != target_length:
+                    raise "shapes do not match"
+
                 casted_variables = tuple(variables)
                 
                 warn(str(variables)+ " of type "+type(variables)+ " will be treated as a sequence of "+\
@@ -38,6 +41,7 @@ def check_list(variables):
     
 def check_ordict(variables):
     """ensure that variables is an OrderedDict"""
+    assert hasattr(variables,"keys") 
     try:
         return OrderedDict(variables)
     except:

@@ -54,7 +54,7 @@ class BaseObjective:
 
 
 
-        sequences = [T.arange(env_state_sessions[0].shape[0],),]+env_state_sessions + agent_action_sessions
+        sequences = [T.arange(agent_action_sessions[0].shape[0],),]+env_state_sessions + agent_action_sessions
 
         rewards,updates = theano.map(compute_reward,sequences=sequences)
         

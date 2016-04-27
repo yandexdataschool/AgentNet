@@ -82,6 +82,14 @@ class Generator(BaseAgent):
         else:
             recorded_sequences = check_list(recorded_sequences)
             environment = SessionBatchEnvironment(recorded_sequences)
+            
+            
+        if initial_actions == "zeros":
+            initial_actions = [T.zeros( 
+                    (batch_size,)+tuple(lasagne.layers.get_output_shape(action_layer)[1:]),
+                    dtype=action_layer.action_dtype
+                )
+                               for action_layer in self.action_layers]
         
         
         groups = super(Generator, self).get_sessions(environment=environment,
@@ -108,69 +116,3 @@ class Generator(BaseAgent):
             
         return env_states,observations,agent_states,actions,policy
         
-        
-        
-        
-        if initial_hidden == 'zeros':
-            memory_state_shape = lasagne.layers.get_output_shape(self.memory)[1:]
-            initial_hidden = T.zeros((batch_size,)+tuple(memory_state_shape))
-        
-        time_ticks = T.arange(session_length)
-
-        
-        
-        
-        #recurrent step functions
-        def step_active(time_tick,last_hidden,last_policy,last_action,
-                 *args):
-            """a recurrent step function where generator actually generates sequence"""
-
-            hidden,policy,action,additional_outputs = self.get_agent_reaction(last_hidden,last_action,
-                                                                               additional_output_layers,**flags)
-            return [hidden,policy,action]+additional_outputs
-        
-        def step_passive(time_tick,current_observation,last_hidden,last_policy,last_action,
-                 *args):
-            """a recurrent step function where generator observes recorded sequence of actions and generates
-            possible next steps for recorded sequence prefices. Used for passive training (like language model)"""
-            hidden,policy,action,additional_outputs = self.get_agent_reaction(last_hidden,current_observation,
-                                                                               additional_output_layers,**flags)
-            return [hidden,policy,action]+additional_outputs
-
-
-        ##main recurrence loop
-        
-        #state 0 values
-        additional_init = [None for i in additional_output_layers]
-        outputs_info = [initial_hidden,None,initial_actions] + additional_init
-        
-        #time ticks and [optional] transposed recorded sequence [tick,batch,...]
-        sequences = [time_ticks]
-        if recorded_sequence is not None:
-            sequences.append(recorded_sequence.swapaxes(1,0))
-        
-        
-        step = step_active if recorded_sequence is None else step_passive
-        
-        history = unroll_scan(step,
-            sequences = sequences,
-            outputs_info = outputs_info,
-            non_sequences = [],
-            n_steps = session_length
-        )
-        
-        
-        self.history = history
-        
-        #from [time,batch,...] to [batch,time,...]
-        history = [ (var.swapaxes(1,0) if var.ndim >1 else var) for var in history]
-        
-        #what's inside:
-        hidden_seq,policy_seq,action_seq = history[:3]
-        
-        additional_output_sequences = tuple(history[3:])
-        
-        
-        
-        return (hidden_seq,policy_seq,action_seq) + additional_output_sequences
-                 

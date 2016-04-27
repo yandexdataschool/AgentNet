@@ -24,8 +24,8 @@ class BaseResolver(lasagne.layers.Layer):
         return T.argmax(policy,axis=1)
     def get_output_shape_for(self,input_shape):
         """
-        returns output shape [batch_id, 1]
+        returns output shape [batch_id]
         """
         batch_size = input_shape[0]
-        return [batch_size,1]
+        return [batch_size]
                

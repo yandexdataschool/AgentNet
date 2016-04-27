@@ -47,7 +47,6 @@ class MDPAgent(BaseAgent):
                      session_length = 10,
                      batch_size = None,
                      initial_env_state = 'zeros',initial_observation = 'zeros',initial_hidden = 'zeros',
-                     additional_output_layers = [],
                      **flags
                      ):
         """returns history of agent interaction with environment for given number of turns:
@@ -75,7 +74,7 @@ class MDPAgent(BaseAgent):
             
         """
         
-        groups = super(MDPAgent, self)(environment=environment,
+        groups = super(MDPAgent, self).get_sessions(environment=environment,
                                                   session_length=session_length,
                                                   batch_size = batch_size,
                                                   initial_env_states=initial_env_state,

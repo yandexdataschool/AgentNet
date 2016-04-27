@@ -12,7 +12,8 @@ from session_batch import SessionBatchEnvironment
 
 from ..objective import BaseObjective
 
-from ..utils import create_shared,set_shared
+from ..utils import create_shared,set_shared,insert_dim
+from ..utils.format import check_list
 
 class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     def __init__(self,n_observations =1,
@@ -38,11 +39,11 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         """
         #setting environmental variables. Their shape is [batch_i,time_i,something]
         self.observations = [
-            create_shared("sessions.observations_history",np.zeros([10,5,1],dtype=theano.config.floatX))
+            create_shared("sessions.observations_history",np.zeros([10,5,2],dtype=theano.config.floatX))
             for i in range(n_observations)
             ]
         self.padded_observations = [
-            T.concatenate([obs,T.zeros_like(obs[:,0,None])],axis=1)
+            T.concatenate([obs,T.zeros_like(insert_dim(obs[:,0],1))],axis=1)
             for obs in self.observations
             ]
 
@@ -61,7 +62,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         self.rewards = create_shared("session.rewards_history",np.zeros([10,5]),dtype=theano.config.floatX)
         
         
-        self.is_alive = create_shared("session.is_alive",np.zeros([10,5]),dtype='uint8')
+        self.is_alive = create_shared("session.is_alive",np.ones([10,5]),dtype='uint8')
         
         #agent memory at state 0: floatX[batch_i,unit]
         self.preceding_agent_memories = [
@@ -118,6 +119,8 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         """
         loads a batch of sessions into env. The loaded sessions are that used during agent interactions
         """
+        observation_sequences = check_list(observation_sequences)
+        action_sequences = check_list(action_sequences)
         
         assert len(observation_sequences) == len(self.observations)
         assert len(action_sequences) == len(self.actions)
@@ -136,7 +139,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         
         if prev_memories is not None:
             for prev_memory_var,prev_memory_value in zip(self.preceding_agent_memories,prev_memories):
-                set_shared(prev_memory_var,prev_memory)
+                set_shared(prev_memory_var,prev_memory_value)
     
     def get_session_updates(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None,cast_dtypes=True):
         """
