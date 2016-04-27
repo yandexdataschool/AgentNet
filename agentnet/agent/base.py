@@ -48,7 +48,9 @@ class BaseAgent(object):
                      "You may find OrderedDict in standard collections module: from collections import OrderedDict")
             
             
-        
+        for memory_in, memory_out in self.state_variables:
+            assert tuple(memory_in.output_shape) == tuple(memory_out.output_shape)
+
         
     def get_agent_reaction(self,prev_states={},current_observations=[],additional_outputs=[],**flags):
         """
