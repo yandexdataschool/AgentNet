@@ -41,9 +41,9 @@ def check_list(variables,target_length=None):
     
 def check_ordict(variables):
     """ensure that variables is an OrderedDict"""
-    assert hasattr(variables,"keys") 
+    assert hasattr(variables,"items") 
     try:
-        return OrderedDict(variables)
+        return OrderedDict(variables.items())
     except:
         raise ValueError, "Could not convert "+variables+"to an ordered dictionary"
 

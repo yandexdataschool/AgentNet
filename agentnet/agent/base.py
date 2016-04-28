@@ -47,8 +47,8 @@ class BaseAgent(object):
                      "may depend on python configuration. Current order is:"+ str(self.state_variables.keys())+"\n"\
                      "You may find OrderedDict in standard collections module: from collections import OrderedDict")
             
-            
-        for memory_in, memory_out in self.state_variables:
+        
+        for memory_in, memory_out in self.state_variables.items():
             assert tuple(memory_in.output_shape) == tuple(memory_out.output_shape)
 
         

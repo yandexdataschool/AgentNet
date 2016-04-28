@@ -104,15 +104,11 @@ class Generator(BaseAgent):
         
 
         
-        
-        if type(environment.state_size) not in supported_sequences:
-            env_states = env_states[0]
-        if self.single_observation:
-            observations = observations[0]
+
         if self.single_resolver:
             actions = actions[0]
         if self.single_policy:
             policy = policy[0]
             
-        return env_states,observations,agent_states,actions,policy
+        return agent_states,actions,policy
         
