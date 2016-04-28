@@ -16,9 +16,10 @@ from ..utils import create_shared,set_shared,insert_dim
 from ..utils.format import check_list
 
 class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
-    def __init__(self,n_observations =1,
-                 n_actions=1,action_dtypes=['int32'],
-                 n_agent_memories = 1,
+    def __init__(self,observations =1,
+                 actions=1,
+                 agent_memories = 1,
+                 action_dtypes=['int32'],
                  rng_seed=1337):
         """
         A generic pseudo-environment that replays sessions loaded via .load_sessions(...),
@@ -38,40 +39,110 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         
         """
         #setting environmental variables. Their shape is [batch_i,time_i,something]
-        self.observations = [
-            create_shared("sessions.observations_history",np.zeros([10,5,2],dtype=theano.config.floatX))
-            for i in range(n_observations)
+        
+        
+        
+        #observations
+        if type(observations) is int:
+            observation_init = np.zeros([10,5,2])
+            self.observations = [
+                create_shared("sessions.observations_history."+str(i),
+                              observation_init,
+                              dtype=theano.config.floatX)
+                for i in range(observations)
             ]
+        else:
+            observations = check_list(observations)
+            self.observations = [
+                create_shared(
+                    "sessions.observations_history."+str(i),
+                    np.zeros(    
+                        (10,5)+tuple(obs.output_shape[1:]),dtype= theano.config.floatX
+                    ) 
+                )
+                for i,obs in enumerate(observations)
+            ]
+ 
+        #padded observations (to avoid index error when interacting with agent)
         self.padded_observations = [
             T.concatenate([obs,T.zeros_like(insert_dim(obs[:,0],1))],axis=1)
             for obs in self.observations
             ]
-
         
+        
+        
+        
+        
+        #action dtypes
+        
+        if type(actions) is int:
+            n_actions = actions
+        else:
+            n_actions = len(check_list(actions))
+            
+            
+        action_dtypes = check_list(action_dtypes)
         if len(action_dtypes) > n_actions:
             action_dtypes = action_dtypes[:n_actions]
         elif len(action_dtypes) < n_actions:
             action_dtypes += action_dtypes[-1:]*(n_actions - len(action_dtypes))
-            
-        self.actions = [
-            create_shared("session.actions_history",np.zeros([10,5]),dtype=dtype)
-            for i,dtype in zip(range(n_actions),action_dtypes)
+
+        
+        
+        #actions log
+        if type(actions) is int:
+            self.actions = [
+                create_shared("session.actions_history."+str(i),np.zeros([10,5]),dtype=action_dtypes[i])
+                for i in range(actions)
             ]
+            
+        else:
+            actions = check_list(actions)
+            self.actions = [
+                create_shared(
+                    "session.actions_history."+str(i),
+                    np.zeros((10,5)+tuple(action.output_shape[1:])),
+                    dtype= action_dtypes[i]
+                )
+                for i,action in enumerate(actions)
+            ]
+
         
-        
-        self.rewards = create_shared("session.rewards_history",np.zeros([10,5]),dtype=theano.config.floatX)
-        
-        
-        self.is_alive = create_shared("session.is_alive",np.ones([10,5]),dtype='uint8')
+            
         
         #agent memory at state 0: floatX[batch_i,unit]
-        self.preceding_agent_memories = [
-            create_shared("session.prev_memory",np.zeros([10,5]),dtype=theano.config.floatX)
-            for i in range(n_agent_memories)
-        ]
+        if type(agent_memories) is int:
+            memory_init = np.zeros([10,5])
+            self.preceding_agent_memories = [
+                create_shared("session.prev_memory."+str(i),
+                              memory_init,
+                              dtype=theano.config.floatX)
+                for i in range(agent_memories)
+            ]
+            
+        else:
+            agent_memories = check_list(agent_memories)
+            
+            self.preceding_agent_memories = [
+                create_shared(
+                    "session.prev_memory."+str(i),
+                    np.zeros((10,5)+tuple(mem.output_shape[1:]),
+                             dtype= theano.config.floatX
+                    ) 
+                )
+                for i,mem in enumerate(agent_memories)
+            ]
+            
+
+        #rewards
+        self.rewards = create_shared("session.rewards_history",np.zeros([10,5]),dtype=theano.config.floatX)
+        
+        #is_alive
+        self.is_alive = create_shared("session.is_alive",np.ones([10,5]),dtype='uint8')
         
         
         
+        #shapes
         self.batch_size = self.pool_size = self.rewards.shape[0]
         self.sequence_length =self.rewards.shape[1]
         

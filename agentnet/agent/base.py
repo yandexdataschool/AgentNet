@@ -103,7 +103,6 @@ class BaseAgent(object):
         #compose output_list
         output_list = list(self.action_layers)+list(self.state_variables.keys()) + list(self.tracked_outputs)
         
-        
         #call get output
         results = lasagne.layers.get_output(
             layer_or_layers=output_list,
