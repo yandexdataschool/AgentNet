@@ -17,12 +17,13 @@ If you have both of them, you can install agentnet with these commands
  python setup.py install
 ``` 
 
-# Windows installation
+## Windows installation
 Technically if you managed to get Lasagne working on Windows, you can follow the Linux instruction.
 However, we cannot guarantee that this will work consistently.
 
 
-#####If you wish to get acquainted with the current library state, view some of the ./examples
+# Demos
+##### If you wish to get acquainted with the current library state, view some of the ./examples
 * Simplest Reinforcement Learning setup
   * Trying to guess the interconnected hidden factors 
   * https://github.com/BladeCarrier/AgentNet/blob/master/examples/Agentnet%20tutorial%20-%20boolean%20reasoning%20problem.ipynb
@@ -38,7 +39,7 @@ If you wish to join the development, we would be eager to accept your help. Curr
 
 If you wish to contribute your own architecture or experiment, please contact me via github or justheuristic@gmail.com. In fact, please contact me if you have any questions, or ideas, i'd be eager to see them.
 
-##What
+## What?
 
 The final framework is planned to be built on and fully compatible with awesome Lasagne[6] with some helper functions to facilitate learning.
 
@@ -50,7 +51,7 @@ The main objectives are:
 
 
 
-##Why?
+## Why?
 
 [long story short: create a platform to play with *QN, attentive and LTM architectures without spending months reading code]
 
@@ -82,7 +83,7 @@ The key objective is to make it easy to build new architectures and test is agai
 
 
 
-##Current state
+## Current state & priorities
 The library is currently in active development and there is much to be done yet.
 
 [priority] Component; no priority means "done"
