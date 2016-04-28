@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 from lasagne.layers.base import MergeLayer
+
 import theano.tensor as T
 
 __doc__ = """A simple stack augmentation for RNN http://arxiv.org/abs/1503.01007"""
