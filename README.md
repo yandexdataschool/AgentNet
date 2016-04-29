@@ -24,13 +24,14 @@ However, we cannot guarantee that this will work consistently.
 
 # Demos
 ##### If you wish to get acquainted with the current library state, view some of the ./examples
-* Simplest Reinforcement Learning setup
-  * Trying to guess the interconnected hidden factors 
-  * https://github.com/BladeCarrier/AgentNet/blob/master/examples/Agentnet%20tutorial%20-%20boolean%20reasoning%20problem.ipynb
-* Stack-augmented GRU generator
+* [Playing Atari Air Raid via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/AirRaid%20-%20Simple%20ConvNet.ipynb)
+  * Can switch to any visual game thanks to their awesome interface
+  * Very simplistic, non-recurrent suffering from atari flickering, etc.
+* [Simple Deep Recurrent Reinforcement Learning setup](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Basic%20tutorial%20on%20Boolearn%20Reasoning%20problem.ipynb)
+  * Trying to guess the interconnected hidden factors on a synthetic problem setup
+* [Stack-augmented GRU generator](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Stack%20RNN%20for%20formal%20sequence%20modelling.ipynb)
   * Reproducing http://arxiv.org/abs/1503.01007 with less code
-  * https://github.com/yandexdataschool/AgentNet/blob/master/examples/Stack%20RNN%20for%20formal%20sequence%20modelling.ipynb
-* MOAR reinforcement learning
+* [MOAR deep recurrent value-based LR for wikipedia facts guessing](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Advanced%20MDP%20tools%20and%20wikicat.ipynb)
   * Trying to figure a policy on guessing musician attributes (genres, decades active, instruments, etc)
   * Using several hidden layers and 3-step Q-learning
 * More to come
