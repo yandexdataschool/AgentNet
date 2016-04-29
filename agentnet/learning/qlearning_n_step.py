@@ -5,7 +5,7 @@ import theano.tensor as T
 import theano
 import numpy as np
 
-from ..utils import create_shared
+from ..utils import create_shared, append_dim
 default_gamma = create_shared('n_step_qlearning_gamma_default',np.float32(0.99), theano.config.floatX)
     
 def get_reference_Qvalues(Qvalues,actions,rewards,is_alive="always",
@@ -60,7 +60,7 @@ def get_reference_Qvalues(Qvalues,actions,rewards,is_alive="always",
     # Qvalues for "next" states (padded with zeros at the session end): float[batch,tick,action]
     next_Qvalues_predicted = T.concatenate(
         [
-            Qvalues[:,1:] * is_alive[:,1:,None],
+            Qvalues[:,1:] * append_dim(is_alive[:,1:]),
             qvalues_after_end,
         ],
         axis=1
