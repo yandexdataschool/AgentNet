@@ -3,3 +3,5 @@ __doc__= """this module contains a number of Lasagne layers useful when designin
 from gru import *
 
 from stack import *
+
+from window import *

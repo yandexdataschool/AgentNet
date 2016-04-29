@@ -4,6 +4,9 @@ from lasagne.layers.base import MergeLayer
 
 import theano.tensor as T
 
+from ..utils import insert_dim
+
+
 __doc__ = """A simple stack augmentation for RNN http://arxiv.org/abs/1503.01007"""
 
 class StackAugmentation(MergeLayer):
@@ -27,32 +30,32 @@ class StackAugmentation(MergeLayer):
 
     def get_output_for(self, inputs, **kwargs):
         """
-            Updates stack given input, stack controls and output
+            Updates stack given input, stack controls and output in the inputs array
         """
         
         
-        #кто они
+        #unpack inputs
         input_val,prev_stack,controls = inputs
         assert input_val.ndim==2
         
         
-        #почему так
-        controls = controls.reshape([-1,3,1,1])    
-        input_val = input_val[:,None,:]
-        zeros_at_the_top = T.zeros_like(prev_stack[:,0,None,:])
+        #cast shapes
+        controls = controls.reshape([-1,3,1,1])
+        input_val = insert_dim(input_val,1)
+        zeros_at_the_top = insert_dim(T.zeros_like(prev_stack[:,0]),1)
         
-        # кто они
+        # unpack controls
         a_push,a_pop,a_no_op = controls[:,0],controls[:,1],controls[:,2]
         
         
         
-        #что это и нафига оно нужно
+        #a version of stack that is pushed down (push)
         stack_down = T.concatenate([prev_stack[:,1:],zeros_at_the_top],axis=1)
         
-        
+        #a version of stack that is moved up (pop)
         stack_up = T.concatenate([input_val,prev_stack[:,:-1]],axis=1)
         
-        
+        #new stack 
         new_stack = a_no_op*prev_stack + a_push*stack_up + a_pop*stack_down
 
         return new_stack
