@@ -24,7 +24,7 @@ However, we cannot guarantee that this will work consistently.
 
 # Demos
 ##### If you wish to get acquainted with the current library state, view some of the ./examples
-* [Playing Atari Air Raid via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/AirRaid%20-%20Simple%20ConvNet.ipynb)
+* [Playing Atari with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb)
   * Can switch to any visual game thanks to their awesome interface
   * Very simplistic, non-recurrent suffering from atari flickering, etc.
 * [Simple Deep Recurrent Reinforcement Learning setup](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Basic%20tutorial%20on%20Boolearn%20Reasoning%20problem.ipynb)
