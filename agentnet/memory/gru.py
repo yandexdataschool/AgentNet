@@ -42,6 +42,9 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
         - determines new agent state given previous agent state and an observation|previous input
 
         """
+        assert len(prev_state_input.output_shape) ==2
+        assert len(observation_input.output_shape)  == 2
+
 
         
         #default name
@@ -117,6 +120,12 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
             memory_state float[batch_id, memory_id]: agent's memory state at this tick
         """
         last_memory_state, input_data = inputs
+        
+        assert last_memory_state.ndim ==2
+        assert input_data.ndim  == 2
+        
+        
+        input_data = input_data.reshape([input_data.shape[0],-1])
         
         # At each call to scan, input_n will be (n_time_steps, 3*num_units).
         # We define a slicing function that extract the input to each GRU gate
