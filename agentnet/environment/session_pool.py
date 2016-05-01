@@ -250,6 +250,8 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         """
         returns SessionBatchEnvironment with sessions (observations,actions,rewards)
         from pool at given indices
+        parameters:
+            selector - an array of integers that contains all indices of sessions to take.
         
         Note that if this environment did not load is_alive or preceding_memory, 
         you won't be able to use them at the SessionBatchEnvironment
@@ -258,7 +260,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         """
         selected_observations = [ observation_seq[selector] for observation_seq in self.observations]
         selected_actions = [ action_seq[selector] for action_seq in self.actions]
-        selected_prev_memories = [ prev_memory[selector] for prev_memory in self.preceding_agent_memory]
+        selected_prev_memories = [ prev_memory[selector] for prev_memory in self.preceding_agent_memories]
         
         return SessionBatchEnvironment(selected_observations,selected_actions,self.rewards[selector],
                                        self.is_alive[selector],selected_prev_memories)

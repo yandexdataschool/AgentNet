@@ -2,7 +2,7 @@ import theano
 import theano.tensor as T
 import lasagne
 import numpy as np
-from lasagne.layers import Gate,InputLayer
+from lasagne.layers import Gate,InputLayer,flatten
 from lasagne import nonlinearities,init
 
 
@@ -43,6 +43,10 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
 
         """
         assert len(prev_state_input.output_shape) ==2
+        
+        if len(observation_input.output_shape) !=2:
+            observation_input = flatten(observation_input,outdim=2)
+        
         assert len(observation_input.output_shape)  == 2
 
 

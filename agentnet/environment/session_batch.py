@@ -6,7 +6,7 @@ import theano
 
 from collections import OrderedDict
 
-from ..utils import create_shared,set_shared
+from ..utils import create_shared,set_shared, insert_dim
 from ..utils.format import check_list
 
 class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
@@ -45,7 +45,7 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
             self.preceding_agent_memory = check_list(preceding_agent_memory)
 
         self.padded_observations = [
-            T.concatenate([obs,T.zeros_like(obs[:,0,None])],axis=1)
+            T.concatenate([obs, insert_dim(T.zeros_like(obs[:,0]),1)],axis=1)
             for obs in self.observations
         ]
 
