@@ -51,6 +51,9 @@ def get_state_value_reference(state_values,rewards,
 
     """
     
+    
+    
+    
     if is_alive == "always":
         is_alive = T.ones_like(rewards)
         
@@ -67,7 +70,6 @@ def get_state_value_reference(state_values,rewards,
         ],
         axis=1
     )
-    
     
     
     

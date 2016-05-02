@@ -35,7 +35,7 @@ class ProbablisticResolver(BaseResolver):
 
         
     
-    def get_output_for(self,policy,deterministic=False,**kwargs):
+    def get_output_for(self,policy,greedy=False,**kwargs):
         """
         picks the action with probabilities from policy
         arguments:
@@ -45,7 +45,7 @@ class ProbablisticResolver(BaseResolver):
         """
         
         ##probablistic branch
-        if not deterministic:
+        if not greedy:
             batch_size,n_actions = policy.shape
 
             if self.assume_normalized:
@@ -70,9 +70,9 @@ class ProbablisticResolver(BaseResolver):
             chosen_action_ids = T.sum((batch_randomness > cum_probas[:,:-1]), axis=1, dtype=self.action_dtype)
             
         
-        else: #deterministic branch
+        else: #greedy branch
         
-            chosen_action_ids = T.argmax(policy,axis=1).astype(self.action_dtype)
+            chosen_action_ids = T.argmax(policy,axis=-1).astype(self.action_dtype)
 
         return chosen_action_ids
     
