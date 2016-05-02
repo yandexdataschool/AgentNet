@@ -27,6 +27,9 @@ However, we cannot guarantee that this will work consistently.
 * [Playing Atari with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb)
   * Can switch to any visual game thanks to their awesome interface
   * Very simplistic, non-recurrent suffering from atari flickering, etc.
+* [Deep Recurrent Kung-Fu training with GRUs and actor-critic](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Deep%20Kung-Fu%20with%20GRUs%20and%20A2c%20algorithm%20%28OpenAI%20Gym%29.ipynb)
+  * Uses the "Playing atari" example with minor changes
+  * Trains via Advantage actor-critic (value+policy-based)
 * [Simple Deep Recurrent Reinforcement Learning setup](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Basic%20tutorial%20on%20Boolearn%20Reasoning%20problem.ipynb)
   * Trying to guess the interconnected hidden factors on a synthetic problem setup
 * [Stack-augmented GRU generator](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Stack%20RNN%20for%20formal%20sequence%20modelling.ipynb)
