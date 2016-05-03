@@ -149,7 +149,9 @@ class BaseAgent(object):
             
             
             time synchronization policy:
-                state_seq,observation_seq correspond to observation BASED ON WHICH agent generated hidden_seq,policy_seq,action_seq
+                state_seq[:,i],observation_seq[:,i] correspond to observation BASED ON WHICH 
+                agent generated hidden_seq[:,i],policy_seq[:,i],action_seq[:,i],
+                 also using his previous memory hidden_seq[:,i-1]
             
         """
         env = environment
