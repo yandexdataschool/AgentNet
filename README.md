@@ -1,9 +1,6 @@
 # AgentNet
 A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
 
-## Warning
-The library is in active development. We maintain a set of runnable examples and a fixed interface, but it may still change once in a while.
-
 ## Linux and Mac OS Installation
 This far the instalation was only tested on Ubuntu, yet an experienced user is unlikely to have problems installing it onto other Linux or Mac OS Machine
 Currently the minimal dependencies are bleeding edge Theano and Lasagne.
