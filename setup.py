@@ -21,14 +21,14 @@ setup(
 
     classifiers=[
         # Indicate who your project is intended for
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: Apache Software License',
-
+        "License :: OSI Approved :: MIT License",
+        
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 2.7 ',
@@ -40,8 +40,8 @@ setup(
 
     # List run-time dependencies here. These will be installed by pip when your project is installed.
     install_requires=[
-        'theano >= 0.8.0.dev0.dev-RELEASE',
-        'lasagne >= 0.2.dev1',
+        'theano >= 0.8.0.dev-RELEASE', #bleeding edge version
+        'lasagne >= 0.2.dev1', #bleeding edge version
         'six',
     ],
 )
