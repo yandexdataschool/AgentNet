@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style> 
+div #sidebar
+{
+  border:2px solid #a1a1a1;
+  padding:10px 20px; 
+  border-radius:15px;
+}
+</style>
+
+<div id="sidebar">
+  <span><b>Anet demo</b></span>
+  <hr/>
+  <div id="menus">
+    <p>Last agent state (filename)</p>
+    <textarea id="prev_state_filename" style="width:180px;height:30px;"></textarea>
+    <p>New response</p>
+    <textarea id="response" style="width:180px;height:30px;"></textarea>
+  </div>
+  <button type="button" id="btn_go">Update</button>
+  <button type="button" id="btn_restart">New session</button>
+  <br/>
+</div>
+
+<div id="loading-div-background">
+  <div id="loading-div" class="ui-corner-all" >
+    <img style="height:64px;margin:10px;" src="static/css/images/282.GIF" alt="Loading.."/>
+    <h3 style="color:gray;font-weight:normal;">Loading....</h3>
+  </div>
+</div>
+<div id="container" style="width:70%; height:400px;"></div>
+<script type="text/javascript">   
+$("#loading-div-background").css({ opacity: 0.7 });
+function datetime_to_epoch(datetime)
+{
+  var aDate = datetime.split('/');
+  var epoch = new Date(aDate[2] + "," + aDate[0] + "," + aDate[1]).getTime() / 1000;
+  return epoch;
+}
+
+$(function(){
+    $.ajax({
+        type: "POST",
+        async:true,
+        contentType: "application/json; charset=utf-8",
+        url: "/init",
+        success: function (content) {
+            var el_index = $("#menus");
+            //el_index.html(content);   
+         },
+        dataType: "html"
+    });
+                   
+})
+$("#btn_restart").click(function() {  
+  $("#prev_state_filename").val("");
+  $("#btn_go").click();
+});
+$("#btn_go").click(function() {  
+
+  $("#loading-div-background").show();
+  $("#container").hide();
+  var qu = {
+            "prev_state_filename":$("#prev_state_filename").val(),
+            "response":$("#response").val()}
+  $.ajax({
+    type: "POST",
+    async:true,
+    contentType: "application/json; charset=utf-8",
+    url: "/show_content",
+    data: JSON.stringify(qu),
+    success: function (data) {    
+     data = JSON.parse(data); 
+     var graph = $("#container");
+     graph.html(data["ans"]);
+     $("#prev_state_filename").val(data["fname"]);
+     $("#loading-div-background").hide();      
+     $("#container").show();
+   },
+   dataType: "html"
+ });
+});
+
+</script>
+{% endblock %}

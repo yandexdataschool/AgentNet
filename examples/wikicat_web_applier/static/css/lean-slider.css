@@ -1,0 +1,29 @@
+/*
+ * Lean Slider v1.0
+ * http://dev7studios.com/lean-slider
+ *
+ * Copyright 2012, Dev7studios
+ * Free to use and abuse under the MIT license.
+ * http://www.opensource.org/licenses/mit-license.php
+ */
+ 
+.lean-slider { 
+    position: relative; 
+    *zoom: 1;
+}
+.lean-slider:before,
+.lean-slider:after {
+    content: " ";
+    display: table;
+}
+.lean-slider:after {
+    clear: both;
+}
+
+.lean-slider-slide { 
+    float: left;
+    width: 100%;
+    margin-right: -100%;
+    display: none; 
+}
+.lean-slider-slide.current { display: block; }

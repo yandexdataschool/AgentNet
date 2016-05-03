@@ -1,11 +1,16 @@
 
-__doc__="""basic function for Q-learning reference values"""
+__doc__="""basic Q-learning implementation"""
 
 import theano.tensor as T
 import theano
 import numpy as np
 
-from ..utils import create_shared    
+from lasagne.objectives import squared_error
+
+
+from ..utils.mdp import get_end_indicator, get_action_Qvalues
+from ..utils.grad import consider_constant
+from ..utils import create_shared
     
 def get_reference_Qvalues(Qvalues,actions,rewards,
                   gamma_or_gammas = 0.95,
@@ -64,9 +69,6 @@ def get_reference_Qvalues(Qvalues,actions,rewards,
 
     return reference_Qvalues
     
-import lasagne
-from ..utils.mdp import get_end_indicator, get_action_Qvalues
-from ..utils import consider_constant
 
     
 def get_elementwise_objective(Qvalues,actions,rewards,
@@ -130,7 +132,7 @@ def get_elementwise_objective(Qvalues,actions,rewards,
     if is_alive == "always":
         
         #tensor of elementwise squared errors
-        elwise_squared_error = lasagne.objectives.squared_error(reference_Qvalues,action_Qvalues)
+        elwise_squared_error = squared_error(reference_Qvalues,action_Qvalues)
 
         
         
@@ -158,7 +160,7 @@ def get_elementwise_objective(Qvalues,actions,rewards,
         
     
         #tensor of elementwise squared errors
-        elwise_squared_error = lasagne.objectives.squared_error(reference_Qvalues,action_Qvalues)
+        elwise_squared_error = squared_error(reference_Qvalues,action_Qvalues)
 
         #zero-out loss after session ended
         elwise_squared_error = elwise_squared_error * is_alive

@@ -44,7 +44,7 @@ class BaseEnvironment:
     @property
     def action_dtypes(self):
         """type of an action: a single theano-compatible dtype or several such dtypes in a list/tuple """
-        return ["int32" for self.action_size]
+        return ["int32" for a in self.action_size]
     
     
     def get_action_results(self,last_states,actions,time_i):

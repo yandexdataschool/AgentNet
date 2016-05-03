@@ -1,14 +1,20 @@
 
-__doc__="""basic algorithms for Q-learning reference values assuming all agent actions are optimal. This, in principle, equals [session_length]-step Q-learning"""
+__doc__="""N-step Advantage Actor-Critic (A2c) implementation.\nWorks with action probabilities and state values instead of Q-values"""
 
+from warnings import warn
 
-
-
-import theano.tensor as T
 import theano
+import theano.tensor as T
 import numpy as np
 
+
+from lasagne.objectives import squared_error
+
+
+from ..utils.mdp import get_end_indicator, get_action_Qvalues
+from ..utils.grad import consider_constant
 from ..utils import create_shared
+
 
 default_gamma = create_shared('a3c_gamma_default',np.float32(0.99), theano.config.floatX)
     
@@ -52,8 +58,15 @@ def get_state_value_reference(state_values,rewards,
     """
     
     
-    
-    
+    if state_values.ndim != 2:
+        if state_values.ndim ==3:
+            warn("state_values must have shape [batch,tick] (ndim = 2).\n"\
+                 "Assuming state_values you provided to have shape [batch, tick,1].\n"\
+                 "Working with state_values[:,:,0].\n"\
+                 "If that isn't what you intended, fix state_values shape to [batch,tick]\n")
+            state_values = state_values[:,:,0]
+        else:
+            raise ValueError ,"state_values must have shape [batch,tick] (ndim = 2), while you have"+str(state_values.ndim)
     if is_alive == "always":
         is_alive = T.ones_like(rewards)
         
@@ -136,11 +149,6 @@ def get_state_value_reference(state_values,rewards,
 
 
 
-import lasagne
-from ..utils.mdp import get_end_indicator, get_action_Qvalues
-from ..utils import consider_constant
-
-from lasagne.objectives import squared_error
     
 def _get_objective(policy,state_values,actions,reference_state_values,
                          is_alive = "always",min_log_proba = -1e50):

@@ -7,16 +7,16 @@ with codecs.open('README.md', encoding='utf-8') as readme_file:
 
 setup(
     name="agentnet",
-    version='0.0.6',
+    version='0.0.7',
     description="AgentNet - a library for MDP agent design and research",
     long_description=long_description,
 
     # Author details
     author_email="justheuristic@gmail.com",
-    url="https://github.com/justheuristic/AgentNet",
+    url="https://github.com/yandexdataschool/AgentNet",
     
     # Choose your license
-    license='Apache 2.0',
+    license='MIT',
     packages=find_packages(),
 
     classifiers=[
@@ -36,14 +36,10 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='machine learning, reinforcement learning, deep learning, Q-network, Markov Decision Process, experiment platform',
+    keywords='machine learning, reinforcement learning, MDP, POMDP, deep learning, Q-network, Markov Decision Process, experiment platform',
 
     # List run-time dependencies here. These will be installed by pip when your project is installed.
     install_requires=[
-        'numpy >= 1.9',
-        'scipy >= 0.15.0',
-        'pandas >= 0.14.0',
-        'scikit-learn >= 0.15.2',
         'theano >= 0.8.0.dev0.dev-RELEASE',
         'lasagne >= 0.2.dev1',
         'six',

@@ -1,7 +1,10 @@
 __doc__= """this module contains a number of Lasagne layers useful when designing agent memory."""
 
-from gru import *
+from rnn import RecurrentMemoryLayer
 
-from stack import *
+from gru import GRUMemoryLayer
 
-from window import *
+from stack import StackAugmentation
+
+from window import WindowAugmentation
+

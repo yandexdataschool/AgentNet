@@ -2,21 +2,14 @@ __doc__="""symbolic gradient-related operations such as "consider constant", "re
 
 from theano import tensor as T
 import theano
-from theano.tensor.opt import register_canonicalize
 import numpy as np
 
 
 
-#consider constant op by benanne
-#https://gist.github.com/benanne/9212037
-class ConsiderConstant(theano.compile.ViewOp):
-    """treats input as constant when computing grads"""
-    def grad(self, args, g_outs):
-        return [T.zeros(g_out.shape,dtype=theano.config.floatX) for g_out in g_outs]
-
-consider_constant = ConsiderConstant()
-register_canonicalize(theano.gof.OpRemove(consider_constant), name='remove_consider_constant_op')
-
+#Specify default consider_constant op.
+#Changing it here will change behaviour throughout entire library (except examples)
+from theano.gradient import disconnected_grad
+consider_constant = disconnected_grad
 
 #gradient reversal layer by Daniel Renshaw 
 #http://stackoverflow.com/users/127480/daniel-renshaw
