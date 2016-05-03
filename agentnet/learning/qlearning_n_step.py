@@ -9,7 +9,7 @@ from lasagne.objectives import squared_error
 
 from ..utils.mdp import get_end_indicator, get_action_Qvalues
 from ..utils.grad import consider_constant
-from ..utils import create_shared
+from ..utils import create_shared, append_dim
 
 
 default_gamma = create_shared('n_step_qlearning_gamma_default',np.float32(0.99), theano.config.floatX)
