@@ -1,41 +1,34 @@
 # AgentNet
 A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
 
-[![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=develop)](https://travis-ci.org/yandexdataschool/AgentNet)
+[![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
 
-## Linux and Mac OS Installation
-This far the instalation was only tested on Ubuntu, yet an experienced user is unlikely to have problems installing it onto other Linux or Mac OS Machine
-Currently the minimal dependencies are bleeding edge Theano and Lasagne.
-You can find a guide to installing them here 
-* http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version
+## Installation
 
-If you have both of them, you can install agentnet with these commands
-```
- git clone https://github.com/justheuristic/AgentNet
- cd AgentNet
- python setup.py install
-``` 
+[Here's an installation guide](https://github.com/yandexdataschool/AgentNet/wiki/Installing-AgentNet)
 
-## Docker installation
- * [AgentNet container using Rep](https://hub.docker.com/r/justheuristic/agentnet/)
-
-This installation contains an installation of AgentNet, along with latest Theano and Lasagne libraries.
-
-We use [Yandex REP](https://github.com/yandex/rep) container to provide data analysis tools (Jupyter, Matplotlib, Pandas, etc)
-
-##### To download/run the container, run
- * ``` [sudo] docker run -d -p 1234:8888 justheuristic/agentnet:develop```
- * Jupyter will now be available at `localhost:1234`
- * You can replace 1234 with whatever port you want it on.
+In short, 
+ * Manual install
+   * Install [bleeding edge theano/lasagne](http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version)
+   * `[sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip`
+ * [Here's the docker container](https://hub.docker.com/r/justheuristic/agentnet/)
+   * `[sudo] docker run -d -p 1234:8888 justheuristic/agentnet`
+   * Access via localhost:1234 or whatever port you chose
 
 
-## Windows installation
-We recommend running the docker container, using docker-machine (see docker install above).
+# Documentation and tutorials
+AgentNet is using embedded documentation, so calling `help(some_function_or_object)` or pressing shift+tab in Ipython will yield description of what that thing is supposed to do.
 
-Technically if you managed to get Lasagne working on Windows, you can follow the Linux instruction.
-However, we cannot guarantee that this will work consistently.
+A standard pipeline of AgentNet experiment can be found among examples
+* [Playing Atari SpaceInvaders with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb)
+  * Step-by-step explaination of what you need to do to recreate DeepMind Atari DQN
+  * Written in a generic way, so that adding recurrent memory or changing learning algorithm could be done in a couple of lines
+* [Simple Deep Recurrent Reinforcement Learning setup](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Basic%20tutorial%20on%20Boolearn%20Reasoning%20problem.ipynb)
+  * Most basic demo, if a bit boring. Covers the problem of learning "If X1 than Y1 Else Y2".
+  * Only required if SpaceInvaders left you confused.
+
 
 
 # Demos
@@ -57,106 +50,5 @@ However, we cannot guarantee that this will work consistently.
 
 If you wish to join the development, we would be eager to accept your help. Current priority development anchors are maintained at the bottom of this readme. 
 
-If you wish to contribute your own architecture or experiment, please contact me via github or justheuristic@gmail.com. In fact, please contact me if you have any questions, or ideas, i'd be eager to see them.
-
-## What?
-
-The final framework is planned to be built on and fully compatible with awesome Lasagne[6] with some helper functions to facilitate learning.
-
-The main objectives are:
-* easy way of tinkering with reinforcement learning architectures
-* just as simple prototyping of Attention and Long Term Memory architectures
-* ease of experiment conduction and reproducibility
-* full integration with Lasagne and Theano
 
 
-
-## Why?
-
-[long story short: create a platform to play with *QN, attentive and LTM architectures without spending months reading code]
-
-[short story long:
-
-The last several years have marked the rediscovery of neural networks applied to Reinforcement Learning domain. The idea has first been introduced in early 90's [0] or even earlier, but was mostly forgotten soon afterwards. 
-
-Years later, these methods were reborn under Deep Learning sauce and popularized by Deepmind [1,2]. Several other researchers have already jumped into the domain with their architectures [3,4] and even dedicated playgrounds [5] to play with them.
-
-The problem is that all these models exist in their own problem setup and implementation bubbles. Simply comparing your new architecture the ones you know requires 
-* 10% implementing architecture
-* 20% implementing experiment setup
-* 70% reimplementing all the other network architectures
-
-This process is not only inefficient, but also very unstable, since a single mistake while implementing 'other' architecture can lead to incorrect results.
-
-So here we are, attempting to build yet another bridge between eager researchers [primarily ourselves so far] and deep reinforcement learning. 
-
-The key objective is to make it easy to build new architectures and test is against others on a number of problems. The easier it is to reproduce the experiment setup, the simpler it is to architect something new and wonderful, the quicker we get to solutions directly applicable to real world problems.
-
-]
-
-* [0] an dusty old journal issue - https://books.google.ru/books?id=teHhVHk3a54C&printsec=frontcover#v=onepage&q&f=false
-* [1] DQN by DeepMind - http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html 
-* [2] DQN explained - https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
-* [4] deep recurrent  - http://arxiv.org/abs/1507.06527
-* [3] attentive DRQN - http://arxiv.org/pdf/1512.01693.pdf
-* [5] MazeBaze by Facebook - http://arxiv.org/pdf/1511.07401.pdf
-
-
-
-## Current state & priorities
-The library is currently in active development and there is much to be done yet.
-
-[priority] Component; no priority means "done"
-
-* Core components
- * Environment
- * Objective
- * Agent architecture
-   * MDP (RL) agent
-   * Generator
-   * Fully customizable agent
- * Experiment platform
-    * [high] Experiment setup zoo
-    * [medium] Pre-trained model zoo
-    * [medium] quick experiment running (
-         * experiment is defined as (environment, objective function, NN architecture, training algorithm)
-
-* Layers 
- * Memory 
-    * Simple RNN
-    * One-step GRU memory
-    * Custom GateLayer 
-      * LSTM as GRU + output GateLayer
-    * Window augmentation (K last states)
-    * Stack Augmentation
-    * [low] List augmentation
-    * [low] Neural Turing Machine controller
- * Resolvers
-    * Greedy resolver (as BaseResolver) 
-    * Epsilon-greedy resolver
-    * Probablistic resolver
-    * [High] Adversarial resolver (test if it works)
-
-* Learning objectives algorithms
-  * Q-learning
-  * SARSA
-  * k-step Q-learning
-  * k-step Advantage Actor-critic methods
-  * Can use any theano/lasagne expressions for loss, gradients and updates
-  * Experience replay pool
-
-* Experiment setups
-  * boolean reasoning - basic "tutorial" experiment about learning to exploit variable dependencies
-  * Wikicat - guessing person's traits based on wikipedia biographies
-  * [high, in progress] openAI gym training/evaluation api and demos
-  * [medium] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
-  * [medium] 2048-in-a-browser with Selenium
-
-* Visualization tools
-  * basic monitoring tools 
-  * [medium] generic tunable session visualizer
-
-* Explanatory material
- * [medium] readthedocs pages
- * [global] MOAR sensible examples
- * [medium] report on prior basic research (optimizer comparison, training algorihtm comparison, layers, etc)
