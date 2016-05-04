@@ -13,7 +13,7 @@ RUN /bin/bash --login -c "\
 RUN /bin/bash --login -c "\
     git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
     cd AgentNet && python setup.py install &&\
-    echo \"ln -s ~/AgentNet/examples /notebooks/agentnet_examples\" >> /root/install_modules.sh\
+    sed -i -e '3iln -s ~/AgentNet/examples /notebooks/agentnet_examples\' /root/install_modules.sh\
     "
     
     
