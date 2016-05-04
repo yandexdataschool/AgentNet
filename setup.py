@@ -40,8 +40,8 @@ setup(
 
     # List run-time dependencies here. These will be installed by pip when your project is installed.
     install_requires=[
-        'theano >= 0.8.0.dev-RELEASE', #bleeding edge version
-        'lasagne >= 0.2.dev1', #bleeding edge version
+        'theano >= 0.8.0', #bleeding edge version
+        'lasagne >= 0.2', #bleeding edge version
         'six',
     ],
 )
