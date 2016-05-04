@@ -101,16 +101,18 @@ The library is currently in active development and there is much to be done yet.
    * Generator
    * Fully customizable agent
  * Experiment platform
-   * [high] Experiment setup zoo
-   * [medium] Pre-trained model zoo
-   * [medium] quick experiment running (
+    * [high] Experiment setup zoo
+    * [medium] Pre-trained model zoo
+    * [medium] quick experiment running (
          * experiment is defined as (environment, objective function, NN architecture, training algorithm)
 
 * Layers 
  * Memory 
-    * Simple RNN done as Lasagne.layers.DenseLayer
-    * One-step GRU memory 
-    * [half-done, medium] Custom LSTM-like constructor
+    * Simple RNN
+    * One-step GRU memory
+    * Custom GateLayer 
+      * LSTM as GRU + output GateLayer
+    * Window augmentation (K last states)
     * Stack Augmentation
     * [low] List augmentation
     * [low] Neural Turing Machine controller
@@ -118,11 +120,12 @@ The library is currently in active development and there is much to be done yet.
     * Greedy resolver (as BaseResolver) 
     * Epsilon-greedy resolver
     * Probablistic resolver
+    * [High] Adversarial resolver (test if it works)
 
 * Learning objectives algorithms
   * Q-learning
   * SARSA
-  * k-step learning
+  * k-step Q-learning
   * k-step Advantage Actor-critic methods
   * Can use any theano/lasagne expressions for loss, gradients and updates
   * Experience replay pool
@@ -130,9 +133,9 @@ The library is currently in active development and there is much to be done yet.
 * Experiment setups
   * boolean reasoning - basic "tutorial" experiment about learning to exploit variable dependencies
   * Wikicat - guessing person's traits based on wikipedia biographies
-  * [half-done] 2048 in the browser - playing 2048 using Selenium only
-  * [high] openAI gym training/evaluation api and demos
+  * [high, in progress] openAI gym training/evaluation api and demos
   * [medium] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
+  * [medium] 2048-in-a-browser with Selenium
 
 * Visualization tools
   * basic monitoring tools 
@@ -141,4 +144,4 @@ The library is currently in active development and there is much to be done yet.
 * Explanatory material
  * [medium] readthedocs pages
  * [global] MOAR sensible examples
- * [medium] report on basic research (optimizer comparison, training algorihtm comparison, layers, etc)
+ * [medium] report on prior basic research (optimizer comparison, training algorihtm comparison, layers, etc)
