@@ -10,9 +10,9 @@ RUN /bin/bash --login -c "\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
     git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
     cd AgentNet && python setup.py install &&\
-    cp examples -r /notebooks/agentnet_examples\
     "
     
+COPY Agentnet/examples -r /notebooks/agentnet_examples
     
     
 
