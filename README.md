@@ -1,5 +1,4 @@
 # AgentNet
-
 A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
 
 [![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
@@ -7,16 +6,19 @@ A lightweight library to build and train neural networks for reinforcement learn
 
 
 ## Installation
-
 [Here's an installation guide](https://github.com/yandexdataschool/AgentNet/wiki/Installing-AgentNet)
 
 In short, 
- * Manual install
-   * Install [bleeding edge theano/lasagne](http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version)
-   * `[sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip`
- * [Here's the docker container](https://hub.docker.com/r/justheuristic/agentnet/)
-   * `[sudo] docker run -d -p 1234:8888 justheuristic/agentnet`
-   * Access via localhost:1234 or whatever port you chose
+### Manual install
+ 1. Install [bleeding edge theano/lasagne](http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version)
+ 2. `[sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip`
+
+### [Docker container](https://hub.docker.com/r/justheuristic/agentnet/)
+ 1. install [Docker](http://docs.docker.com/installation/), 
+ 2. make sure `docker` daemon is running (`sudo service docker start`)
+ 3. make sure no application is using port 1234 (this is the default port that can be changed) 
+ 4. `[sudo] docker run -d -p 1234:8888 justheuristic/agentnet`
+ 5. Access via localhost:1234 or whatever port you chose
 
 
 # Documentation and tutorials
