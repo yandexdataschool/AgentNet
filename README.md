@@ -18,7 +18,22 @@ If you have both of them, you can install agentnet with these commands
  python setup.py install
 ``` 
 
+## Docker installation
+ * [AgentNet container using Rep](https://hub.docker.com/r/justheuristic/agentnet/)
+
+This installation contains an installation of AgentNet, along with latest Theano and Lasagne libraries.
+
+We use [Yandex REP](https://github.com/yandex/rep) container to provide data analysis tools (Jupyter, Matplotlib, Pandas, etc)
+
+##### To download/run the container, run
+ * ``` [sudo] docker run -d -p 1234:8888 justheuristic/agentnet:develop```
+ * Jupyter will now be available at `localhost:1234`
+ * You can replace 1234 with whatever port you want it on.
+
+
 ## Windows installation
+We recommend running the docker container, using docker-machine (see docker install above).
+
 Technically if you managed to get Lasagne working on Windows, you can follow the Linux instruction.
 However, we cannot guarantee that this will work consistently.
 
