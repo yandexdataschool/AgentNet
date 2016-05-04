@@ -39,9 +39,8 @@ setup(
     keywords='machine learning, reinforcement learning, MDP, POMDP, deep learning, Q-network, Markov Decision Process, experiment platform',
 
     # List run-time dependencies here. These will be installed by pip when your project is installed.
+    #WARNING!! We require bleeding edge versions for theano and lasagne. These cannot be installed via pip so far.
     install_requires=[
-        'theano >= 0.8.0', #bleeding edge version
-        'lasagne >= 0.2', #bleeding edge version
         'six',
     ],
 )
