@@ -1,6 +1,5 @@
 # AgentNet
 
-[![Join the chat at https://gitter.im/yandexdataschool/AgentNet](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
 
 [![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
