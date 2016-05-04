@@ -7,12 +7,15 @@ RUN /bin/bash --login -c "\
     source activate rep_py2 && \ 
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
-    pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
-    cd AgentNet && python setup.py install\
+    pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip\
     "
     
-COPY Agentnet/examples -r /notebooks/agentnet_examples
+RUN /bin/bash --login -c "\
+    git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
+    cd AgentNet && python setup.py install &&\
+    cp examples -r $HOME/agentnet_examples &&\
+    "
+    
     
     
 
