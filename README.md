@@ -1,6 +1,10 @@
 # AgentNet
 A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
 
+[![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=develop)](https://travis-ci.org/yandexdataschool/AgentNet)
+[![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
+
+
 ## Linux and Mac OS Installation
 This far the instalation was only tested on Ubuntu, yet an experienced user is unlikely to have problems installing it onto other Linux or Mac OS Machine
 Currently the minimal dependencies are bleeding edge Theano and Lasagne.
