@@ -1,6 +1,10 @@
 # AgentNet
 A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
 
+[![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=develop)](https://travis-ci.org/yandexdataschool/AgentNet)
+[![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
+
+
 ## Linux and Mac OS Installation
 This far the instalation was only tested on Ubuntu, yet an experienced user is unlikely to have problems installing it onto other Linux or Mac OS Machine
 Currently the minimal dependencies are bleeding edge Theano and Lasagne.
@@ -14,7 +18,22 @@ If you have both of them, you can install agentnet with these commands
  python setup.py install
 ``` 
 
+## Docker installation
+ * [AgentNet container using Rep](https://hub.docker.com/r/justheuristic/agentnet/)
+
+This installation contains an installation of AgentNet, along with latest Theano and Lasagne libraries.
+
+We use [Yandex REP](https://github.com/yandex/rep) container to provide data analysis tools (Jupyter, Matplotlib, Pandas, etc)
+
+##### To download/run the container, run
+ * ``` [sudo] docker run -d -p 1234:8888 justheuristic/agentnet:develop```
+ * Jupyter will now be available at `localhost:1234`
+ * You can replace 1234 with whatever port you want it on.
+
+
 ## Windows installation
+We recommend running the docker container, using docker-machine (see docker install above).
+
 Technically if you managed to get Lasagne working on Windows, you can follow the Linux instruction.
 However, we cannot guarantee that this will work consistently.
 
@@ -97,16 +116,18 @@ The library is currently in active development and there is much to be done yet.
    * Generator
    * Fully customizable agent
  * Experiment platform
-   * [high] Experiment setup zoo
-   * [medium] Pre-trained model zoo
-   * [medium] quick experiment running (
+    * [high] Experiment setup zoo
+    * [medium] Pre-trained model zoo
+    * [medium] quick experiment running (
          * experiment is defined as (environment, objective function, NN architecture, training algorithm)
 
 * Layers 
  * Memory 
-    * Simple RNN done as Lasagne.layers.DenseLayer
-    * One-step GRU memory 
-    * [half-done, medium] Custom LSTM-like constructor
+    * Simple RNN
+    * One-step GRU memory
+    * Custom GateLayer 
+      * LSTM as GRU + output GateLayer
+    * Window augmentation (K last states)
     * Stack Augmentation
     * [low] List augmentation
     * [low] Neural Turing Machine controller
@@ -114,11 +135,12 @@ The library is currently in active development and there is much to be done yet.
     * Greedy resolver (as BaseResolver) 
     * Epsilon-greedy resolver
     * Probablistic resolver
+    * [High] Adversarial resolver (test if it works)
 
 * Learning objectives algorithms
   * Q-learning
   * SARSA
-  * k-step learning
+  * k-step Q-learning
   * k-step Advantage Actor-critic methods
   * Can use any theano/lasagne expressions for loss, gradients and updates
   * Experience replay pool
@@ -126,9 +148,9 @@ The library is currently in active development and there is much to be done yet.
 * Experiment setups
   * boolean reasoning - basic "tutorial" experiment about learning to exploit variable dependencies
   * Wikicat - guessing person's traits based on wikipedia biographies
-  * [half-done] 2048 in the browser - playing 2048 using Selenium only
-  * [high] openAI gym training/evaluation api and demos
+  * [high, in progress] openAI gym training/evaluation api and demos
   * [medium] KSfinder - detecting particle decays in Large Hadron Collider beauty experiment 
+  * [medium] 2048-in-a-browser with Selenium
 
 * Visualization tools
   * basic monitoring tools 
@@ -137,4 +159,4 @@ The library is currently in active development and there is much to be done yet.
 * Explanatory material
  * [medium] readthedocs pages
  * [global] MOAR sensible examples
- * [medium] report on basic research (optimizer comparison, training algorihtm comparison, layers, etc)
+ * [medium] report on prior basic research (optimizer comparison, training algorihtm comparison, layers, etc)

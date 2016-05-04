@@ -1,0 +1,13 @@
+sudo: required
+
+services:
+  - docker
+
+before_install:
+  - docker build -t agentnet .
+
+install:
+  - docker run -d -p 1234:8888 --name agentnet agentnet
+
+script:
+  - echo "Yuppi!"
