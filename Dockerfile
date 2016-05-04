@@ -9,8 +9,11 @@ RUN /bin/bash --login -c "\
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
     git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
-    cd AgentNet && python setup.py install\
+    cd AgentNet && python setup.py install &&\
+    rm /notebooks/* &&\
+    cp examples -r /notebooks/agentnet_examples &&\
     "
+    
     
     
 
