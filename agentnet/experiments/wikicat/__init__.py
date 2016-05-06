@@ -154,10 +154,10 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
     """dimensions"""
     
     @property
-    def observation_size(self):
+    def observation_shapes(self):
         return [int((self.joint_data.shape[1]+2).eval())]
     @property
-    def state_size(self):
+    def state_shapes(self):
         return [int(self.joint_data.shape[1].eval())]
     
     
@@ -173,7 +173,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
     
     """agent interaction"""
     
-    def get_action_results(self,last_states,actions,time_i):
+    def get_action_results(self,last_states,actions):
         
         #unpack state and action
         last_state = check_list(last_states)[0]
@@ -213,10 +213,10 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
         arguments:
-            session_states float[batch_id, memory_id]: environment state before taking action
-            session_actions int[batch_id]: agent action at this tick
+            session_states float[time, memory_id]: environment state before taking action
+            session_actions int[time]: agent action at this tick
         returns:
-            reward float[batch_id]: reward for taking action from the given state
+            reward float[time]: reward for taking action from the given state
         """
         #unpach states and actions
         session_states = check_list(session_states)[0]

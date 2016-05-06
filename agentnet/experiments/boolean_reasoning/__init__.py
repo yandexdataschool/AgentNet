@@ -127,10 +127,10 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
     #flags that denote whether environment should get a single state/action instead of iterable of these
     
     @property
-    def observation_size(self):
+    def observation_shapes(self):
         return [int((self.joint_data.shape[1]+2).eval())]
     @property
-    def state_size(self):
+    def state_shapes(self):
         return [int(self.joint_data.shape[1].eval())]
     
     
@@ -145,7 +145,7 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
     
     """agent interaction"""
     
-    def get_action_results(self,last_states,actions,time_i):
+    def get_action_results(self,last_states,actions):
         
         #state is a boolean vector: whether or not i-th action
         #was tried already during this session

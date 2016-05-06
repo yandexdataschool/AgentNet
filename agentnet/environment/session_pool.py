@@ -19,12 +19,24 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     def __init__(self,observations =1,
                  actions=1,
                  agent_memories = 1,
-                 action_dtypes=['int32'],
+                 default_action_dtype="int32",
                  rng_seed=1337):
         """
         A generic pseudo-environment that replays sessions loaded via .load_sessions(...),
         ignoring agent actions completely.
+        
+        It has a single scalar integer env_state, corresponding to time tick.
+        
         The environment maintains it's own pool of sessions represented as (.observations, .actions, .rewards)
+        
+        
+        parameters:
+         - observations - number of floatX flat observations or a list of observation inputs to mimic
+         - actions - number of int32 scalar actions or a list of resolvers to mimic
+         - agent memories
+            
+        To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
+        
         
         To create experience-replay sessions, call Agent.get_sessions with this as an environment.
         During experience replay sessions,
@@ -40,7 +52,8 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         """
         #setting environmental variables. Their shape is [batch_i,time_i,something]
         
-        
+        get_dtype = lambda layer, default=None: layer.output_dtype if hasattr(layer,"output_dtype")\
+                                                else default or theano.config.floatX
         
         #observations
         if type(observations) is int:
@@ -57,7 +70,8 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                 create_shared(
                     "sessions.observations_history."+str(i),
                     np.zeros(    
-                        (10,5)+tuple(obs.output_shape[1:]),dtype= theano.config.floatX
+                        (10,5)+tuple(obs.output_shape[1:]),
+                        dtype=  get_dtype(obs)
                     ) 
                 )
                 for i,obs in enumerate(observations)
@@ -71,28 +85,10 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         
         
         
-        
-        
-        #action dtypes
-        
-        if type(actions) is int:
-            n_actions = actions
-        else:
-            n_actions = len(check_list(actions))
-            
-            
-        action_dtypes = check_list(action_dtypes)
-        if len(action_dtypes) > n_actions:
-            action_dtypes = action_dtypes[:n_actions]
-        elif len(action_dtypes) < n_actions:
-            action_dtypes += action_dtypes[-1:]*(n_actions - len(action_dtypes))
-
-        
-        
         #actions log
         if type(actions) is int:
             self.actions = [
-                create_shared("session.actions_history."+str(i),np.zeros([10,5]),dtype=action_dtypes[i])
+                create_shared("session.actions_history."+str(i),np.zeros([10,5]),dtype=default_action_dtype)
                 for i in range(actions)
             ]
             
@@ -102,7 +98,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                 create_shared(
                     "session.actions_history."+str(i),
                     np.zeros((10,5)+tuple(action.output_shape[1:])),
-                    dtype= action_dtypes[i]
+                    dtype= get_dtype(action,default_action_dtype)
                 )
                 for i,action in enumerate(actions)
             ]
@@ -127,7 +123,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                 create_shared(
                     "session.prev_memory."+str(i),
                     np.zeros((10,5)+tuple(mem.output_shape[1:]),
-                             dtype= theano.config.floatX
+                             dtype= get_type(mem)
                     ) 
                 )
                 for i,mem in enumerate(agent_memories)
@@ -151,15 +147,38 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
 
         
     @property 
-    def state_size(self):
-        """Environment state size"""
-        return []
-    @property 
-    def observation_size(self):
-        """Single observation size"""
-        return [obs.shape[-1] for obs in self.padded_observations]
+    def state_shapes(self):
+        """Environment state sizes. In this case, it's a timer"""
+        return [tuple()]
+    @property
+    def state_dtypes(self):
+        """environment state dtypes. In this case, it's a timer"""
+        return ["int32"]
     
-    def get_action_results(self,last_states,actions,time_i):
+    
+    @property 
+    def observation_shapes(self):
+        """observation shapes"""
+        return [obs.get_value().shape[2:] for obs in self.observations]
+    
+    @property 
+    def observation_dtypes(self):
+        """observation dtypes"""
+        return [obs.dtype for obs in self.observations]
+    @property 
+    def action_shapes(self):
+        """action shapes"""
+        return [act.get_value().shape[2:] for act in self.actions]
+    @property 
+    def action_dtypes(self):
+        """action dtypes"""
+        return [act.dtype for act in self.actions]
+    
+    
+    
+    
+    
+    def get_action_results(self,last_states,actions):
         """
         computes environment state after processing agent's action
         arguments:
@@ -169,7 +188,13 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
-        return [],[obs[:,time_i+1] for obs in self.padded_observations]
+        time_i = check_list(last_states)[0]
+        
+        batch_range = T.arange(time_i.shape[0])
+        
+        new_observations = [obs[batch_range,time_i+1] 
+                               for obs in self.padded_observations]
+        return [time_i+1],new_observations
         
     def get_reward(self,session_states,session_actions,batch_i):
         """

@@ -3,7 +3,7 @@ from lasagne.utils import unroll_scan
 from theano import tensor as T
 from ..utils import insert_dim
 
-from base import BaseAgent
+from recurrence import Recurrence
 from ..environment.session_batch import SessionBatchEnvironment
 from ..environment.feedback import  FeedbackEnvironment
 
@@ -13,7 +13,7 @@ from ..utils.format import supported_sequences,check_list
 
 
 
-class Generator(BaseAgent):
+class Generator(Recurrence):
     def __init__(self,
                  observation_layers,
                  memory_dict,

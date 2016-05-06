@@ -7,12 +7,14 @@ from warnings import warn
 
 supported_sequences = (tuple,list)
 
-def check_list(variables,target_length=None):
-    """ensure that variables is a sequence of a supported type"""
-    if type(variables) in supported_sequences:
+def check_sequence(variables):
+    """ensure that variables is one of supported_sequences or converts to one.
+    If naive conversion fails, throws an error"""
+    if any( isinstance(variables,seq) for seq in supported_sequences):
         return variables
     else:
-        #if it is a numpy or theano array, excluding numpy array of objects
+        #if it is a numpy or theano array, excluding numpy array of objects, return a list with single element
+        # yes, i know it's messy. Better options are welcome for pull requests :)
         if hasattr(variables,'shape'):
             if hasattr(variables,'dtype'):
                 if variables.dtype != np.object:
@@ -23,25 +25,33 @@ def check_list(variables,target_length=None):
         if hasattr(variables,'__iter__'):
             #try casting to tuple. If cannot, treat that it will be treated as an atomic object
             try:
-                if target_length is not None and len(variables) != target_length:
-                    raise "shapes do not match"
-
-                casted_variables = tuple(variables)
+                casted_variables = list(variables)
                 
-                warn(str(variables)+ " of type "+type(variables)+ " will be treated as a sequence of "+\
+                warn(str(variables)+ " of type "+str(type(variables))+ " will be treated as a sequence of "+\
                      len(casted_variables) +"elements, not a single element. If you want otherwise, please"\
                      " pass it as a single-element list/tuple")
                 return casted_variables
             except:
-                warn(str(variables)+ " of type "+type(variables)+ " will be treated as a single input/output tensor,"\
-                    "and not a collection of such. If you want otherwise, please cast it to list/tuple")
+                warn(str(variables)+ " of type "+str(type(variables))+ " will be treated as a single "\
+                     "input/output tensor, and not a collection of such. If you want otherwise, please cast it"\
+                     "to list/tuple")
                 
+        #otherwise it's a one-element list
         return [variables] 
-    
+
+def check_list(variables):
+    """ensure that variables is a list or converts to one.
+    If naive conversion fails, throws an error"""
+    return list(check_sequence(variables))
+                
+def check_tuple(variables):
+    """ensure that variables is a list or converts to one.
+    If naive conversion fails, throws an error"""
+    return tuple(check_sequence(variables))
     
 def check_ordict(variables):
     """ensure that variables is an OrderedDict"""
-    assert hasattr(variables,"items") 
+    assert isinstance(variables,dict) 
     try:
         return OrderedDict(variables.items())
     except:

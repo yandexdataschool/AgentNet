@@ -28,4 +28,10 @@ class BaseResolver(lasagne.layers.Layer):
         """
         batch_size = input_shape[0]
         return [batch_size]
-               
+    
+    @property
+    def output_dtype(self):
+        """
+        returns dtype of output tensor. If not implemented, assumes floatX
+        """
+        return "int32"
