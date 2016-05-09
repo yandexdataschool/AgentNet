@@ -1,7 +1,7 @@
 import lasagne                 
 from lasagne.utils import unroll_scan
 from lasagne.layers import InputLayer
-from ..utils.layers import TupleLayer
+from ..utils.layers import TupleLayer, get_layer_dtype
 
 
 import theano
@@ -23,7 +23,6 @@ class Recurrence(TupleLayer):
                  tracked_outputs = [],
                  state_variables = OrderedDict(),
                  state_init = 'zeros',
-                 state_dtypes = {},
                  n_steps = 10,
                  batch_size = None,
                  delayed_states = [],
@@ -50,6 +49,10 @@ class Recurrence(TupleLayer):
 
             state_variables: a dictionary that maps next state variables to their respective previous state
                 keys (new states) must be lasagne layers and values (previous states) must be InputLayers
+                
+                Note that state dtype is defined thus:
+                 - if state key layer has output_dtype, than that type is used for the entire state
+                 - otherwise, theano.config.floatX is used
             
             state_init: what are the default values for state_variables. In other words, what is
                 prev_state for the first iteration. By default it's T.zeros of the appropriate shape.
@@ -58,12 +61,6 @@ class Recurrence(TupleLayer):
                 Can be a list of initializer layers for states in the order of dict.items()
                     - if so, it's length must match len(state_variables)
                     
-            state_dtypes: an optional dict that maps state output layers to state dtypes.
-                By default, 
-                    - if state_init is provided, it recurrence inherits it's state
-                    - elif dtype is provided in state_dtypes, we use that dtype isntead
-                    - else, we use theano.config.floatX (works in most cases
-
                 
             n_steps - how many time steps will the recurrence unroll for
             
@@ -139,13 +136,12 @@ class Recurrence(TupleLayer):
         #cast to dict and save
         self.state_init = check_ordict(state_init)
         
-        self.state_dtypes = state_dtypes
         
         #init base class
         incomings = list(self.state_init.values()) +\
                     list(self.input_nonsequences.values()) +\
-                    list(self.input_sequences.values())\
-                
+                    list(self.input_sequences.values())
+        
                 
         #if we have no inputs or inits, make sure batch_size is specified
         if len(incomings) ==0:
@@ -163,13 +159,14 @@ class Recurrence(TupleLayer):
 
             all_inputs = list(self.state_variables.values()) +\
                          list(self.state_init.keys()) +\
-                         list(self.input_nonsequences.keys())
+                         list(self.input_nonsequences.keys()) +\
+                         list(self.input_sequences.keys())
 
             #all recurrent graph inputs and prev_states are unique (no input/prev_state is used more than once)
             assert len(all_inputs) == len(set(all_inputs))
 
             #all state_init correspond to defined state variables
-            for state_out in list(self.state_init.keys()) + list(self.state_dtypes.keys()):
+            for state_out in list(self.state_init.keys()):
                 assert state_out in self.state_variables.keys()
 
             #all new_state+output dependencies (input layers) lie inside one-step recurrence
@@ -178,7 +175,10 @@ class Recurrence(TupleLayer):
             
             for layer in lasagne.layers.get_all_layers(all_outputs):
                 if type(layer) is InputLayer:
-                    assert layer in all_inputs
+                    if layer not in all_inputs:
+                        raise ValueError, \
+                              "One of your network dependencies (%s) is not mentioned"\
+                              "as a Recurrence inputs"%(str(layer.name))
         
         #verifying shapes (assertions)
         
@@ -196,56 +196,24 @@ class Recurrence(TupleLayer):
             assert tuple(seq_onestep.output_shape) == step_shape
             
             seq_len = seq_shape[1]
-            assert seq_len is None or seq_len>n_steps
+            assert seq_len is None or seq_len>=n_steps
             if seq_len is None:
                 warn("You are giving Recurrence an input sequence of undefined length (None).\n"\
                      "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
             
-    def get_sequences(self,
-                      input_nonseqs = {},
-                      input_seqs = {},
-                      initial_states = {},
-                      recurrence_flags = {},
-                      **kwargs):
-        """
-        returns history of agent interaction with environment for given number of turns.
-        
-        parameters:
-            input_nonseqs - a dict mapping non-sequence inputs (if any) to theano expressions for them
-            input_seqs - a dict mapping sequence inputs (if any) to theano expressions for them
-            initial_states - a dict of state initializers(if any), that maps state outputs from self.state_init.keys()
-                    to theano expressions for them. {state_output_layer -> expression for initial value}
             
-            recurrence_flags - a set of flags to be passed to the one step agent (anything that lasagne supports)
-                e.g. {deterministic=True}
-        returns:
-            [state_sequences] , [output sequences] - a list of all state sequences and  a list of all output sequences
-            Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
-        """
+            
+    def get_params(self,**kwargs):
+        """returns all params. If include_recurrence is set ot True, includes recurrent params from one-step network"""
         
-        assert len(input_nonseqs) == len(self.input_nonsequences)
-        assert len(input_seqs) == len(self.input_sequences)
-        assert len(initial_states) == len(self.state_init)
+        params = super(Recurrence,self).get_params(**kwargs)
         
+        #include inner recurrence params
+        outputs = list(self.state_variables.keys()) + self.tracked_outputs
+        inner_params = lasagne.layers.get_all_params(outputs,**kwargs)
+        params += inner_params
         
-        inputs = [
-            initial_states[state_out] for state_out in self.state_init
-        ]+[
-            input_nonseqs[inp] for inp in self.input_nonsequences
-        ]+[ 
-            input_seqs[inp] for inp in self.input_sequences
-        ]
-           
-        
-        
-        results = self.get_output_for(inputs,recurrence_flags,**kwargs)
-        
-        pivot = len(self.state_variables)
-        state_seqs = results[:pivot]
-        output_seqs = results[pivot:]
-        
-        return state_seqs, output_seqs
-
+        return params
         
 
     def get_output_for(self,inputs,recurrence_flags = {},**kwargs):
@@ -266,8 +234,6 @@ class Recurrence(TupleLayer):
         #set batch size
         if len(inputs) != 0:
             batch_size = inputs[0].shape[0]
-            if self.batch_size is not None:
-                assert batch_size == self.batch_size
         else:
             batch_size = self.batch_size
         
@@ -276,11 +242,12 @@ class Recurrence(TupleLayer):
         input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
 
         n_states = len(self.state_variables)
+        n_state_inits = len(self.state_init)
         n_input_nonseq = len(self.input_nonsequences)
         n_input_seq = len(self.input_sequences)
         n_outputs = len(self.tracked_outputs)
         
-        initial_states, nonsequences, sequences = unpack_list(inputs, n_states,n_input_nonseq,n_input_seq)
+        initial_states, nonsequences, sequences = unpack_list(inputs, n_state_inits,n_input_nonseq,n_input_seq)
         
         
         # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
@@ -297,22 +264,17 @@ class Recurrence(TupleLayer):
                 
                 #use it
                 initial_state = initial_states[state_out_layer]
-                
-                #double-check that state init has correct dtype
-                if state_out_layer in self.state_dtypes:
-                    assert initial_state.dtype == self.state_dtypes[state_out_layer]
-                    
+                                    
             #otherwise initialize with zeros
             else:
-                state_dtype = self.state_dtypes.get(state_out_layer) or theano.config.floatX
                 initial_state = T.zeros((batch_size,)+tuple(state_out_layer.output_shape[1:]), 
-                                    dtype = state_dtype)
+                                    dtype = get_layer_dtype(state_out_layer))
             return initial_state
         
         
         initial_state_variables = map(get_initial_state, self.state_variables)
-        outputs_info = initial_state_variables + [None]*len(self.tracked_outputs)
         
+        outputs_info = initial_state_variables + [None]*len(self.tracked_outputs)
         
         #recurrent step function
         def step(*args):
@@ -324,13 +286,14 @@ class Recurrence(TupleLayer):
                                                                                n_input_nonseq,
                                                                                )
 
-            
             #make dicts of prev_states and inputs
             prev_states_dict = OrderedDict(zip(self.state_variables.keys(),prev_states))
             
             input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
-            inputs_dict = OrderedDict(zip(nonsequences+sequence_slices, input_layers))
             
+            assert len(input_layers)== len(nonsequences+sequence_slices)
+            
+            inputs_dict = OrderedDict(zip(input_layers,nonsequences+sequence_slices))
             
             #call one step recurrence
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict,**recurrence_flags)
@@ -379,7 +342,10 @@ class Recurrence(TupleLayer):
                         
                         
                                                
-        
+    def get_output_shape_for(self, input_shapes,**kwargs):
+        """returns shapes of each respective output"""
+        shapes = [ tuple(layer.output_shape) for layer in self.state_variables.keys() + self.tracked_outputs]
+        return [ shape[:1]+(self.n_steps,)+shape[1:] for shape in shapes]
         
                             
                             
@@ -406,7 +372,6 @@ class Recurrence(TupleLayer):
             
         """
 
-                
 
             
                  
@@ -440,6 +405,7 @@ class Recurrence(TupleLayer):
             current_inputs = OrderedDict(zip(input_layers,current_inputs))
         else:
             current_inputs = check_ordict(current_inputs)
+            
         
         assert len(current_inputs) == len(input_layers)
 
@@ -453,6 +419,7 @@ class Recurrence(TupleLayer):
         
         #compose output_list
         output_list = list(self.state_variables.keys()) + self.tracked_outputs
+
         
         #call get output
         results = lasagne.layers.get_output(
@@ -468,3 +435,22 @@ class Recurrence(TupleLayer):
         new_states,new_outputs = unpack_list(results,n_states,n_outputs)
         
         return new_states,new_outputs
+
+    
+    
+    def get_sequence_layers(self):
+        """
+        returns history of agent interaction with environment for given number of turns.
+            [state_sequences] , [output sequences] - a list of all state sequences and  a list of all output sequences
+            Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
+        """
+
+        outputs = list(self)
+        
+        n_states = len(self.state_variables)
+        
+        state_dict = OrderedDict(zip( self.state_variables,outputs[:n_states]))
+        
+        return state_dict, outputs[n_states:]
+        
+    

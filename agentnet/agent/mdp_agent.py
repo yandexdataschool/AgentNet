@@ -1,12 +1,12 @@
 
 from recurrence import Recurrence
 
-from ..utils.format import supported_sequences, check_list,check_tuple,check_ordict,unpack_list
+from ..utils.format import supported_sequences,unpack_list,check_list,check_tuple,check_ordict
 
 
 from theano import tensor as T
 import lasagne                 
-from lasagne.layers import InputLayer
+from lasagne.layers import InputLayer,Layer
 
 from collections import OrderedDict
 
@@ -54,17 +54,19 @@ class MDPAgent(object):
                       environment,
                       session_length = 10,
                       batch_size = None,
-                      initial_env_states = 'zeros',initial_observations = 'zeros',initial_hidden = 'zeros',
+                      initial_env_states = 'zeros',
+                      initial_observations = 'zeros',
+                      initial_hidden = 'zeros',
                       **kwargs
                       ):
-        """returns history of agent interaction with environment for given number of turns:
+        """returns a Recurrence lasagne layer that contains :
         parameters:
             environment - an environment to interact with (BaseEnvironment instance)
             session_length - how many turns of interaction shall there be for each batch
             batch_size - [required parameter] amount of independed sessions [number or symbolic].
                 rrelevant if there's at least one input or if you manually set any initial_*.
             
-            initial_<something> - initial values for all variables at 0-th time step
+            initial_<something> - layers providing initial values for all variables at 0-th time step
                 'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
             flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
@@ -99,7 +101,7 @@ class MDPAgent(object):
         
         #compose state initialization dict
         state_init_pairs = []
-        for initializers,references in zip(
+        for initializers,layers in zip(
                     [initial_env_states,initial_observations, initial_hidden],
                     [new_state_outputs, new_observation_outputs, self.state_variables.keys()]
             ):
@@ -109,21 +111,28 @@ class MDPAgent(object):
                 state_init_pairs += initializers.items()
             else:
                 initializers = check_list(initializers)
-                assert len(initializers) == len(references)
+                assert len(initializers) == len(layers)
                 
-                for init,ref in zip(initializers,references):
+                for layer,init in zip(layers,initializers):
                     if init is not None:
-                        state_init_pairs.append([ref,init])
-                    
-        #compose state dtypes
+                        state_init_pairs.append([layer,init])
         
-        state_dtypes = zip(new_state_outputs, env.state_dtypes) +\
-                       zip(new_observation_outputs, env.observation_dtypes)
+        #convert all inits into layers:
+        for i in range(len(state_init_pairs)):
+            layer,init = state_init_pairs[i]
+            
+            #replace theano variables with input layers for them
+            if not isinstance(init, lasagne.layers.Layer):
+                init_layer = InputLayer(layer.output_shape,
+                                        name = "env.initial_values_for."+(layer.name or "state"),
+                                        input_var = init)
+                state_init_pairs[i][1] = init_layer
+            
         
+        #create the recurrence
         recurrence = Recurrence(
             state_variables = OrderedDict(all_state_pairs),
             state_init = OrderedDict(state_init_pairs),
-            state_dtypes = OrderedDict(state_dtypes),
             tracked_outputs = self.policy + self.action_layers,
             n_steps = session_length,
             batch_size = batch_size,
@@ -139,8 +148,9 @@ class MDPAgent(object):
                      environment,
                      session_length = 10,
                      batch_size = None,
-                     initial_env_states = 'zeros',initial_observations = 'zeros',initial_hidden = 'zeros',
-                     return_layers = False,
+                     initial_env_states = 'zeros',
+                     initial_observations = 'zeros',
+                     initial_hidden = 'zeros',
                      **kwargs
                   ):
         """returns history of agent interaction with environment for given number of turns:
@@ -181,19 +191,27 @@ class MDPAgent(object):
         """
         env = environment
         
+        
+        
+        #create recurrence
         recurrence = self.as_recurrence(environment=environment,
-                                            session_length=session_length,
-                                            batch_size = batch_size,
-                                            initial_env_states=initial_env_states,
-                                            initial_observations=initial_observations,
-                                            initial_hidden=initial_hidden,
-                                            **kwargs
-                                           )
+                                        session_length=session_length,
+                                        batch_size = batch_size,
+                                        initial_env_states=initial_env_states,
+                                        initial_observations=initial_observations,
+                                        initial_hidden=initial_hidden,
+                                        **kwargs
+                                       )
+        state_layers_dict, output_layers = recurrence.get_sequence_layers()
         
-        states,outputs = recurrence.get_layers() if return_layers else recurrence.get_sequences()#!!!send inits?
+        #convert sequence layers into actual theano varaibles
+        theano_expressions = lasagne.layers.get_output(list(state_layers_dict.values())+output_layers)
         
-
-        agent_states,env_states,observations = unpack_list(states,
+        n_states = len(state_layers_dict)
+        states_list, outputs = theano_expressions[:n_states], theano_expressions[n_states:]
+        
+        #sort sequences into categories
+        agent_states,env_states,observations = unpack_list(states_list,
                                                            len(self.state_variables),
                                                            len(env.state_shapes),
                                                            len(env.observation_shapes))
@@ -206,6 +224,7 @@ class MDPAgent(object):
         
         agent_states = OrderedDict(zip(self.state_variables.keys(),agent_states))        
         
+        #if user asked for single value and not one-element list, unpack the list
         if type(environment.state_shapes) not in supported_sequences:
             env_states = env_states[0]
         if self.single_observation:
@@ -214,6 +233,8 @@ class MDPAgent(object):
             actions = actions[0]
         if self.single_policy:
             policy = policy[0]
+            
+        
         return env_states,observations,agent_states,actions,policy
     
     
@@ -241,6 +262,7 @@ class MDPAgent(object):
             prev_states = OrderedDict(zip(self.state_variables.keys(),prev_states))
         else:
             prev_states = check_ordict(prev_states)
+            
             
         ##check that the size matches
         assert len(prev_states) == len(self.state_variables)
@@ -281,3 +303,6 @@ class MDPAgent(object):
         new_actions,new_states,new_outputs = unpack_list(results,n_actions,n_states,n_outputs)
         
         return new_actions,new_states,new_outputs
+    
+    
+   

@@ -76,7 +76,7 @@ def RecurrentMemoryLayer(prev_state,
     
     new_hid = NonlinearityLayer(elwise_sum,
                                 nonlinearity,
-                                name=name+".nonlinearity")
+                                name=name+".new_state")
     
     return new_hid
     

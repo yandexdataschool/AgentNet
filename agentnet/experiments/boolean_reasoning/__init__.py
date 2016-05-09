@@ -128,9 +128,11 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
     
     @property
     def observation_shapes(self):
+        """a single observation. Treated as one-element list"""
         return [int((self.joint_data.shape[1]+2).eval())]
     @property
     def state_shapes(self):
+        """ a single state here. Treated as one-element list"""
         return [int(self.joint_data.shape[1].eval())]
     
     

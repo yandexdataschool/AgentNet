@@ -5,3 +5,5 @@ from mdp_agent import MDPAgent
 Agent = MDPAgent
 
 from generator import Generator
+
+from recurrence import Recurrence

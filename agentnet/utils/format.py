@@ -1,11 +1,22 @@
 __doc__="""a few auxilary methods that work with supported collection formats"""
 
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from warnings import warn
 
 
 supported_sequences = (tuple,list)
+
+
+def is_theano_object(var):
+    """checks if var is a theano input, transformation, constant or shared variable"""
+    return type(var).__module__.startswith("theano")
+
+def is_numpy_object(var):
+    """checks if var is a theano input, transformation, constant or shared variable"""
+    return type(var).__module__.startswith("numpy")
+
+
 
 def check_sequence(variables):
     """ensure that variables is one of supported_sequences or converts to one.
@@ -15,10 +26,9 @@ def check_sequence(variables):
     else:
         #if it is a numpy or theano array, excluding numpy array of objects, return a list with single element
         # yes, i know it's messy. Better options are welcome for pull requests :)
-        if hasattr(variables,'shape'):
-            if hasattr(variables,'dtype'):
-                if variables.dtype != np.object:
-                    return [variables]
+        if is_theano_object(variables) or is_numpy_object(variables):
+            if variables.dtype != np.object:
+                return [variables]
                 
                 
         #elif it is a different kind of sequence

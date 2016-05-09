@@ -14,6 +14,9 @@ from ..objective import BaseObjective
 
 from ..utils import create_shared,set_shared,insert_dim
 from ..utils.format import check_list
+from ..utils.layers import get_layer_dtype
+
+from warnings import warn
 
 class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
     def __init__(self,observations =1,
@@ -52,8 +55,6 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         """
         #setting environmental variables. Their shape is [batch_i,time_i,something]
         
-        get_dtype = lambda layer, default=None: layer.output_dtype if hasattr(layer,"output_dtype")\
-                                                else default or theano.config.floatX
         
         #observations
         if type(observations) is int:
@@ -71,7 +72,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                     "sessions.observations_history."+str(i),
                     np.zeros(    
                         (10,5)+tuple(obs.output_shape[1:]),
-                        dtype=  get_dtype(obs)
+                        dtype=  get_layer_dtype(obs)
                     ) 
                 )
                 for i,obs in enumerate(observations)
@@ -98,7 +99,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                 create_shared(
                     "session.actions_history."+str(i),
                     np.zeros((10,5)+tuple(action.output_shape[1:])),
-                    dtype= get_dtype(action,default_action_dtype)
+                    dtype= get_layer_dtype(action,default_action_dtype)
                 )
                 for i,action in enumerate(actions)
             ]
@@ -206,6 +207,8 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         returns:
             reward float[batch_id]: reward for taking action from the given state
         """
+        warn("Warning - a sesssion pool has all the rewards already stored as .rewards property."\
+             "Recomputing them this way is probably just a slower way of calling your_session_pool.rewards")
         return self.rewards[batch_i,:]
     
     
