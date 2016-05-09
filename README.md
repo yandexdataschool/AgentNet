@@ -1,8 +1,12 @@
 # AgentNet
-A lightweight library to build and train neural networks for reinforcement learning using Theano+Lasagne
+A lightweight library to build and train deep reinforcement learning and custom recurrent networks using Theano+Lasagne
 
 [![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
+
+
+![img](https://cs.hse.ru/mirror/pubs/share/thumb/150729584:c570x570+185+148:r150x150!)
+
 
 
 ## Installation
