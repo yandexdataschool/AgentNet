@@ -96,6 +96,7 @@ class BaseEnvironment:
         new_states = last_states
         observations = new_states #mdp with full observability
         return last_states, observations
+    
 
     #---------------------------------------------------
     # Here begin Lasagne Layer compatibility methods

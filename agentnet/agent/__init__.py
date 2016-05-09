@@ -1,9 +1,14 @@
 
-from mdp_agent import MDPAgent
 
-#alias for backward compatibility
+from mdp_agent import MDPAgent
+from recurrence import Recurrence
+
+
+#alias for MDP agent
 Agent = MDPAgent
 
-from generator import Generator
 
-from recurrence import Recurrence
+
+#deprecated stuff
+from ..deprecated.generator import Generator 
+from ..deprecated.base import BaseAgent
