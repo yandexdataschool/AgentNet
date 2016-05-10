@@ -27,7 +27,7 @@ class BaseResolver(lasagne.layers.Layer):
         returns output shape [batch_id]
         """
         batch_size = input_shape[0]
-        return [batch_size]
+        return (batch_size,)
     
     @property
     def output_dtype(self):
