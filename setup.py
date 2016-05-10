@@ -7,8 +7,8 @@ with codecs.open('README.md', encoding='utf-8') as readme_file:
 
 setup(
     name="agentnet",
-    version='0.0.7',
-    description="AgentNet - a library for MDP agent design and research",
+    version='0.0.8',
+    description="AgentNet - a library for Deep Reinforcement Learning and custom recurrent network design and research",
     long_description=long_description,
 
     # Author details
