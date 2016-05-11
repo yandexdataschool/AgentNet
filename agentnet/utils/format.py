@@ -24,7 +24,7 @@ def check_list(variables,target_length=None):
             #try casting to tuple. If cannot, treat that it will be treated as an atomic object
             try:
                 if target_length is not None and len(variables) != target_length:
-                    raise Exception, "shapes do not match"
+                    raise Exception("shapes do not match")
 
                 casted_variables = tuple(variables)
                 
@@ -43,9 +43,9 @@ def check_ordict(variables):
     """ensure that variables is an OrderedDict"""
     assert hasattr(variables,"items") 
     try:
-        return OrderedDict(variables.items())
+        return OrderedDict(list(variables.items()))
     except:
-        raise ValueError, "Could not convert "+variables+"to an ordered dictionary"
+        raise ValueError("Could not convert "+variables+"to an ordered dictionary")
 
 def unpack_list(a, *lengths):
     """

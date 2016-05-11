@@ -44,11 +44,11 @@ class BaseAgent(object):
             if len(self.state_variables) >1:
                 warn("It is recommended that state_variables is an ordered dict.\n"\
                      "Otherwise, order of agent state outputs from get_sessions and get_agent_reaction methods\n"\
-                     "may depend on python configuration. Current order is:"+ str(self.state_variables.keys())+"\n"\
+                     "may depend on python configuration. Current order is:"+ str(list(self.state_variables.keys()))+"\n"\
                      "You may find OrderedDict in standard collections module: from collections import OrderedDict")
             
         
-        for memory_in, memory_out in self.state_variables.items():
+        for memory_in, memory_out in list(self.state_variables.items()):
             assert tuple(memory_in.output_shape) == tuple(memory_out.output_shape)
 
         
@@ -75,7 +75,7 @@ class BaseAgent(object):
         if not hasattr(prev_states,'keys'):
             #if only one layer given, make a single-element list of it
             prev_states = check_list(prev_states)
-            prev_states = OrderedDict(zip(self.state_variables.keys(),prev_states))
+            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()),prev_states)))
         else:
             prev_states = check_ordict(prev_states)
             
@@ -93,10 +93,10 @@ class BaseAgent(object):
         #compose input map
         
         ##state input layer: prev state
-        prev_states_kv = [(self.state_variables[s],prev_states[s]) for s in self.state_variables.keys()] #prev states
+        prev_states_kv = [(self.state_variables[s],prev_states[s]) for s in list(self.state_variables.keys())] #prev states
         
         ##observation input layer: observation value
-        observation_kv = zip(self.observation_layers,current_observations)
+        observation_kv = list(zip(self.observation_layers,current_observations))
         
         input_map = OrderedDict(prev_states_kv + observation_kv)
         
@@ -211,7 +211,7 @@ class BaseAgent(object):
             env_states,observations,prev_agent_states = unpack_list(args,n_env_states,n_observations,n_memories)
             
             
-            prev_states_dict = OrderedDict(zip(self.state_variables.keys(),prev_agent_states))
+            prev_states_dict = OrderedDict(list(zip(list(self.state_variables.keys()),prev_agent_states)))
             
             new_actions,new_agent_states,new_outputs = self.get_agent_reaction(prev_states_dict,observations,**flags)
             
@@ -259,7 +259,7 @@ class BaseAgent(object):
             action_sequences, output_sequences = groups
         
         
-        agent_state_dict = OrderedDict(zip(self.state_variables.keys(),agent_state_sequences))
+        agent_state_dict = OrderedDict(list(zip(list(self.state_variables.keys()),agent_state_sequences)))
         
         #allign time axes: actions come AFTER states with the same index
         #add first env turn, crop to session length

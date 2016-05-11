@@ -66,7 +66,7 @@ def get_state_value_reference(state_values,rewards,
                  "If that isn't what you intended, fix state_values shape to [batch,tick]\n")
             state_values = state_values[:,:,0]
         else:
-            raise ValueError ,"state_values must have shape [batch,tick] (ndim = 2), while you have"+str(state_values.ndim)
+            raise ValueError("state_values must have shape [batch,tick] (ndim = 2), while you have"+str(state_values.ndim))
     if is_alive == "always":
         is_alive = T.ones_like(rewards)
         

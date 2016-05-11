@@ -115,9 +115,9 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
 
         
         if not os.path.isfile(dataset_path):
-            print "loading dataset..."
+            print("loading dataset...")
             if sys.version_info[0] == 2:
-                from urllib import urlretrieve
+                from urllib.request import urlretrieve
             else:
                 from urllib.request import urlretrieve
 
@@ -128,8 +128,8 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
         
         feature_names = list(df.columns)
-        categorical_columns = np.nonzero(map(lambda s: s.startswith("category:"),feature_names))[0]
-        attribute_columns = np.nonzero(map(lambda s: not s.startswith("category:"),feature_names))[0]
+        categorical_columns = np.nonzero([s.startswith("category:") for s in feature_names])[0]
+        attribute_columns = np.nonzero([not s.startswith("category:") for s in feature_names])[0]
 
         data_cats = df.iloc[:,categorical_columns]
         data_attrs = df.iloc[:,attribute_columns]

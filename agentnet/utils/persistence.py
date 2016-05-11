@@ -1,8 +1,8 @@
 __doc__="""Saves and loads lasagne model weights"""
 
-import cPickle as pickle
+import pickle as pickle
 import lasagne
-from shared import set_shared
+from .shared import set_shared
 
 
 def save(nn,fname):
