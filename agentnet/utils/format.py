@@ -24,7 +24,7 @@ def check_list(variables,target_length=None):
             #try casting to tuple. If cannot, treat that it will be treated as an atomic object
             try:
                 if target_length is not None and len(variables) != target_length:
-                    raise "shapes do not match"
+                    raise Exception, "shapes do not match"
 
                 casted_variables = tuple(variables)
                 
