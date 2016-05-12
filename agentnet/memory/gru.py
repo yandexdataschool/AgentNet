@@ -17,6 +17,11 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
                                     nonlinearity=nonlinearities.tanh),
                  
                  
+                 bias_init = init.Constant(),
+                 weight_init = init.Normal(),
+
+                 
+                 
                  
                  grad_clipping=5.,
                  **kwargs):

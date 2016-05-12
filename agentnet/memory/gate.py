@@ -104,7 +104,6 @@ class GateLayer(TupleLayer):
         super(GateLayer, self).__init__(incomings, **kwargs)
         
         
-        
         #nonlinearities
         self.gate_nonlinearities = check_list(gate_nonlinearities)
         self.gate_nonlinearities = [(nl if (nl is not None) else (lambda v:v))
@@ -160,11 +159,12 @@ class GateLayer(TupleLayer):
                     self.add_param(
                         spec= b_init,
                         shape = (channel_n_units,),
-                        name = self.name+".b_%s"%(channel_name)
+                        name = "b_%s"%(channel_name)
                     )              
                 )
             else:
                 self.gate_b.append(T.zeros((channel_n_units,)))
+                
             
             #add weights
             for ctrl_i,(controller,w_init) in enumerate(zip(self.gate_controllers,
@@ -176,7 +176,7 @@ class GateLayer(TupleLayer):
                     self.add_param(
                         spec= w_init,
                         shape = (controller.output_shape[1], channel_n_units),
-                        name = self.name+".W_%s_%s"%(ctrl_name,channel_name)
+                        name = "W_%s_%s"%(ctrl_name,channel_name)
                     ))
             
                 
@@ -199,8 +199,8 @@ class GateLayer(TupleLayer):
                     layer-defined channels are those defined lasagne.layers.Layer and not just a number of inputs
         """
         assert len(inputs) == len(self.channel_layers)+len(self.gate_controllers)
-
-        given_channels,controllers= inputs[:len(self.channels)],inputs[len(self.channels):]
+        
+        given_channels,controllers= inputs[:len(self.channel_layers)],inputs[len(self.channel_layers):]
         
         
         def slice_w(x_stacked):

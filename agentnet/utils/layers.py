@@ -2,24 +2,51 @@
 
 __doc__ = """Here you can find a number of auxilary lasagne layers that are used throughout AgentNet and examples"""
 
+import theano
+import theano.tensor as T
 
 from lasagne.layers import Layer, MergeLayer, ExpressionLayer,NonlinearityLayer
-import theano
+from lasagne.layers import DenseLayer,NonlinearityLayer,ElemwiseMergeLayer
 
-        
 
-def get_layer_dtype(layer, default=None):
-    """ takes layer's output_dtype property if it is defined, 
-    otherwise defaults to default or (if it's not given) theano.config.floatX"""
-    return layer.output_dtype if hasattr(layer,"output_dtype") else default or theano.config.floatX
+#shortcut functions
+def mul(*args,**kwargs):
+    """elementwise multiply layers"""
+    inp_names = [layer.name or "layer"+str(i) for i,layer in enumerate(args)]
+    kwargs["name"] = kwargs.get("name",
+                                "sum(%s)"%(', '.join(inp_names)))
+    
+    return ElemwiseMergeLayer(args,T.mul,**kwargs)
+                                
+def add(*args,**kwargs):
+    """elementrise sum of layers"""
+    inp_names = [layer.name or "layer"+str(i) for i,layer in enumerate(args)]
+    kwargs["name"] = kwargs.get("name",
+                                "sum(%s)"%(', '.join(inp_names)))
+    
+    return ElemwiseMergeLayer(args,T.add,**kwargs)
 
+def transform(a,fun=lambda x:x,**kwargs):
+    """alias for NonlinearityLayer"""
+    kwargs["name"] = kwargs.get("name",
+                                (a.name or "layer")+".transform",)
+
+    return NonlinearityLayer(a,fun,**kwargs)
 
 def clip_grads(layer, grad_clipping):
     """Clips grads passing through a lasagne.layers.layer"""
     grad_clipping = abs(grad_clipping)
     grad_clip_op = lambda v:  theano.gradient.grad_clip(v, -grad_clipping, grad_clipping)
-    name = layer.name or ""
-    return NonlinearityLayer(layer, grad_clip_op,name = name+".grad_clipper")
+    name = layer.name or "layer"
+    return NonlinearityLayer(layer, grad_clip_op,name = name+".grad_clip")
+
+
+#dtype checker
+
+def get_layer_dtype(layer, default=None):
+    """ takes layer's output_dtype property if it is defined, 
+    otherwise defaults to default or (if it's not given) theano.config.floatX"""
+    return layer.output_dtype if hasattr(layer,"output_dtype") else default or theano.config.floatX
 
 
 

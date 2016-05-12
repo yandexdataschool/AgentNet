@@ -9,6 +9,8 @@ from collections import OrderedDict
 from ..utils import create_shared,set_shared, insert_dim
 from ..utils.format import check_list
 
+from warnings import warn
+
 class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
     def __init__(self,observations,actions=None,rewards=None,is_alive=None,preceding_agent_memory=None):
         """
@@ -33,6 +35,7 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
         with no additional computation.
         
         """
+        warn("SessionBatchEnvironment is currently in process of refactoring and is not tested")
         
         #setting environmental variables. Their shape is [batch_i,time_i,something]
         self.observations = check_list(observations)
@@ -51,16 +54,40 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
 
         self.batch_size = self.observations[0].shape[0]
         self.sequence_length =self.observations[0].shape[1]
+        
     @property 
-    def state_size(self):
-        """Environment state size"""
-        return []
-    @property 
-    def observation_size(self):
-        """Single observation size"""
-        return [obs.shape[-1] for obs in self.padded_observations]
+    def state_shapes(self):
+        """Environment state sizes. In this case, it's a timer"""
+        return [tuple()]
+    @property
+    def state_dtypes(self):
+        """environment state dtypes. In this case, it's a timer"""
+        return ["int32"]
     
-    def get_action_results(self,last_state,action,time_i):
+    
+    @property 
+    def observation_shapes(self):
+        """observation shapes"""
+        return [obs.get_value().shape[2:] for obs in self.observations]
+    
+    @property 
+    def observation_dtypes(self):
+        """observation dtypes"""
+        return [obs.dtype for obs in self.observations]
+    @property 
+    def action_shapes(self):
+        """action shapes"""
+        return [act.get_value().shape[2:] for act in self.actions]
+    @property 
+    def action_dtypes(self):
+        """action dtypes"""
+        return [act.dtype for act in self.actions]
+    
+    
+    
+    
+    
+    def get_action_results(self,last_states,actions):
         """
         computes environment state after processing agent's action
         arguments:
@@ -70,7 +97,13 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
             new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
-        return [],[obs[:,time_i+1] for obs in self.padded_observations]
+        time_i = check_list(last_states)[0]
+        
+        batch_range = T.arange(time_i.shape[0])
+        
+        new_observations = [obs[batch_range,time_i+1] 
+                               for obs in self.padded_observations]
+        return [time_i+1],new_observations
         
     def get_reward(self,session_states,session_actions,batch_i):
         """
@@ -82,4 +115,6 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
         returns:
             reward float[batch_id]: reward for taking action from the given state
         """
+        warn("Warning - a sesssion pool has all the rewards already stored as .rewards property."\
+             "Recomputing them this way is probably just a slower way of calling your_session_pool.rewards")
         return self.rewards[batch_i,:]

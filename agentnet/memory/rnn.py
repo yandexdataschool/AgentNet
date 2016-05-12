@@ -3,12 +3,18 @@ import theano.tensor as T
 import lasagne
 import numpy as np
 
-from lasagne.layers import DenseLayer, NonlinearityLayer,ElemwiseSumLayer
-
+from lasagne.layers import DenseLayer,NonlinearityLayer,ElemwiseMergeLayer,NonlinearityLayer
 from ..utils.format import check_list
-from ..utils.layers import clip_grads
 
-def RecurrentMemoryLayer(prev_state,
+
+
+
+
+
+
+#Vanilla RNN cell
+
+def RNNCell(prev_state,
                          input_or_inputs = [],
                          nonlinearity = lasagne.nonlinearities.sigmoid,
                          num_units = None,
@@ -75,18 +81,10 @@ def RecurrentMemoryLayer(prev_state,
     return new_hid
     
                      
-import theano
-import theano.tensor as T
-import lasagne
-import numpy as np
 
-from lasagne.layers import DenseLayer, NonlinearityLayer,ElemwiseMergeLayer
 
-from agentnet.utils.format import check_list
-from agentnet.utils.layers import clip_grads
+
 from agentnet.memory.gate import GateLayer
-
-
 
 def GRUCell(prev_state,
              input_or_inputs = [],
@@ -124,53 +122,74 @@ def GRUCell(prev_state,
     
     inputs = check_list(input_or_inputs)
     
-    if grad_clipping:
-        prev_state = clip_grads(prev_state,grad_clipping)
-        inputs = map(lambda lyr: clip_grads(lyr,grad_clipping), inputs)
     
     
-    #apply gates
-    inp_to_gates = GateLayer(inputs,[num_units]*3,
-                             gate_nonlinearities=None)
-    inp_forget, inp_update, inp_hidden_update = inp_to_gates
-
+    #hidden to gates
     hid_to_gates = GateLayer(prev_state,[num_units]*3,
                              gate_nonlinearities=None,
-                             bias_init = None)
-    hid_forget, hid_update, hid_hidden_update = hid_to_gates
+                             bias_init = None,
+                             name = name+".hidden_to_gates_stacked")
+    hid_forget, hid_update, hidden_update_hid = hid_to_gates
 
-    #showtcut functions
-    def gate(inp,hid,nonlinearity):
-        return NonlinearityLayer(
-            ElemwiseSumLayer([inp,hid]),
-            nonlinearity)
-    def mul(a,b):
-        return ElemwiseMergeLayer([a,b],T.mul)
-    def add(a,b):
-        return ElemwiseMergeLayer([a,b],T.add)
+    #clip grads #1
+    if grad_clipping:
+        inputs = map(lambda lyr: clip_grads(lyr,grad_clipping), inputs)
+        hid_forget, hid_update, hidden_update_hid = map(lambda lyr: clip_grads(lyr,grad_clipping),
+                                                        [hid_forget, hid_update, hidden_update_hid])
+        
+    #input to gates
+    inp_to_gates = GateLayer(inputs,[num_units]*3,
+                             gate_nonlinearities=None,
+                             name=name+".input_to_gates_stacked")
+    inp_forget, inp_update, hidden_update_in = inp_to_gates
 
-    #compute both gates
-    forgetgate = gate(inp_forget, hid_forget,forgetgate_nonlinearity)
-    updategate = gate(inp_update, hid_update,updategate_nonlinearity)
+
+
+    #compute forget and update gates
+    forgetgate = transform(
+        add(inp_forget, hid_forget),
+        forgetgate_nonlinearity,
+        name="forgetgate"
+    )
+    updategate = transform(
+        add(inp_update, hid_update),
+        updategate_nonlinearity,
+        name="updategate"
+    )
+
+    inv_updategate = transform(updategate, 
+                               lambda x : 1-x,
+                               name="1 - updategate")
     
     #compute hidden update
     hidden_update = add(
-        inp_hidden_update,
-        mul(forgetgate,hid_hidden_update)
+        hidden_update_in,
+        mul(forgetgate,hidden_update_hid),
+        name="hid_update"
     )
-    hidden_update = NonlinearityLayer(hidden_update, hidden_update_nonlinearity)
+    
+    #clip grads #2
+    if grad_clipping:
+        hidden_update = clip_grads(hidden_update,
+                                   grad_clipping) 
+    
+    hidden_update = NonlinearityLayer(hidden_update, 
+                                      hidden_update_nonlinearity)
     
     
     
     #compute new hidden values
     new_hid = add(
-        mul(updategate,prev_state), 
-        mul(updategate,hidden_update)
+        mul(inv_updategate,prev_state), 
+        mul(updategate,hidden_update),
+        name= name
     )
 
     
     
     return new_hid
+
+
     
                      
     
