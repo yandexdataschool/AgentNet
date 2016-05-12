@@ -7,8 +7,8 @@ import theano
 from collections import OrderedDict
 
 
-from base import BaseEnvironment
-from session_batch import SessionBatchEnvironment
+from .base import BaseEnvironment
+from .session_batch import SessionBatchEnvironment
 
 from ..objective import BaseObjective
 
@@ -269,7 +269,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                 
         if cast_dtypes:
             casted_updates = OrderedDict({})
-            for var,upd in updates.items():
+            for var,upd in list(updates.items()):
                 casted_updates[var] = upd.astype(var.dtype)
             updates = casted_updates
             

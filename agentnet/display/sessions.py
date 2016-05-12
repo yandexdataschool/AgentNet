@@ -1,3 +1,4 @@
+from __future__ import print_function
 __doc__ = """this module contains several auxilary functions used to print or plot agent's actions and state throughout session"""
 
 import numpy as np
@@ -31,7 +32,7 @@ def print_sessions(policy_seq,action_seq,reward_seq, action_names = None,
         """
 
     if action_names is None:
-        action_names = map("action #{}".format,range(np.max(action_seq)))
+        action_names = list(map("action #{}".format,list(range(np.max(action_seq)))))
     if is_alive_seq is None:
         is_alive_seq = np.ones_like(action_seq)
     if reference_policy_seq is None:
@@ -44,7 +45,7 @@ def print_sessions(policy_seq,action_seq,reward_seq, action_names = None,
     #if we are on;y given one session, reshape everithing as a 1-session batch
     if len(action_seq.shape) ==1:
         policy_seq,action_seq,reward_seq,is_alive_seq,reference_policy_seq =\
-            map(lambda v: v[None,:], [policy_seq,action_seq,reward_seq,is_alive_seq,reference_policy_seq])
+            [v[None,:] for v in [policy_seq,action_seq,reward_seq,is_alive_seq,reference_policy_seq]]
 
     #if all policy values are given for [batch,tick,action], select policy values for taken actions
     assert len(policy_seq.shape)==3
@@ -58,18 +59,18 @@ def print_sessions(policy_seq,action_seq,reward_seq, action_names = None,
         
                 
         time_range = np.arange(policy_seq.shape[1])
-        session_tuples = zip(policy_seq[s_i,time_range, action_seq[s_i]],
+        session_tuples = list(zip(policy_seq[s_i,time_range, action_seq[s_i]],
                              action_seq[s_i],reward_seq[s_i],
-                             reference_policy_seq[s_i],is_alive_seq[s_i])
+                             reference_policy_seq[s_i],is_alive_seq[s_i]))
         
         
         #print session log
-        print "session #",s_i
+        print("session #",s_i)
         
         for t_i, (qpred, a, r, qref,is_al) in enumerate(session_tuples):
             
             if not is_al:
-                print '\n'
+                print('\n')
                 break
             
             if print_reference:
@@ -79,10 +80,10 @@ def print_sessions(policy_seq,action_seq,reward_seq, action_names = None,
             
             action_name = action_names[a]
             
-            print pattern.format(action=action_name, qpred=qpred, reward=r, qref=qref),
+            print(pattern.format(action=action_name, qpred=qpred, reward=r, qref=qref), end=' ')
             
         else:
-            print "reached max session length"
+            print("reached max session length")
         
         #plot policy, actions, etc
         if plot_policy :

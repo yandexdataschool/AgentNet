@@ -1,15 +1,12 @@
-
-from recurrence import Recurrence
-
-from ..utils.format import supported_sequences,unpack_list,check_list,check_tuple,check_ordict
-
-
 from theano import tensor as T
+
 import lasagne                 
 from lasagne.layers import InputLayer,Layer
 
-from collections import OrderedDict
+from .recurrence import Recurrence
+from ..utils.format import supported_sequences,unpack_list,check_list,check_tuple,check_ordict
 
+from collections import OrderedDict
 
 class MDPAgent(object):
     def __init__(self,
