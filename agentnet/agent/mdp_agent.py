@@ -61,7 +61,7 @@ class MDPAgent(object):
                       ):
         """returns a Recurrence lasagne layer that contains :
         parameters:
-            environment - an environment to interact with (BaseEnvironment instance)
+            environment - an environment to interact with (BaseEnvironment instance).
             session_length - how many turns of interaction shall there be for each batch
             batch_size - [required parameter] amount of independed sessions [number or symbolic].
                 rrelevant if there's at least one input or if you manually set any initial_*.
