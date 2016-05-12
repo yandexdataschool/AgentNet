@@ -38,7 +38,11 @@ def check_sequence(variables):
         if hasattr(variables,'__iter__'):
             #try casting to tuple. If cannot, treat that it will be treated as an atomic object
             try:
-                casted_variables = list(variables)
+
+                if target_length is not None and len(variables) != target_length:
+                    raise Exception("shapes do not match")
+
+                casted_variables = tuple(variables)
                 
                 warn(str(variables)+ " of type "+str(type(variables))+ " will be treated as a sequence of "+\
                      len(casted_variables) +"elements, not a single element. If you want otherwise, please"\
@@ -66,9 +70,9 @@ def check_ordict(variables):
     """ensure that variables is an OrderedDict"""
     assert isinstance(variables,dict) 
     try:
-        return OrderedDict(variables.items())
+        return OrderedDict(list(variables.items()))
     except:
-        raise ValueError, "Could not convert "+variables+"to an ordered dictionary"
+        raise ValueError("Could not convert "+variables+"to an ordered dictionary")
 
 def unpack_list(a, *lengths):
     """

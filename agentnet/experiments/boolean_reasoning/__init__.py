@@ -49,8 +49,8 @@ from agentnet.utils.format import check_list
 n_attrs = 3
 n_categories = 2
 
-x_names = map("X{}".format, range(1, n_attrs+1))
-y_names = map("Y{}".format, range(1, n_categories+1))
+x_names = list(map("X{}".format, list(range(1, n_attrs+1))))
+y_names = list(map("Y{}".format, list(range(1, n_categories+1))))
 
 
 class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):

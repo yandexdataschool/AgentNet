@@ -20,8 +20,8 @@ class Metrics(defaultdict):
         
         plt.figure(figsize = figsize)
         
-        for metric_name, metric_dict in self.items():            
-            plt.plot(*zip(*sorted(metric_dict.items())),label = metric_name)
+        for metric_name, metric_dict in list(self.items()):            
+            plt.plot(*list(zip(*sorted(metric_dict.items()))),label = metric_name)
 
         plt.title(title)
         plt.grid()

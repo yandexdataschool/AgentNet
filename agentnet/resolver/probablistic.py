@@ -1,7 +1,7 @@
 import theano.tensor as T
 
 import lasagne
-from base import BaseResolver
+from .base import BaseResolver
 
 from agentnet.utils.shared import create_shared
 
