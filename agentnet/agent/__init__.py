@@ -1,7 +1,7 @@
 
-from mdp_agent import MDPAgent
+from .mdp_agent import MDPAgent
 
 #alias for backward compatibility
 Agent = MDPAgent
 
-from generator import Generator
+from .generator import Generator

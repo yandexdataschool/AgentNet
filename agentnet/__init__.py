@@ -1,11 +1,11 @@
 __doc__ = """AgentNet - a library for MDP agent design and research"""
 
 
-import utils
+from . import utils
 
-import environment
-import objective
+from . import environment
+from . import objective
 
-import memory
-import resolver
-import agent
+from . import memory
+from . import resolver
+from . import agent

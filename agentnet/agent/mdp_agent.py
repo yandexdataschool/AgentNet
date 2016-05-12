@@ -5,7 +5,7 @@ from ..utils import insert_dim
 
 from ..utils.format import supported_sequences
 
-from base import BaseAgent
+from .base import BaseAgent
 
 class MDPAgent(BaseAgent):
     def __init__(self,

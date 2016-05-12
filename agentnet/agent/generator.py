@@ -3,7 +3,7 @@ from lasagne.utils import unroll_scan
 from theano import tensor as T
 from ..utils import insert_dim
 
-from base import BaseAgent
+from .base import BaseAgent
 from ..environment.session_batch import SessionBatchEnvironment
 from ..environment.feedback import  FeedbackEnvironment
 
