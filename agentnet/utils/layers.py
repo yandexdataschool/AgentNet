@@ -3,7 +3,7 @@
 __doc__ = """Here you can find a number of auxilary lasagne layers that are used throughout AgentNet and examples"""
 
 
-from lasagne.layers import Layer, MergeLayer, ExpressionLayer
+from lasagne.layers import Layer, MergeLayer, ExpressionLayer,NonlinearityLayer
 import theano
 
         
@@ -12,6 +12,15 @@ def get_layer_dtype(layer, default=None):
     """ takes layer's output_dtype property if it is defined, 
     otherwise defaults to default or (if it's not given) theano.config.floatX"""
     return layer.output_dtype if hasattr(layer,"output_dtype") else default or theano.config.floatX
+
+
+def clip_grads(layer, grad_clipping):
+    """Clips grads passing through a lasagne.layers.layer"""
+    grad_clipping = abs(grad_clipping)
+    grad_clip_op = lambda v:  theano.gradient.grad_clip(v, -grad_clipping, grad_clipping)
+    name = layer.name or ""
+    return NonlinearityLayer(layer, grad_clip_op,name = name+".grad_clipper")
+
 
 
 class TupleLayer(MergeLayer):
@@ -37,14 +46,19 @@ class TupleLayer(MergeLayer):
                 for i in range(len(self.output_shape))]
     
     @property
+    def disable_tuple(self):
+        """if True, forces tuple to work as a single layer. Useful if your layer has a different behavious depending on parameters"""
+        return False
+    
+    @property
     def output_dtype(self):
         """ dtypes of tuple outputs"""
-        return [theano.config.floatX for i in range(len(self.output_shape))]
+        return [theano.config.floatX for i in range(len(self))]
 
     
     def __len__(self):
         """an amount of output layers in a tuple"""
-        return len(self.output_shape)
+        return len(self.output_shape) if not self.disable_tuple else 1
     
     def __getitem__(self, ind):
         """ returns a lasagne layer that yields i-th output of the tuple.
@@ -53,6 +67,7 @@ class TupleLayer(MergeLayer):
         returns:
             a particular layer of the tuple or a list of such layers if slice is given 
         """
+        assert not self.disable_tuple
         assert type(ind) in (int, slice)
         
         if type(ind) is slice:            
@@ -70,7 +85,10 @@ class TupleLayer(MergeLayer):
     
     def __iter__(self):
         """ iterate over tuple output layers"""
-        return (self[i] for i in range(len(self.output_shape)))
+        if self.disable_tuple:
+            return [self]
+        else:
+            return (self[i] for i in range(len(self)))
     
         
 

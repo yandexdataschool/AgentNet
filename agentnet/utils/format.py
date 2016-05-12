@@ -1,12 +1,14 @@
 __doc__="""a few auxilary methods that work with supported collection formats"""
-
+import lasagne
 import numpy as np
 from collections import OrderedDict, namedtuple
 from warnings import warn
 
 
-supported_sequences = (tuple,list)
 
+def is_layer(var):
+    """checks if var is lasagne layer"""
+    return isinstance(var,lasagne.layers.Layer)
 
 def is_theano_object(var):
     """checks if var is a theano input, transformation, constant or shared variable"""
@@ -17,6 +19,7 @@ def is_numpy_object(var):
     return type(var).__module__.startswith("numpy")
 
 
+supported_sequences = (tuple,list)
 
 def check_sequence(variables):
     """ensure that variables is one of supported_sequences or converts to one.
