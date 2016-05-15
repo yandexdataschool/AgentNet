@@ -7,12 +7,19 @@ RUN /bin/bash --login -c "\
     source activate rep_py2 && \ 
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
-    pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip\
+    pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip\
     "
-    
+RUN /bin/bash --login -c "\
+    source activate jupyterhub_py3 && \ 
+    pip install --upgrade pip && \
+    pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
+    pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip\
+    "
+
 RUN /bin/bash --login -c "\
     git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
-    cd AgentNet && python setup.py install &&\
     sed -i -e '3iln -s ~/AgentNet/examples /notebooks/agentnet_examples\' /root/install_modules.sh\
     "
     
