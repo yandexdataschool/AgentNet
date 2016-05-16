@@ -167,8 +167,9 @@ class BaseAgent(object):
             
             if initial_env_states == 'zeros':
                 
-                initial_env_states = [T.zeros((batch_size,)+size) 
-                                      for size in check_list(env.state_shapes)]
+                initial_env_states = [T.zeros((batch_size,)+size,
+                                             dtype=dtype) 
+                                      for size,dtype in zip(check_list(env.state_shapes),check_list(env.state_dtypes))]
             else:
                 initial_env_states = check_list(initial_env_states)
 

@@ -10,12 +10,12 @@ class FeedbackEnvironment(BaseEnvironment):
         """
         
     @property 
-    def state_size(self):
+    def state_shapes(self):
         """Environment state size"""
         return []
 
     @property 
-    def observation_size(self):
+    def observation_shapes(self):
         """Single observation size"""
         raise NotImplemented, "FeedbackEnvironment does not have a pre-defined observation size."
     

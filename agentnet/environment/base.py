@@ -48,7 +48,7 @@ class BaseEnvironment:
     @property 
     def state_shapes(self):
         """Environment state size: a single shape tuple or several such tuples in a list/tuple """
-        raise []
+        return []
         
     @property 
     def observation_shapes(self):
