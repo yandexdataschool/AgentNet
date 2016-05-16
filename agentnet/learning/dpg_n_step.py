@@ -101,7 +101,7 @@ def get_elementwise_objective_components(policy,
                                                        rewards,
                                                        is_alive,
                                                        n_steps = n_steps,
-                                                       state_values_after_end = state_values_after_end,
+                                                       optimal_state_values_after_end = state_values_after_end,
                                                        gamma_or_gammas = gamma_or_gammas,
                                                        dependencies = scan_dependencies,
                                                        strict = scan_strict
@@ -140,7 +140,7 @@ def get_elementwise_objective_components(policy,
     
     #critic loss
     reference_action_values = consider_constant(reference_action_values)
-    V_err_elwise = squared_error(reference_state_values,state_values)
+    V_err_elwise = squared_error(reference_action_values,action_values)
     
             
     return policy_loss_elwise*is_alive, V_err_elwise*is_alive

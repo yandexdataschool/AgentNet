@@ -36,7 +36,9 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         parameters:
          - observations - number of floatX flat observations or a list of observation inputs to mimic
          - actions - number of int32 scalar actions or a list of resolvers to mimic
-         - agent memories
+         - agent memories - number of agent states [batch,tick,unit] each or a list of memory layers to minic
+         - defaul_action_dtype - what is the dtype of actions if number of actions is given
+             - if actual layers are given, defaults to layer.output_dtype or float.
             
         To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
         
@@ -99,7 +101,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
                 create_shared(
                     "session.actions_history."+str(i),
                     np.zeros((10,5)+tuple(action.output_shape[1:])),
-                    dtype= get_layer_dtype(action,default_action_dtype)
+                    dtype= get_layer_dtype(action,theano.config.floatX)
                 )
                 for i,action in enumerate(actions)
             ]
