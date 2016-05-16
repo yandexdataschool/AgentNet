@@ -4,7 +4,7 @@ from ..utils import insert_dim
 
 from base import BaseAgent
 from ..environment.session_batch import SessionBatchEnvironment
-from ..environment.feedback import  FeedbackEnvironment
+from feedback import  FeedbackEnvironment
 
 
 from ..utils.format import supported_sequences,check_list
@@ -85,7 +85,8 @@ class Generator(BaseAgent):
             environment = FeedbackEnvironment()
         else:
             recorded_sequences = check_list(recorded_sequences)
-            environment = SessionBatchEnvironment(recorded_sequences)
+            obs_shapes = [obs.output_shape[1:] for obs in self.observation_layers]
+            environment = SessionBatchEnvironment(recorded_sequences,obs_shapes)
             
             
         if initial_actions == "zeros":

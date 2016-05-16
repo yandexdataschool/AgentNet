@@ -167,8 +167,8 @@ class BaseAgent(object):
             
             if initial_env_states == 'zeros':
                 
-                initial_env_states = [T.zeros([batch_size,size]) 
-                                      for size in check_list(env.state_size)]
+                initial_env_states = [T.zeros((batch_size,)+size) 
+                                      for size in check_list(env.state_shapes)]
             else:
                 initial_env_states = check_list(initial_env_states)
 
@@ -204,7 +204,7 @@ class BaseAgent(object):
             # we only need env state, prev observation and agent state to iterate on
             
             if env is not None:
-                n_env_states = len(check_list(env.state_size))
+                n_env_states = len(check_list(env.state_shapes))
             else:
                 n_env_states = 0
             
@@ -221,7 +221,7 @@ class BaseAgent(object):
             
             
             if env is not None: 
-                new_env_states,new_observations = env.get_action_results(env_states,new_actions,time_tick)
+                new_env_states,new_observations = env.get_action_results(env_states,new_actions)#,time_tick)
                 new_env_states = check_list(new_env_states)
                 new_observations = check_list(new_observations)
             else:
