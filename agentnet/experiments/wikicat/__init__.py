@@ -117,7 +117,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         if not os.path.isfile(dataset_path):
             print("loading dataset...")
             if sys.version_info[0] == 2:
-                from urllib.request import urlretrieve
+                from urllib import urlretrieve
             else:
                 from urllib.request import urlretrieve
 
