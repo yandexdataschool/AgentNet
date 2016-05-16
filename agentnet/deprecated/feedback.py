@@ -17,7 +17,7 @@ class FeedbackEnvironment(BaseEnvironment):
     @property 
     def observation_shapes(self):
         """Single observation size"""
-        raise NotImplemented, "FeedbackEnvironment does not have a pre-defined observation size."
+        raise [tuple()]
     
     def get_action_results(self,last_states,actions,time_i):
         """
