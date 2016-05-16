@@ -1,7 +1,11 @@
+import theano
 import theano.tensor as T
+import numpy as np
 
 import lasagne
 from .base import BaseResolver
+
+
 
 class EpsilonGreedyResolver(BaseResolver):
     """
@@ -11,11 +15,14 @@ class EpsilonGreedyResolver(BaseResolver):
         - takes random action with probability epsilon
     """
     
-    def __init__(self,incoming,epsilon,seed = 1234,**kwargs):
+    def __init__(self,incoming,epsilon=None,seed = 1234,**kwargs):
         """
             epsilon float scalar: probability of random choice instead of optimal one
             seed constant: - random seed
         """
+        if epsilon is None:
+            epsilon = theano.shared(np.float32(0.1),"e-greedy.epsilon")
+        
         self.epsilon = epsilon
         
         

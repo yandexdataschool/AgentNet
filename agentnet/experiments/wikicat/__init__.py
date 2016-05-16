@@ -141,6 +141,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         """load data into model"""
         set_shared(self.attributes,attrs_batch)
         set_shared(self.categories,categories_batch)
+        
     def load_random_batch(self,attrs,cats,batch_size=10):
         """load batch_size random samples from given data attributes and categories"""
         

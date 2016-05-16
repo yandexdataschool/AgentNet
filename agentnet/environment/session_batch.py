@@ -12,7 +12,9 @@ from ..utils.format import check_list
 from warnings import warn
 
 class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
-    def __init__(self,observations,actions=None,rewards=None,is_alive=None,preceding_agent_memory=None):
+    def __init__(self,observations,single_observation_shapes,
+                 actions=None,single_action_shapes="all_scalar",
+                 rewards=None,is_alive=None,preceding_agent_memory=None):
         """
         A generic pseudo-environment that replays sessions loaded on creation,
         ignoring agent actions completely.
@@ -35,12 +37,20 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
         with no additional computation.
         
         """
-        warn("SessionBatchEnvironment is currently in process of refactoring and is not tested")
         
         #setting environmental variables. Their shape is [batch_i,time_i,something]
         self.observations = check_list(observations)
+        self.single_observation_shapes = check_list(single_observation_shapes)
+        
+        for obs,obs_shape in zip(self.observations,self.single_observation_shapes):
+            assert obs.ndim == len(obs_shape)+2
+         
         if actions is not None:
             self.actions = check_list(actions)
+            self.single_action_shapes = single_action_shapes
+            if self.single_action_shapes =="all_scalar":
+                single_action_shapes = [tuple()]*len(self.actions)
+                
         self.rewards = rewards
         self.is_alive = is_alive
         
@@ -68,7 +78,7 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
     @property 
     def observation_shapes(self):
         """observation shapes"""
-        return [obs.get_value().shape[2:] for obs in self.observations]
+        return self.single_observation_shapes
     
     @property 
     def observation_dtypes(self):
@@ -77,7 +87,8 @@ class SessionBatchEnvironment(BaseEnvironment,BaseObjective):
     @property 
     def action_shapes(self):
         """action shapes"""
-        return [act.get_value().shape[2:] for act in self.actions]
+        assert self.actions is not None
+        return self.single_action_shapes
     @property 
     def action_dtypes(self):
         """action dtypes"""

@@ -8,7 +8,7 @@ import numpy as np
 from lasagne.objectives import squared_error
 
 
-from ..utils.mdp import get_end_indicator, get_action_Qvalues
+from helpers import get_end_indicator, get_action_Qvalues
 from ..utils.grad import consider_constant
 from ..utils import create_shared
 

@@ -120,13 +120,16 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             ]
             
         else:
+            if isinstance(agent_memories,dict):
+                agent_memories = agent_memories.keys()
+
             agent_memories = check_list(agent_memories)
             
             self.preceding_agent_memories = [
                 create_shared(
                     "session.prev_memory."+str(i),
-                    np.zeros((10,5)+tuple(mem.output_shape[1:]),
-                             dtype= get_type(mem)
+                    np.zeros((10,)+tuple(mem.output_shape[1:]),
+                             dtype= get_layer_dtype(mem)
                     ) 
                 )
                 for i,mem in enumerate(agent_memories)
@@ -292,8 +295,11 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         selected_actions = [ action_seq[selector] for action_seq in self.actions]
         selected_prev_memories = [ prev_memory[selector] for prev_memory in self.preceding_agent_memories]
         
-        return SessionBatchEnvironment(selected_observations,selected_actions,self.rewards[selector],
-                                       self.is_alive[selector],selected_prev_memories)
+        return SessionBatchEnvironment(selected_observations,self.observation_shapes,
+                                       selected_actions,self.action_shapes,
+                                       self.rewards[selector],
+                                       self.is_alive[selector],
+                                       selected_prev_memories)
 
     def sample_session_batch(self,max_n_samples,replace=False,selector_dtype='int32'):
         """
