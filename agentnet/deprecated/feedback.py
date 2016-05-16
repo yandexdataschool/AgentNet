@@ -17,9 +17,9 @@ class FeedbackEnvironment(BaseEnvironment):
     @property 
     def observation_shapes(self):
         """Single observation size"""
-        raise [tuple()]
+        return [tuple()]
     
-    def get_action_results(self,last_states,actions,time_i):
+    def get_action_results(self,last_states,actions):#,time_i):
         """
         computes environment state after processing agent's action
         arguments:
