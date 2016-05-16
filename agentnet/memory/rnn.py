@@ -5,7 +5,7 @@ import numpy as np
 
 from lasagne.layers import DenseLayer,NonlinearityLayer,ElemwiseMergeLayer,NonlinearityLayer
 from ..utils.format import check_list
-
+from ..utils.layers import clip_grads, add, mul,transform
 
 
 
@@ -15,11 +15,11 @@ from ..utils.format import check_list
 #Vanilla RNN cell
 
 def RNNCell(prev_state,
-                         input_or_inputs = [],
-                         nonlinearity = lasagne.nonlinearities.sigmoid,
-                         num_units = None,
-                         name = "YetAnotherRNNLayer",
-                         grad_clipping=5.):
+            input_or_inputs = [],
+            nonlinearity = lasagne.nonlinearities.sigmoid,
+            num_units = None,
+            name = "YetAnotherRNNLayer",
+            grad_clipping=5.):
     """
         
     Implements a one-step recurrent neural network (RNN) with arbitrary number of units.
@@ -70,7 +70,7 @@ def RNNCell(prev_state,
     
     
     #stack them
-    elwise_sum = ElemwiseSumLayer([hid_to_hid]+inputs_to_hid, name = name+".sum")
+    elwise_sum = add(*([hid_to_hid]+inputs_to_hid), name = name+".sum")
     
     #finally, apply nonlinearity
     
