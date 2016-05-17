@@ -9,12 +9,13 @@ RUN apt-get -y install swig #!This won't work with Box2D!
 
 
 RUN /bin/bash --login -c "\
-    source activate rep_py2 && \ 
+    source activate rep_py2 && \
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
     pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip &&\
-    git clone https://github.com/openai/gym && cd gym && pip install -e 'gym[all]' && cd .. && rm -rf gym\
+    git clone https://github.com/openai/gym && cd gym && \
+    pip install -e .[all] && pip install -e .[all] && cd .. && rm -rf gym\
     "
 RUN /bin/bash --login -c "\
     source activate jupyterhub_py3 && \ 
@@ -22,7 +23,8 @@ RUN /bin/bash --login -c "\
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
     pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip &&\
-    git clone https://github.com/openai/gym && cd gym && pip install -e 'gym[all]' && cd .. && rm -rf gym\
+    git clone https://github.com/openai/gym && cd gym && \
+    pip install -e .[all] && pip install -e .[all] && cd .. && rm -rf gym\
     "
 
 RUN /bin/bash --login -c "\
