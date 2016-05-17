@@ -118,7 +118,7 @@ class Recurrence(TupleLayer):
             if len(self.state_variables) >1:
                 warn("State_variables recommended type is OrderedDict.\n"\
                      "Otherwise, order of agent state outputs from get_sessions and get_agent_reaction methods\n"\
-                     "may depend on python configuration.\n Current order is:"+ str(self.state_variables.keys())+"\n"\
+                     "may depend on python configuration.\n Current order is:"+ str(list(self.state_variables.keys()))+"\n"\
                      "You may find OrderedDict in standard collections module: from collections import OrderedDict")
         
         self.delayed_states = delayed_states
@@ -131,7 +131,7 @@ class Recurrence(TupleLayer):
         #convert list to dict
         elif state_init in supported_sequences:
             assert len(state_init) == len(self.state_variables)
-            state_init = OrderedDict(zip(self.state_variables.keys(), state_init))
+            state_init = OrderedDict(list(zip(list(self.state_variables.keys()), state_init)))
             
         #cast to dict and save
         self.state_init = check_ordict(state_init)
@@ -167,7 +167,7 @@ class Recurrence(TupleLayer):
 
             #all state_init correspond to defined state variables
             for state_out in list(self.state_init.keys()):
-                assert state_out in self.state_variables.keys()
+                assert state_out in list(self.state_variables.keys())
 
             #all new_state+output dependencies (input layers) lie inside one-step recurrence
             all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
@@ -176,9 +176,8 @@ class Recurrence(TupleLayer):
             for layer in lasagne.layers.get_all_layers(all_outputs):
                 if type(layer) is InputLayer:
                     if layer not in all_inputs:
-                        raise ValueError, \
-                              "One of your network dependencies (%s) is not mentioned"\
-                              "as a Recurrence inputs"%(str(layer.name))
+                        raise ValueError("One of your network dependencies (%s) is not mentioned"\
+                              "as a Recurrence inputs"%(str(layer.name)))
         
         #verifying shapes (assertions)
         
@@ -190,7 +189,7 @@ class Recurrence(TupleLayer):
             assert tuple(layer_in.output_shape) == tuple(layer_out.output_shape)
         
             
-        for seq_onestep, seq_input in self.input_sequences.items():
+        for seq_onestep, seq_input in list(self.input_sequences.items()):
             seq_shape = tuple(seq_input.output_shape)
             step_shape = seq_shape[:1] + seq_shape[2:]
             assert tuple(seq_onestep.output_shape) == step_shape
@@ -251,11 +250,11 @@ class Recurrence(TupleLayer):
         
         
         # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
-        sequences = map(lambda seq: seq.swapaxes(1,0), sequences)
+        sequences = [seq.swapaxes(1,0) for seq in sequences]
         
         
         # create outputs_info for scan
-        initial_states = OrderedDict(zip(self.state_init,initial_states))
+        initial_states = OrderedDict(list(zip(self.state_init,initial_states)))
         
         def get_initial_state(state_out_layer):
             """ pick dedicated initial state or create zeros of appropriate shape and dtype"""
@@ -272,7 +271,7 @@ class Recurrence(TupleLayer):
             return initial_state
         
         
-        initial_state_variables = map(get_initial_state, self.state_variables)
+        initial_state_variables = list(map(get_initial_state, self.state_variables))
         
         outputs_info = initial_state_variables + [None]*len(self.tracked_outputs)
         
@@ -287,13 +286,13 @@ class Recurrence(TupleLayer):
                                                                                )
 
             #make dicts of prev_states and inputs
-            prev_states_dict = OrderedDict(zip(self.state_variables.keys(),prev_states))
+            prev_states_dict = OrderedDict(list(zip(list(self.state_variables.keys()),prev_states)))
             
             input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
             
             assert len(input_layers)== len(nonsequences+sequence_slices)
             
-            inputs_dict = OrderedDict(zip(input_layers,nonsequences+sequence_slices))
+            inputs_dict = OrderedDict(list(zip(input_layers,nonsequences+sequence_slices)))
             
             #call one step recurrence
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict,**recurrence_flags)
@@ -322,7 +321,7 @@ class Recurrence(TupleLayer):
         #handle delayed_states
         #selectively shift state sequences by 1 tick into the past, padding with their initializers 
         for i in range(len(state_seqs)):
-            if self.state_variables.keys()[i] in self.delayed_states:
+            if list(self.state_variables.keys())[i] in self.delayed_states:
                 
                 state_seq = state_seqs[i]
                 state_init = initial_state_variables[i]
@@ -344,7 +343,7 @@ class Recurrence(TupleLayer):
                                                
     def get_output_shape_for(self, input_shapes,**kwargs):
         """returns shapes of each respective output"""
-        shapes = [ tuple(layer.output_shape) for layer in self.state_variables.keys() + self.tracked_outputs]
+        shapes = [ tuple(layer.output_shape) for layer in list(self.state_variables.keys()) + self.tracked_outputs]
         return [ shape[:1]+(self.n_steps,)+shape[1:] for shape in shapes]
         
                             
@@ -379,7 +378,7 @@ class Recurrence(TupleLayer):
         if not isinstance(prev_states,dict):
             #if only one layer given, make a single-element list of it
             prev_states = check_list(prev_states)
-            prev_states = OrderedDict(zip(self.state_variables.keys(),prev_states))
+            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()),prev_states)))
         else:
             prev_states = check_ordict(prev_states)
         
@@ -388,7 +387,7 @@ class Recurrence(TupleLayer):
         #input map
         ##prev state input layer: prev state expression
         prev_states_kv = [(self.state_variables[s],prev_states[s]) 
-                          for s in self.state_variables.keys()] #prev states
+                          for s in list(self.state_variables.keys())] #prev states
 
 
         
@@ -402,7 +401,7 @@ class Recurrence(TupleLayer):
             
             #if only one layer given, make a single-element list of it
             current_inputs = check_list(current_inputs)
-            current_inputs = OrderedDict(zip(input_layers,current_inputs))
+            current_inputs = OrderedDict(list(zip(input_layers,current_inputs)))
         else:
             current_inputs = check_ordict(current_inputs)
             
@@ -449,7 +448,7 @@ class Recurrence(TupleLayer):
         
         n_states = len(self.state_variables)
         
-        state_dict = OrderedDict(zip( self.state_variables,outputs[:n_states]))
+        state_dict = OrderedDict(list(zip( self.state_variables,outputs[:n_states])))
         
         return state_dict, outputs[n_states:]
         

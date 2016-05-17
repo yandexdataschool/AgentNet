@@ -100,7 +100,7 @@ class TupleLayer(MergeLayer):
         if type(ind) is slice:            
             return list(self)[ind]
         
-        assert type(ind) in (int,long)
+        assert type(ind) == int
         
         item_layer = ExpressionLayer(self,lambda values:values[ind], 
                                output_shape = lambda shapes:shapes[ind],

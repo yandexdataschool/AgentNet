@@ -29,7 +29,7 @@ import numpy as np
 from lasagne.objectives import squared_error
 
 
-from helpers import get_n_step_value_reference, get_end_indicator, get_action_Qvalues
+from .helpers import get_n_step_value_reference, get_end_indicator, get_action_Qvalues
 from ..utils.grad import consider_constant
 
 

@@ -13,6 +13,7 @@ from ..utils.format import is_layer,check_list,check_tuple,supported_sequences
 
 from warnings import warn
 from operator import add
+from functools import reduce
 
 
 class GateLayer(TupleLayer):
@@ -55,20 +56,20 @@ class GateLayer(TupleLayer):
         
         #check channel types
         for chl in self.channels:
-            assert is_layer(chl) or (type(chl) in (int,long))
+            assert is_layer(chl) or (type(chl) == int)
         
         
         
         #separate layers from non-layers
-        self.channel_layers = filter(is_layer, self.channels)
-        self.channel_ints = filter(lambda v: not is_layer(v),self.channels)
+        self.channel_layers = list(filter(is_layer, self.channels))
+        self.channel_ints = [v for v in self.channels if not is_layer(v)]
         
         
         
         #flatten layers to 2 dimensions
         for i in range(len(self.channel_layers)):
             layer = self.channel_layers[i]
-            if type(layer) in (int,long):
+            if type(layer) == int:
                 continue
                 
             lname = layer.name or ""
@@ -181,7 +182,7 @@ class GateLayer(TupleLayer):
             
                 
         #a list where i-th element contains weights[i-th_gate_controller] for all outputs stacked
-        self.gate_W_stacked = map(lambda weights:T.concatenate(weights,axis=1),self.gate_W)        
+        self.gate_W_stacked = [T.concatenate(weights,axis=1) for weights in self.gate_W]        
         #a list of biases for the respective outputs stacked
         self.gate_b_stacked = T.concatenate(self.gate_b)
         
@@ -242,7 +243,7 @@ class GateLayer(TupleLayer):
                 next_layer_id+=1
                 gated_channels.append(gate*chl_value)
             else:
-                assert type(chl_layer_or_int) in (int,long)
+                assert type(chl_layer_or_int) == int
                 gated_channels.append(gate)
         #if user only wants one channel, give him that channel instead of a one-item list
         if self.single_channel:

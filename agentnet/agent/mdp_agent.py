@@ -103,21 +103,21 @@ class MDPAgent(object):
         
         
         #add state changes to memory dict
-        all_state_pairs = self.state_variables.items() +\
-                          zip(new_state_outputs, prev_env_states) +\
-                          zip(new_observation_outputs, self.observation_layers)
+        all_state_pairs = list(self.state_variables.items()) +\
+                          list(zip(new_state_outputs, prev_env_states)) +\
+                          list(zip(new_observation_outputs, self.observation_layers))
         
         
         #compose state initialization dict
         state_init_pairs = []
         for initializers,layers in zip(
                     [initial_env_states,initial_observations, initial_hidden],
-                    [new_state_outputs, new_observation_outputs, self.state_variables.keys()]
+                    [new_state_outputs, new_observation_outputs, list(self.state_variables.keys())]
             ):
             if initializers == "zeros":
                 continue  
             elif isinstance(initializers,dict):
-                state_init_pairs += initializers.items()
+                state_init_pairs += list(initializers.items())
             else:
                 initializers = check_list(initializers)
                 assert len(initializers) == len(layers)
@@ -187,8 +187,8 @@ class MDPAgent(object):
         if initial_hidden == "zeros":
             initial_hidden = {}
         elif isinstance(initial_hidden,dict):
-            for layer in initial_hidden.keys():
-                assert layer in self.state_variables.keys()
+            for layer in list(initial_hidden.keys()):
+                assert layer in list(self.state_variables.keys())
             initial_hidden = check_ordict(initial_hidden)
             
         else:
@@ -196,12 +196,12 @@ class MDPAgent(object):
             assert len(initial_hidden) == len(layers)
             
             state_init_pairs = []
-            for layer,init in zip(self.state_variables.keys(),initial_hidden):
+            for layer,init in zip(list(self.state_variables.keys()),initial_hidden):
                 if init is not None:
                     state_init_pairs.append([layer,init])
             initial_hidden = OrderedDict(state_init_pairs)
         
-        for layer,init in initial_hidden.items():
+        for layer,init in list(initial_hidden.items()):
             #replace theano variables with input layers for them
             if not isinstance(init, lasagne.layers.Layer):
                 init_layer = InputLayer(layer.output_shape,
@@ -225,7 +225,7 @@ class MDPAgent(object):
                                         input_var = obs_seq)
                 
                 observation_sequences[i] = obs_seq
-        observation_sequences = OrderedDict(zip(self.observation_layers, observation_sequences))
+        observation_sequences = OrderedDict(list(zip(self.observation_layers, observation_sequences)))
         
         
         #create the recurrence
@@ -354,7 +354,7 @@ class MDPAgent(object):
                                      len(self.action_layers),
                                     )
         
-        agent_states = OrderedDict(zip(self.state_variables.keys(),agent_states))        
+        agent_states = OrderedDict(list(zip(list(self.state_variables.keys()),agent_states)))        
         
         #if user asked for single value and not one-element list, unpack the list
         if type(environment.state_shapes) not in supported_sequences:
@@ -391,7 +391,7 @@ class MDPAgent(object):
         if not hasattr(prev_states,'keys'):
             #if only one layer given, make a single-element list of it
             prev_states = check_list(prev_states)
-            prev_states = OrderedDict(zip(self.state_variables.keys(),prev_states))
+            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()),prev_states)))
         else:
             prev_states = check_ordict(prev_states)
             
@@ -410,10 +410,10 @@ class MDPAgent(object):
         #compose input map
         
         ##state input layer: prev state
-        prev_states_kv = [(self.state_variables[s],prev_states[s]) for s in self.state_variables.keys()] #prev states
+        prev_states_kv = [(self.state_variables[s],prev_states[s]) for s in list(self.state_variables.keys())] #prev states
         
         ##observation input layer: observation value
-        observation_kv = zip(self.observation_layers,current_observations)
+        observation_kv = list(zip(self.observation_layers,current_observations))
         
         input_map = OrderedDict(prev_states_kv + observation_kv)
         
@@ -446,7 +446,7 @@ class MDPAgent(object):
 
         # inputs to all agent memory states (usng lasagne defaults, may use any theano inputs)
         applier_memories = OrderedDict([ (new_st,prev_st.input_var)
-                                        for new_st, prev_st in self.state_variables.items()
+                                        for new_st, prev_st in list(self.state_variables.items())
                                        ])
 
         #one step function
