@@ -13,18 +13,14 @@ RUN /bin/bash --login -c "\
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip &&\
-    git clone https://github.com/openai/gym && cd gym && \
-    pip install -e .[all] && pip install -e .[all] && cd .. && rm -rf gym\
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip \
     "
 RUN /bin/bash --login -c "\
     source activate jupyterhub_py3 && \ 
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip &&\
-    git clone https://github.com/openai/gym && cd gym && \
-    pip install -e .[all] && pip install -e .[all] && cd .. && rm -rf gym\
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip \
     "
 
 RUN /bin/bash --login -c "\
