@@ -8,14 +8,14 @@ RUN /bin/bash --login -c "\
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip\
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/py2to3.zip\
     "
 RUN /bin/bash --login -c "\
     source activate jupyterhub_py3 && \ 
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip\
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/py2to3.zip\
     "
 
 RUN /bin/bash --login -c "\
