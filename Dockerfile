@@ -19,7 +19,7 @@ RUN /bin/bash --login -c "\
     "
 
 RUN /bin/bash --login -c "\
-    git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
+    git clone https://github.com/yandexdataschool/AgentNet -b 2to3 &&\
     sed -i -e '3iln -s ~/AgentNet/examples /notebooks/agentnet_examples\' /root/install_modules.sh\
     "
     
