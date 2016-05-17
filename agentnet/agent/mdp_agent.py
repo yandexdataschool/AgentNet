@@ -136,7 +136,6 @@ class MDPAgent(object):
                                         name = "env.initial_values_for."+(layer.name or "state"),
                                         input_var = init)
                 state_init_pairs[i][1] = init_layer
-            
         
         #create the recurrence
         recurrence = Recurrence(

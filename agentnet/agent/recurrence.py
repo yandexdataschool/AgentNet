@@ -161,7 +161,7 @@ class Recurrence(TupleLayer):
                          list(self.state_init.keys()) +\
                          list(self.input_nonsequences.keys()) +\
                          list(self.input_sequences.keys())
-
+                        
             #all recurrent graph inputs and prev_states are unique (no input/prev_state is used more than once)
             assert len(all_inputs) == len(set(all_inputs))
 
@@ -176,7 +176,7 @@ class Recurrence(TupleLayer):
             for layer in lasagne.layers.get_all_layers(all_outputs):
                 if type(layer) is InputLayer:
                     if layer not in all_inputs:
-                        raise ValueError("One of your network dependencies (%s) is not mentioned"\
+                        raise ValueError("One of your network dependencies (%s) is not mentioned "\
                               "as a Recurrence inputs"%(str(layer.name)))
         
         #verifying shapes (assertions)
@@ -340,8 +340,8 @@ class Recurrence(TupleLayer):
         return state_seqs+ output_seqs
                         
                         
-                                               
-    def get_output_shape_for(self, input_shapes,**kwargs):
+    @property
+    def output_shapes(self):
         """returns shapes of each respective output"""
         shapes = [ tuple(layer.output_shape) for layer in list(self.state_variables.keys()) + self.tracked_outputs]
         return [ shape[:1]+(self.n_steps,)+shape[1:] for shape in shapes]

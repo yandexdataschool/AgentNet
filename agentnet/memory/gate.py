@@ -252,7 +252,8 @@ class GateLayer(TupleLayer):
         #otherwise return list
         return gated_channels
 
-    def get_output_shape_for(self, input_shapes):
+    @property
+    def output_shapes(self):
         """
         a list of shapes of all gates
         parameters: 

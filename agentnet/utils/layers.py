@@ -58,19 +58,27 @@ class TupleLayer(MergeLayer):
     self.get_output_shape must return [(None,25),(None,15,5,7)]
     """
     
-    def get_output_shape_for(self,input_shape):
+    @property
+    def output_shapes(self):
         """
         One must implement this method when inheriting from TupleLayer.
         TupleLayer's shape must be a sequence of shapes for each output (depth-2 list or tuple)
         """
         raise NotImplementedError
 
+    def get_output_shape_for(self,input_shape):
+        """
+        This is a mock output_shape that should only be used for service reasons.
+        To get actual shapes, consider self.output_shapes
+        """
+        return (len(self.output_shapes),)
+        
     
     @property
     def element_names(self):
         name = (self.name or "tuple layer")
         return [name+"[{}]".format(i) 
-                for i in range(len(self.output_shape))]
+                for i in range(len(self.output_shapes))]
     
     @property
     def disable_tuple(self):
@@ -85,7 +93,7 @@ class TupleLayer(MergeLayer):
     
     def __len__(self):
         """an amount of output layers in a tuple"""
-        return len(self.output_shape) if not self.disable_tuple else 1
+        return len(self.output_shapes) if not self.disable_tuple else 1
     
     def __getitem__(self, ind):
         """ returns a lasagne layer that yields i-th output of the tuple.
@@ -103,7 +111,7 @@ class TupleLayer(MergeLayer):
         assert type(ind) == int
         
         item_layer = ExpressionLayer(self,lambda values:values[ind], 
-                               output_shape = lambda shapes:shapes[ind],
+                               output_shape = self.output_shapes[ind],
                                name = self.element_names[ind])
         
         item_layer.output_dtype = self.output_dtype[ind]
