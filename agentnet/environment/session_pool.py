@@ -1,27 +1,26 @@
 from theano import tensor as T
 
-
 import numpy as np
 import theano
 
 from collections import OrderedDict
-
 
 from .base import BaseEnvironment
 from .session_batch import SessionBatchEnvironment
 
 from ..objective import BaseObjective
 
-from ..utils import create_shared,set_shared,insert_dim
+from ..utils import create_shared, set_shared, insert_dim
 from ..utils.format import check_list
 from ..utils.layers import get_layer_dtype
 
 from warnings import warn
 
-class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
-    def __init__(self,observations =1,
+
+class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
+    def __init__(self, observations=1,
                  actions=1,
-                 agent_memories = 1,
+                 agent_memories=1,
                  default_action_dtype="int32",
                  rng_seed=1337):
         """
@@ -37,7 +36,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
          - observations - number of floatX flat observations or a list of observation inputs to mimic
          - actions - number of int32 scalar actions or a list of resolvers to mimic
          - agent memories - number of agent states [batch,tick,unit] each or a list of memory layers to minic
-         - defaul_action_dtype - what is the dtype of actions if number of actions is given
+         - default_action_dtype - what is the dtype of actions if number of actions is given
              - if actual layers are given, defaults to layer.output_dtype or float.
             
         To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
@@ -47,144 +46,128 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         During experience replay sessions,
          - states are replaced with a fake one-unit state
          - observations, actions and rewards match original ones
-         - agent memory states, Qvalues and all in-agent expressions (but for actions) will correspond to what
+         - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to what
            agent thinks NOW about the replay.
         
         
-        Allthough it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
+        Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
         with no additional computation.
         
         """
-        #setting environmental variables. Their shape is [batch_i,time_i,something]
-        
-        
-        #observations
+        # setting environmental variables. Their shape is [batch_i,time_i,something]
+
+        # observations
         if type(observations) is int:
-            observation_init = np.zeros([10,5,2])
+            observation_init = np.zeros([10, 5, 2])
             self.observations = [
-                create_shared("sessions.observations_history."+str(i),
+                create_shared("sessions.observations_history." + str(i),
                               observation_init,
                               dtype=theano.config.floatX)
                 for i in range(observations)
-            ]
+                ]
         else:
             observations = check_list(observations)
             self.observations = [
                 create_shared(
-                    "sessions.observations_history."+str(i),
-                    np.zeros(    
-                        (10,5)+tuple(obs.output_shape[1:]),
-                        dtype=  get_layer_dtype(obs)
-                    ) 
-                )
-                for i,obs in enumerate(observations)
-            ]
- 
-        #padded observations (to avoid index error when interacting with agent)
+                    "sessions.observations_history." + str(i),
+                    np.zeros((10, 5) + tuple(obs.output_shape[1:]), dtype=get_layer_dtype(obs)))
+                for i, obs in enumerate(observations)
+                ]
+
+        # padded observations (to avoid index error when interacting with agent)
         self.padded_observations = [
-            T.concatenate([obs,T.zeros_like(insert_dim(obs[:,0],1))],axis=1)
+            T.concatenate([obs, T.zeros_like(insert_dim(obs[:, 0], 1))], axis=1)
             for obs in self.observations
             ]
-        
-        
-        
-        #actions log
+
+        # actions log
         if type(actions) is int:
             self.actions = [
-                create_shared("session.actions_history."+str(i),np.zeros([10,5]),dtype=default_action_dtype)
+                create_shared("session.actions_history." + str(i), np.zeros([10, 5]), dtype=default_action_dtype)
                 for i in range(actions)
-            ]
-            
+                ]
+
         else:
             actions = check_list(actions)
             self.actions = [
                 create_shared(
-                    "session.actions_history."+str(i),
-                    np.zeros((10,5)+tuple(action.output_shape[1:])),
-                    dtype= get_layer_dtype(action,theano.config.floatX)
+                    "session.actions_history." + str(i),
+                    np.zeros((10, 5) + tuple(action.output_shape[1:])),
+                    dtype=get_layer_dtype(action, theano.config.floatX)
                 )
-                for i,action in enumerate(actions)
-            ]
+                for i, action in enumerate(actions)
+                ]
 
-        
-            
-        
-        #agent memory at state 0: floatX[batch_i,unit]
+        # agent memory at state 0: floatX[batch_i,unit]
         if type(agent_memories) is int:
-            memory_init = np.zeros([10,5])
+            memory_init = np.zeros([10, 5])
             self.preceding_agent_memories = [
-                create_shared("session.prev_memory."+str(i),
+                create_shared("session.prev_memory." + str(i),
                               memory_init,
                               dtype=theano.config.floatX)
                 for i in range(agent_memories)
-            ]
-            
+                ]
+
         else:
-            if isinstance(agent_memories,dict):
+            if isinstance(agent_memories, dict):
                 agent_memories = list(agent_memories.keys())
 
             agent_memories = check_list(agent_memories)
-            
+
             self.preceding_agent_memories = [
                 create_shared(
-                    "session.prev_memory."+str(i),
-                    np.zeros((10,)+tuple(mem.output_shape[1:]),
-                             dtype= get_layer_dtype(mem)
-                    ) 
+                    "session.prev_memory." + str(i),
+                    np.zeros((10,) + tuple(mem.output_shape[1:]),
+                             dtype=get_layer_dtype(mem)
+                             )
                 )
-                for i,mem in enumerate(agent_memories)
-            ]
-            
+                for i, mem in enumerate(agent_memories)
+                ]
 
-        #rewards
-        self.rewards = create_shared("session.rewards_history",np.zeros([10,5]),dtype=theano.config.floatX)
-        
-        #is_alive
-        self.is_alive = create_shared("session.is_alive",np.ones([10,5]),dtype='uint8')
-        
-        
-        
-        #shapes
+        # rewards
+        self.rewards = create_shared("session.rewards_history", np.zeros([10, 5]), dtype=theano.config.floatX)
+
+        # is_alive
+        self.is_alive = create_shared("session.is_alive", np.ones([10, 5]), dtype='uint8')
+
+        # shapes
         self.batch_size = self.pool_size = self.rewards.shape[0]
-        self.sequence_length =self.rewards.shape[1]
-        
-        #rng used to .sample_session_batch
+        self.sequence_length = self.rewards.shape[1]
+
+        # rng used to .sample_session_batch
         self.rng = T.shared_randomstreams.RandomStreams(rng_seed)
 
-        
-    @property 
+    @property
     def state_shapes(self):
         """Environment state sizes. In this case, it's a timer"""
         return [tuple()]
+
     @property
     def state_dtypes(self):
         """environment state dtypes. In this case, it's a timer"""
         return ["int32"]
-    
-    
-    @property 
+
+    @property
     def observation_shapes(self):
         """observation shapes"""
         return [obs.get_value().shape[2:] for obs in self.observations]
-    
-    @property 
+
+    @property
     def observation_dtypes(self):
         """observation dtypes"""
         return [obs.dtype for obs in self.observations]
-    @property 
+
+    @property
     def action_shapes(self):
         """action shapes"""
         return [act.get_value().shape[2:] for act in self.actions]
-    @property 
+
+    @property
     def action_dtypes(self):
         """action dtypes"""
         return [act.dtype for act in self.actions]
-    
-    
-    
-    
-    
-    def get_action_results(self,last_states,actions):
+
+    def get_action_results(self, last_states, actions):
         """
         computes environment state after processing agent's action
         arguments:
@@ -195,14 +178,14 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
         time_i = check_list(last_states)[0]
-        
+
         batch_range = T.arange(time_i.shape[0])
-        
-        new_observations = [obs[batch_range,time_i+1] 
-                               for obs in self.padded_observations]
-        return [time_i+1],new_observations
-        
-    def get_reward(self,session_states,session_actions,batch_i):
+
+        new_observations = [obs[batch_range, time_i + 1]
+                            for obs in self.padded_observations]
+        return [time_i + 1], new_observations
+
+    def get_reward(self, session_states, session_actions, batch_i):
         """
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
@@ -212,74 +195,72 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         returns:
             reward float[batch_id]: reward for taking action from the given state
         """
-        warn("Warning - a sesssion pool has all the rewards already stored as .rewards property."\
+        warn("Warning - a session pool has all the rewards already stored as .rewards property."
              "Recomputing them this way is probably just a slower way of calling your_session_pool.rewards")
-        return self.rewards[batch_i,:]
-    
-    
-    
-    
-    def load_sessions(self,observation_sequences,action_sequences,reward_seq,is_alive=None,prev_memories=None):
+        return self.rewards[batch_i, :]
+
+    def load_sessions(self, observation_sequences, action_sequences, reward_seq, is_alive=None, prev_memories=None):
         """
         loads a batch of sessions into env. The loaded sessions are that used during agent interactions
         """
         observation_sequences = check_list(observation_sequences)
         action_sequences = check_list(action_sequences)
-        
+
         assert len(observation_sequences) == len(self.observations)
         assert len(action_sequences) == len(self.actions)
         if prev_memories is not None:
             assert len(prev_memories) == len(self.preceding_agent_memories)
-        
-        for observation_var,observation_seq in zip(self.observations,observation_sequences):
-            set_shared(observation_var,observation_seq)
-        for action_var, action_seq in zip(self.actions,action_sequences):
-            set_shared(action_var,action_seq)
-            
-        set_shared(self.rewards,reward_seq)
-        
+
+        for observation_var, observation_seq in zip(self.observations, observation_sequences):
+            set_shared(observation_var, observation_seq)
+        for action_var, action_seq in zip(self.actions, action_sequences):
+            set_shared(action_var, action_seq)
+
+        set_shared(self.rewards, reward_seq)
+
         if is_alive is not None:
-            set_shared(self.is_alive,is_alive)
-        
+            set_shared(self.is_alive, is_alive)
+
         if prev_memories is not None:
-            for prev_memory_var,prev_memory_value in zip(self.preceding_agent_memories,prev_memories):
-                set_shared(prev_memory_var,prev_memory_value)
-    
-    def get_session_updates(self,observation_seq,action_seq,reward_seq,is_alive=None,prev_memory=None,cast_dtypes=True):
+            for prev_memory_var, prev_memory_value in zip(self.preceding_agent_memories, prev_memories):
+                set_shared(prev_memory_var, prev_memory_value)
+
+    def get_session_updates(self, observation_sequences, action_sequences, reward_seq, is_alive=None, prev_memory=None,
+                            cast_dtypes=True):
         """
         returns a dictionary of updates that will set shared variables to argument state
         is cast_dtypes is True, casts all updates to the dtypes of their respective variables
         """
         assert len(observation_sequences) == len(self.observations)
         assert len(action_sequences) == len(self.actions)
-        if prev_memories is not None:
-            assert len(prev_memories) == len(self.preceding_agent_memories)
-        
-        
+        if prev_memory is not None:
+            assert len(prev_memory) == len(self.preceding_agent_memories)
+
         updates = OrderedDict()
-        
-        for observation_var,observation_seq in zip(self.observations,observation_sequences):
-            updates[observation_var] = observation_seq
-        for action_var, action_seq in zip(self.actions,action_sequences):
-            updates[action_var] = action_seq
-            
+
+        for observation_var, observation_sequences in zip(self.observations, observation_sequences):
+            updates[observation_var] = observation_sequences
+        for action_var, action_sequences in zip(self.actions, action_sequences):
+            updates[action_var] = action_sequences
+
         updates[self.rewards] = reward_seq
-        
+
         if is_alive is not None:
             updates[self.is_alive] = is_alive
-        
-        if prev_memories is not None:
-            for prev_memory_var,prev_memory_value in zip(self.preceding_agent_memories,prev_memories):
+
+        if prev_memory is not None:
+            for prev_memory_var, prev_memory_value in zip(self.preceding_agent_memories, prev_memory):
                 updates[prev_memory_var] = prev_memory
-                
+
         if cast_dtypes:
             casted_updates = OrderedDict({})
-            for var,upd in list(updates.items()):
+            for var, upd in list(updates.items()):
                 casted_updates[var] = upd.astype(var.dtype)
             updates = casted_updates
-            
+
         return updates
-    def select_session_batch(self,selector):
+
+    def select_session_batch(self, selector):
         """
         returns SessionBatchEnvironment with sessions (observations,actions,rewards)
         from pool at given indices
@@ -291,17 +272,17 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         
         
         """
-        selected_observations = [ observation_seq[selector] for observation_seq in self.observations]
-        selected_actions = [ action_seq[selector] for action_seq in self.actions]
-        selected_prev_memories = [ prev_memory[selector] for prev_memory in self.preceding_agent_memories]
-        
-        return SessionBatchEnvironment(selected_observations,self.observation_shapes,
-                                       selected_actions,self.action_shapes,
+        selected_observations = [observation_seq[selector] for observation_seq in self.observations]
+        selected_actions = [action_seq[selector] for action_seq in self.actions]
+        selected_prev_memories = [prev_memory[selector] for prev_memory in self.preceding_agent_memories]
+
+        return SessionBatchEnvironment(selected_observations, self.observation_shapes,
+                                       selected_actions, self.action_shapes,
                                        self.rewards[selector],
                                        self.is_alive[selector],
                                        selected_prev_memories)
 
-    def sample_session_batch(self,max_n_samples,replace=False,selector_dtype='int32'):
+    def sample_session_batch(self, max_n_samples, replace=False, selector_dtype='int32'):
         """
         returns SessionBatchEnvironment with sessions(observations,actions,rewards)
         that will be sampled uniformly from this session pool.
@@ -316,10 +297,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
         if replace:
             n_samples = max_n_samples
         else:
-            n_samples = T.minimum(max_n_samples,self.pool_size)
-            
-        sample_ids = self.rng.choice(size = (n_samples,), a = self.pool_size,dtype=selector_dtype,replace=replace)
+            n_samples = T.minimum(max_n_samples, self.pool_size)
+
+        sample_ids = self.rng.choice(size=(n_samples,), a=self.pool_size, dtype=selector_dtype, replace=replace)
         return self.select_session_batch(sample_ids)
-        
-        
-        
