@@ -185,7 +185,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                             for obs in self.padded_observations]
         return [time_i + 1], new_observations
 
-    def get_reward(self, session_states, session_actions, batch_i):
+    def get_reward(self, session_states, session_actions, batch_id):
         """
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
@@ -197,7 +197,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         """
         warn("Warning - a session pool has all the rewards already stored as .rewards property."
              "Recomputing them this way is probably just a slower way of calling your_session_pool.rewards")
-        return self.rewards[batch_i, :]
+        return self.rewards[batch_id, :]
 
     def load_sessions(self, observation_sequences, action_sequences, reward_seq, is_alive=None, prev_memories=None):
         """

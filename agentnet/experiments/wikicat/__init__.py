@@ -209,7 +209,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
         return new_state, observation
 
-    def get_reward(self,session_states,session_actions,batch_i):
+    def get_reward(self, session_states, session_actions, batch_id):
         """
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
@@ -236,7 +236,7 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
         action_is_categorical = in1d(session_actions, self.category_action_ids)
                 
-        response = self.joint_data[batch_i,session_actions].ravel()
+        response = self.joint_data[batch_id, session_actions].ravel()
         
         at_least_one_category_guessed = T.any(action_is_categorical[:end_tick] & (response[:end_tick]>0))
 

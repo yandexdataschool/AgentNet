@@ -163,7 +163,7 @@ class BooleanReasoningEnvironment(BaseObjective, BaseEnvironment):
 
         return new_state, observation
 
-    def get_reward(self, state_sequences, action_sequences, batch_i):
+    def get_reward(self, state_sequences, action_sequences, batch_id):
         """
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
@@ -184,7 +184,7 @@ class BooleanReasoningEnvironment(BaseObjective, BaseEnvironment):
         has_finished_now = T.eq(action_sequence, self.end_action_id)
         action_is_categorical = in1d(action_sequence, self.category_action_ids)
 
-        response = self.joint_data[batch_i, action_sequence].ravel()
+        response = self.joint_data[batch_id, action_sequence].ravel()
 
         # categorical and attributes
         reward_for_intermediate_action = T.switch(
