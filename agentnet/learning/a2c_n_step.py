@@ -1,44 +1,45 @@
-
-__doc__="""
-N-step Advantage Actor-Critic (A2c) implementation.\nWorks with action probabilities and state values instead of Q-values
+"""
+N-step Advantage Actor-Critic (A2c) implementation.
+Works with action probabilities and state values instead of Q-values.
 
 Works with discrete action space.
 
 Follows the article http://arxiv.org/pdf/1602.01783v1.pdf 
 """
 
-
 import theano
 import theano.tensor as T
-import numpy as np
-
 from lasagne.objectives import squared_error
 
-from ..utils.grad import consider_constant
 from .helpers import get_n_step_value_reference, get_end_indicator, get_action_Qvalues
+from ..utils.grad import consider_constant
 
 
-def get_elementwise_objective(policy,state_values,actions,rewards,
-                              is_alive = "always",
-                              n_steps = None,
-                              gamma_or_gammas = 0.99,
-                              force_values_after_end = True,
-                              state_values_after_end = "zeros",
-                              consider_value_reference_constant = True,
+def get_elementwise_objective(policy,
+                              state_values,
+                              actions,
+                              rewards,
+                              is_alive="always",
+                              n_steps=None,
+                              gamma_or_gammas=0.99,
+                              force_values_after_end=True,
+                              state_values_after_end="zeros",
+                              consider_value_reference_constant=True,
                               consider_predicted_value_constant=True,
-                              scan_dependencies = [], scan_strict = True,
-                              min_log_proba = -1e50):
+                              scan_dependencies=[],
+                              scan_strict=True,
+                              min_log_proba=-1e50):
     """
-    returns crossentropy-like objective function for Actor-Critic method
+    returns cross-entropy-like objective function for Actor-Critic method
 
-        L_policy = - log(policy)*(Vreference - const(V))
+        L_policy = - log(policy) * (V_reference - const(V))
         L_V = (V - Vreference)^2
             
     parameters:
     
         policy [batch,tick,action_id] - predicted action probabilities
         state_values [batch,tick] - predicted state values
-        actions [batch,tick] - commited actions
+        actions [batch,tick] - committed actions
         rewards [batch,tick] - immediate rewards for taking actions at given time ticks
         
         is_alive [batch,tick] - whether given session is still active at given tick. Defaults to always active.
@@ -67,57 +68,47 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         elementwise sum of policy_loss + state_value_loss
 
     """
-    
-    
-    #get reference values via Q-learning algorithm
-    reference_state_values = get_n_step_value_reference(state_values,rewards,is_alive,
-                                              n_steps = n_steps,
-                                              optimal_state_values_after_end = state_values_after_end,
-                                              gamma_or_gammas = gamma_or_gammas,
-                                              dependencies = scan_dependencies,
-                                              strict = scan_strict
-                                             )    
-    
-    
-    #if we have to set after_end values
+
+    # get reference values via Q-learning algorithm
+    reference_state_values = get_n_step_value_reference(state_values, rewards, is_alive,
+                                                        n_steps=n_steps,
+                                                        optimal_state_values_after_end=state_values_after_end,
+                                                        gamma_or_gammas=gamma_or_gammas,
+                                                        dependencies=scan_dependencies,
+                                                        strict=scan_strict
+                                                        )
+
+    # if we have to set after_end values
     if is_alive != "always" and force_values_after_end:
-        #if asked to force reference_Q[end_tick+1,a] = 0, do it
-        #note: if agent is always alive, this is meaningless
-        
-        #set future rewards at session end to rewards+qvalues_after_end
-        end_ids = get_end_indicator(is_alive,force_end_at_t_max = True).nonzero()
+        # if asked to force reference_Q[end_tick+1,a] = 0, do it
+        # note: if agent is always alive, this is meaningless
+
+        # set future rewards at session end to rewards+qvalues_after_end
+        end_ids = get_end_indicator(is_alive, force_end_at_t_max=True).nonzero()
 
         if state_values_after_end == "zeros":
             # "set reference state values at end action ids to just the immediate rewards"
-            reference_state_values = T.set_subtensor(reference_state_values[end_ids],
-                                                    rewards[end_ids]
-                                                    )
+            reference_state_values = T.set_subtensor(reference_state_values[end_ids], rewards[end_ids])
         else:
-            
+
             # "set reference state values at end action ids to the immediate rewards + qvalues after end"
-            reference_state_values = T.set_subtensor(reference_state_values[end_ids],
-                                           rewards[end_ids] + gamma_or_gammas*state_values_after_end[end_ids[0],0])
+            new_state_values = rewards[end_ids] + gamma_or_gammas * state_values_after_end[end_ids[0], 0]
+            reference_state_values = T.set_subtensor(reference_state_values[end_ids], new_state_values)
 
-        
-    #now compute the loss        
+    # now compute the loss
     if is_alive == "always":
-        is_alive = T.ones_like(actions,dtype=theano.config.floatX)
-        
-    
-    
-    #actor loss
-    action_probas =  get_action_Qvalues(policy,actions)
-    
-    reference_state_values = consider_constant(reference_state_values)
-    
-    log_probas = T.maximum(T.log(action_probas),min_log_proba)
-    
-    policy_loss_elwise = - log_probas * (reference_state_values - consider_constant(state_values))
-    
-    
-    #critic loss
-    V_err_elwise = squared_error(reference_state_values,state_values)
-    
-    return (policy_loss_elwise + V_err_elwise)*is_alive
+        is_alive = T.ones_like(actions, dtype=theano.config.floatX)
 
-        
+    # actor loss
+    action_probas = get_action_Qvalues(policy, actions)
+
+    reference_state_values = consider_constant(reference_state_values)
+
+    log_probas = T.maximum(T.log(action_probas), min_log_proba)
+
+    policy_loss_elwise = - log_probas * (reference_state_values - consider_constant(state_values))
+
+    # critic loss
+    V_err_elwise = squared_error(reference_state_values, state_values)
+
+    return (policy_loss_elwise + V_err_elwise) * is_alive
