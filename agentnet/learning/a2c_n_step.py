@@ -15,7 +15,7 @@ import numpy as np
 from lasagne.objectives import squared_error
 
 from ..utils.grad import consider_constant
-from helpers import get_n_step_value_reference, get_end_indicator, get_action_Qvalues
+from .helpers import get_n_step_value_reference, get_end_indicator, get_action_Qvalues
 
 
 def get_elementwise_objective(policy,state_values,actions,rewards,

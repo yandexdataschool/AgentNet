@@ -66,7 +66,7 @@ class GamePool:
                         new_memory_states[m_i][i] = 0
 
                     if verbose:
-                        print "atari",i,"reloaded"
+                        print("atari %i reloaded"%i)
 
 
             #append observation -> action -> reward tuple

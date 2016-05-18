@@ -50,7 +50,7 @@ def RNNCell(prev_state,
     
     if grad_clipping:
         prev_state = clip_grads(prev_state,grad_clipping)
-        inputs = map(lambda lyr: clip_grads(lyr,grad_clipping), inputs)
+        inputs = [clip_grads(lyr,grad_clipping) for lyr in inputs]
         
         
 
@@ -133,9 +133,8 @@ def GRUCell(prev_state,
 
     #clip grads #1
     if grad_clipping:
-        inputs = map(lambda lyr: clip_grads(lyr,grad_clipping), inputs)
-        hid_forget, hid_update, hidden_update_hid = map(lambda lyr: clip_grads(lyr,grad_clipping),
-                                                        [hid_forget, hid_update, hidden_update_hid])
+        inputs = [clip_grads(lyr,grad_clipping) for lyr in inputs]
+        hid_forget, hid_update, hidden_update_hid = [clip_grads(lyr,grad_clipping) for lyr in [hid_forget, hid_update, hidden_update_hid]]
         
     #input to gates
     inp_to_gates = GateLayer(inputs,[num_units]*3,

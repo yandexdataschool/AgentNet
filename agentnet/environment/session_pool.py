@@ -121,7 +121,7 @@ class SessionPoolEnvironment(BaseEnvironment,BaseObjective):
             
         else:
             if isinstance(agent_memories,dict):
-                agent_memories = agent_memories.keys()
+                agent_memories = list(agent_memories.keys())
 
             agent_memories = check_list(agent_memories)
             

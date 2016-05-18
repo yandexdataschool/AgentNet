@@ -195,11 +195,11 @@ class EnvironmentStepLayer(TupleLayer):
 
         return check_list(new_states) + check_list(observations)
 
-    def get_output_shape_for(self,input_shapes,**kwargs):
+    @property
+    def output_shapes(self):
         """Returns a tuple of shapes for every output layer"""
         state_shapes = [ (None,)+check_tuple(shape) for shape in check_list(self.env.state_shapes)]
         observation_shapes =[ (None,)+check_tuple(shape) for shape in check_list(self.env.observation_shapes)]
-        
         return state_shapes + observation_shapes
     
     @property

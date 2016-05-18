@@ -2,9 +2,9 @@ import lasagne
 from theano import tensor as T
 from ..utils import insert_dim
 
-from base import BaseAgent
+from .base import BaseAgent
 from ..environment.session_batch import SessionBatchEnvironment
-from feedback import  FeedbackEnvironment
+from .feedback import  FeedbackEnvironment
 
 
 from ..utils.format import supported_sequences,check_list
