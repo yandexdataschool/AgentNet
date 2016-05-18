@@ -1,5 +1,4 @@
-
-__doc__="""
+"""
 N-step Deterministic Policy Gradient (A2c) implementation.
 
 Works with continuous action space (real value or vector of such)
@@ -10,7 +9,7 @@ Based on
 http://arxiv.org/abs/1509.02971
 http://jmlr.org/proceedings/papers/v32/silver14.pdf
 
-Difference:
+This particular implementation is different:
  - Allows n-step reinforcement learning
  - Does not use old network snapshot for reference values, instead relies on parallel exploration as in
    - http://arxiv.org/pdf/1602.01783v1.pdf
@@ -18,36 +17,30 @@ Difference:
    
 The code mostly relies on the same architecture as advantage actor-critic a2c_n_step
 """
-
-from warnings import warn
+from __future__ import division, print_function, absolute_import
 
 import theano
 import theano.tensor as T
-import numpy as np
-
-
 from lasagne.objectives import squared_error
 
-
-from .helpers import get_n_step_value_reference, get_end_indicator, get_action_Qvalues
+from .helpers import get_n_step_value_reference, get_end_indicator
 from ..utils.grad import consider_constant
 
 
-    
 def get_elementwise_objective_components(policy,
                                          rewards,
                                          policy_values,
                                          action_values='same',
-                                         is_alive = "always",
-                                         n_steps = None,
-                                         gamma_or_gammas = 0.99,
-                                         force_values_after_end = True,
-                                         state_values_after_end = "zeros",
-                                         consider_value_reference_constant = True,
+                                         is_alive="always",
+                                         n_steps=None,
+                                         gamma_or_gammas=0.99,
+                                         force_values_after_end=True,
+                                         state_values_after_end="zeros",
+                                         consider_value_reference_constant=True,
                                          consider_predicted_value_constant=True,
-                                         scan_dependencies = [], 
-                                         scan_strict = True,
-                                        ):
+                                         scan_dependencies=tuple(),
+                                         scan_strict=True,
+                                         ):
     """
     returns deterministic policy gradient components for actor and critic
 
@@ -87,61 +80,51 @@ def get_elementwise_objective_components(policy,
         
     Returns:
                 
-        elementwise sum of policy_loss + state_value_loss
+        Element-wise sum of policy_loss + state_value_loss
 
     """
-    
-    
-    if action_values =='same':
-        action_values = policy_values
-    
-    
-    #get reference values via DPG algorithm
-    reference_action_values = get_n_step_value_reference(action_values,
-                                                       rewards,
-                                                       is_alive,
-                                                       n_steps = n_steps,
-                                                       optimal_state_values_after_end = state_values_after_end,
-                                                       gamma_or_gammas = gamma_or_gammas,
-                                                       dependencies = scan_dependencies,
-                                                       strict = scan_strict
-                                             )    
-    
-    if is_alive != "always" and force_values_after_end:
-        #if asked to force reference_Q[end_tick+1,a] = 0, do it
-        #note: if agent is always alive, this is meaningless
 
-        #set future rewards at session end to rewards+qvalues_after_end
-        end_ids = get_end_indicator(is_alive,force_end_at_t_max = True).nonzero()
+    if action_values == 'same':
+        action_values = policy_values
+
+    # get reference values via DPG algorithm
+    reference_action_values = get_n_step_value_reference(action_values,
+                                                         rewards,
+                                                         is_alive,
+                                                         n_steps=n_steps,
+                                                         optimal_state_values_after_end=state_values_after_end,
+                                                         gamma_or_gammas=gamma_or_gammas,
+                                                         dependencies=scan_dependencies,
+                                                         strict=scan_strict
+                                                         )
+
+    if is_alive != "always" and force_values_after_end:
+        # if asked to force reference_Q[end_tick+1,a] = 0, do it
+        # note: if agent is always alive, this is meaningless
+
+        # set future rewards at session end to rewards+qvalues_after_end
+        end_ids = get_end_indicator(is_alive, force_end_at_t_max=True).nonzero()
 
         if state_values_after_end == "zeros":
             # "set reference state values at end action ids to just the immediate rewards"
-            reference_action_values = T.set_subtensor(reference_action_values[end_ids],
-                                                     rewards[end_ids]
-                                                    )
+            reference_action_values = T.set_subtensor(reference_action_values[end_ids], rewards[end_ids])
         else:
-
             # "set reference state values at end action ids to the immediate rewards + qvalues after end"
-            reference_state_values = T.set_subtensor(reference_state_values[end_ids],
-                                        rewards[end_ids] + gamma_or_gammas*state_values_after_end[end_ids[0],0]
-                                      )
+            new_subtensor_values = rewards[end_ids] + gamma_or_gammas * state_values_after_end[end_ids[0], 0]
+            reference_action_values = T.set_subtensor(reference_action_values[end_ids], new_subtensor_values)
 
-    
-    #now compute the loss components
+    # now compute the loss components
     if is_alive == "always":
-        is_alive = T.ones_like(action_values,dtype=theano.config.floatX)
-        
-    #actor loss
-    #here we rely on fact that state_values = critic(state,optimal_policy)
-    #using chain rule, 
-    #grad(state_values,actor_weights) = grad(state_values, optimal_policy)*grad(optimal_policy,actor_weights)
-    policy_loss_elwise = -policy_values
-    
-    
-    #critic loss
-    reference_action_values = consider_constant(reference_action_values)
-    V_err_elwise = squared_error(reference_action_values,action_values)
-    
-            
-    return policy_loss_elwise*is_alive, V_err_elwise*is_alive
+        is_alive = T.ones_like(action_values, dtype=theano.config.floatX)
 
+    # actor loss
+    # here we rely on fact that state_values = critic(state,optimal_policy)
+    # using chain rule,
+    # grad(state_values,actor_weights) = grad(state_values, optimal_policy)*grad(optimal_policy,actor_weights)
+    policy_loss_elwise = -policy_values
+
+    # critic loss
+    reference_action_values = consider_constant(reference_action_values)
+    V_err_elementwise = squared_error(reference_action_values, action_values)
+
+    return policy_loss_elwise * is_alive, V_err_elementwise * is_alive

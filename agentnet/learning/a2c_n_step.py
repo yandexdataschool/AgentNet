@@ -6,6 +6,7 @@ Works with discrete action space.
 
 Follows the article http://arxiv.org/pdf/1602.01783v1.pdf 
 """
+from __future__ import division, print_function, absolute_import
 
 import theano
 import theano.tensor as T
