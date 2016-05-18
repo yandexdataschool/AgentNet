@@ -56,6 +56,7 @@ setup(
         'lasagne',  # TODO github
         'theano >= 0.8.2',
         'pandas>=0.14',
-        'numpy>=1.9'
+        'numpy>=1.9',
+        'matplotlib >= 1.4'
     ],
 )
