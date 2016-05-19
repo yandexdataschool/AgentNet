@@ -1,18 +1,22 @@
-__doc__="""base (greedy) action resolver"""
+"""
+Greedy action resolver
+"""
 
 import theano.tensor as T
 
 import lasagne
+
+
 class BaseResolver(lasagne.layers.Layer):
     """
     special Lasagne Layer instance, that:
         - determines actions agent takes given policy (e.g. Qvalues),
     """
-    def __init__(self,incoming,*args,**kwargs):
+
+    def __init__(self, incoming, *args, **kwargs):
         super(BaseResolver, self).__init__(incoming, **kwargs)
 
-    
-    def get_output_for(self,policy,**kwargs):
+    def get_output_for(self, policy, **kwargs):
         """
         picks the action based on Qvalues
         arguments:
@@ -20,15 +24,16 @@ class BaseResolver(lasagne.layers.Layer):
         returns:
             actions int[batch_id]: ids of actions picked  
         """
-        
-        return T.argmax(policy,axis=1)
-    def get_output_shape_for(self,input_shape):
+
+        return T.argmax(policy, axis=1)
+
+    def get_output_shape_for(self, input_shape):
         """
-        returns output shape [batch_id]
+        output shape is [n_batches]
         """
         batch_size = input_shape[0]
-        return (batch_size,)
-    
+        return (batch_size, )
+
     @property
     def output_dtype(self):
         """

@@ -7,7 +7,7 @@ class ProbabilisticResolver(BaseResolver):
     """
     instance, that:
         - determines which action should be taken given policy
-        - samples actions with proibabilities given by input layer
+        - samples actions with probabilities given by input layer
     """
 
     def __init__(self, incoming, assume_normalized=False, seed=1234, action_dtype='int32',
