@@ -1,34 +1,30 @@
-import lasagne                 
-from lasagne.utils import unroll_scan
-from lasagne.layers import InputLayer
-from ..utils.layers import TupleLayer, get_layer_dtype
-
-
-import theano
-from theano import tensor as T
-
-import numpy as np
 from collections import OrderedDict
+from itertools import chain
 from warnings import warn
 
+import lasagne
+from lasagne.layers import InputLayer
+from lasagne.utils import unroll_scan
+from theano import tensor as T
 
-from ..utils.format import check_list,check_ordict,unpack_list, supported_sequences
 from ..utils import insert_dim
+from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences
+from ..utils.layers import TupleLayer, get_layer_dtype
 
 
 class Recurrence(TupleLayer):
     def __init__(self,
-                 input_nonsequences = OrderedDict(),
-                 input_sequences = OrderedDict(),
-                 tracked_outputs = [],
-                 state_variables = OrderedDict(),
-                 state_init = 'zeros',
-                 n_steps = 10,
-                 batch_size = None,
-                 delayed_states = [],
-                 strict = True,
+                 input_nonsequences=OrderedDict(),
+                 input_sequences=OrderedDict(),
+                 tracked_outputs=tuple(),
+                 state_variables=OrderedDict(),
+                 state_init='zeros',
+                 n_steps=10,
+                 batch_size=None,
+                 delayed_states=tuple(),
+                 strict=True,
                  **kwargs
-                ):
+                 ):
         """
         A generic recurrent unit that works with a custom graph
         Takes:
@@ -96,126 +92,116 @@ class Recurrence(TupleLayer):
                         
             
         """
-        
-        #default name
-        if "name" not in kwargs:
-            kwargs["name"] = "YetAnother"+self.__class__.__name__
 
-            
+        # default name
+        if "name" not in kwargs:
+            kwargs["name"] = "YetAnother" + self.__class__.__name__
 
         self.n_steps = n_steps
 
-        
-        self.input_nonsequences = check_ordict(input_nonsequences)
-        self.input_sequences = check_ordict(input_sequences)
+        self.input_nonsequences = check_ordered_dict(input_nonsequences)
+        self.input_sequences = check_ordered_dict(input_sequences)
 
-        
         self.tracked_outputs = check_list(tracked_outputs)
-         
-        
-        self.state_variables = check_ordict(state_variables) 
+
+        self.state_variables = check_ordered_dict(state_variables)
         if type(state_variables) is not OrderedDict:
-            if len(self.state_variables) >1:
-                warn("State_variables recommended type is OrderedDict.\n"\
-                     "Otherwise, order of agent state outputs from get_sessions and get_agent_reaction methods\n"\
-                     "may depend on python configuration.\n Current order is:"+ str(list(self.state_variables.keys()))+"\n"\
-                     "You may find OrderedDict in standard collections module: from collections import OrderedDict")
-        
+            if len(self.state_variables) > 1:
+                warn("""State_variables recommended type is OrderedDict.
+                Otherwise, order of agent state outputs from get_sessions and get_agent_reaction methods
+                may depend on python configuration.
+
+                Current order is: {state_variables}
+                You may find OrderedDict in standard collections module: from collections import OrderedDict
+                """.format(state_variables=list(self.state_variables.keys())))
+
         self.delayed_states = delayed_states
-        
-        #initial states
-        
-        #convert zeros to empty dict
+
+        # initial states
+
+        # convert zeros to empty dict
         if state_init == "zeros":
             state_init = OrderedDict()
-        #convert list to dict
+        # convert list to dict
         elif state_init in supported_sequences:
             assert len(state_init) == len(self.state_variables)
             state_init = OrderedDict(list(zip(list(self.state_variables.keys()), state_init)))
-            
-        #cast to dict and save
-        self.state_init = check_ordict(state_init)
-        
-        
-        #init base class
-        incomings = list(self.state_init.values()) +\
-                    list(self.input_nonsequences.values()) +\
-                    list(self.input_sequences.values())
-        
-                
-        #if we have no inputs or inits, make sure batch_size is specified
-        if len(incomings) ==0:
+
+        # cast to dict and save
+        self.state_init = check_ordered_dict(state_init)
+
+        # init base class
+        incomings = chain(self.state_init.values(),
+                          self.input_nonsequences.values(),
+                          self.input_sequences.values())
+
+        # if we have no inputs or inits, make sure batch_size is specified
+        if len(incomings) == 0:
             assert batch_size is not None
         self.batch_size = batch_size
 
-                
-        super(Recurrence,self).__init__(incomings, **kwargs)
-        
-        
-        ### assertions and only assertions. From now this function only asserts stuff.
-        
-        if strict:        
-            #verifying graph topology (assertions)
+        super(Recurrence, self).__init__(incomings, **kwargs)
 
-            all_inputs = list(self.state_variables.values()) +\
-                         list(self.state_init.keys()) +\
-                         list(self.input_nonsequences.keys()) +\
-                         list(self.input_sequences.keys())
-                        
-            #all recurrent graph inputs and prev_states are unique (no input/prev_state is used more than once)
+        # assertions and only assertions. From now this function only asserts stuff.
+
+        if strict:
+            # verifying graph topology (assertions)
+
+            all_inputs = chain(self.state_variables.values(),
+                               self.state_init.keys(),
+                               self.input_nonsequences.keys(),
+                               self.input_sequences.keys())
+
+            # all recurrent graph inputs and prev_states are unique (no input/prev_state is used more than once)
             assert len(all_inputs) == len(set(all_inputs))
 
-            #all state_init correspond to defined state variables
+            # all state_init correspond to defined state variables
             for state_out in list(self.state_init.keys()):
                 assert state_out in list(self.state_variables.keys())
 
-            #all new_state+output dependencies (input layers) lie inside one-step recurrence
+            # all new_state+output dependencies (input layers) lie inside one-step recurrence
             all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
             all_inputs = set(all_inputs)
-            
+
             for layer in lasagne.layers.get_all_layers(all_outputs):
                 if type(layer) is InputLayer:
                     if layer not in all_inputs:
-                        raise ValueError("One of your network dependencies (%s) is not mentioned "\
-                              "as a Recurrence inputs"%(str(layer.name)))
-        
-        #verifying shapes (assertions)
-        
-        nonseq_pairs = list(self.state_variables.items()) +\
-                       list(self.state_init.items()) +\
-                       list(self.input_nonsequences.items())
-                
+                        raise ValueError("One of your network dependencies (%s) is not mentioned " \
+                                         "as a Recurrence inputs" % (str(layer.name)))
+
+        # verifying shapes (assertions)
+
+        nonseq_pairs = chain(self.state_variables.items(),
+                             self.state_init.items(),
+                             self.input_nonsequences.items())
+
         for layer_out, layer_in in nonseq_pairs:
             assert tuple(layer_in.output_shape) == tuple(layer_out.output_shape)
-        
-            
+
         for seq_onestep, seq_input in list(self.input_sequences.items()):
             seq_shape = tuple(seq_input.output_shape)
             step_shape = seq_shape[:1] + seq_shape[2:]
             assert tuple(seq_onestep.output_shape) == step_shape
-            
-            seq_len = seq_shape[1]
-            assert seq_len is None or seq_len>=n_steps
-            if seq_len is None:
-                warn("You are giving Recurrence an input sequence of undefined length (None).\n"\
-                     "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
-            
-            
-            
-    def get_params(self,**kwargs):
-        """returns all params. If include_recurrence is set ot True, includes recurrent params from one-step network"""
-        
-        params = super(Recurrence,self).get_params(**kwargs)
-        
-        #include inner recurrence params
-        outputs = list(self.state_variables.keys()) + self.tracked_outputs
-        inner_params = lasagne.layers.get_all_params(outputs,**kwargs)
-        params += inner_params
-        
-        return params
-        
 
-    def get_output_for(self,inputs,recurrence_flags = {},**kwargs):
+            seq_len = seq_shape[1]
+            assert seq_len is None or seq_len >= n_steps
+            if seq_len is None:
+                warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
+                     "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
+
+    def get_params(self, **kwargs):
+        """returns all params. If include_recurrence is set ot True, includes recurrent params from one-step network"""
+
+        params = super(Recurrence, self).get_params(**kwargs)
+
+        # include inner recurrence params
+        outputs = list(self.state_variables.keys()) + self.tracked_outputs
+        inner_params = lasagne.layers.get_all_params(outputs, **kwargs)
+        params += inner_params
+
+        return params
+
+    def get_output_for(self, inputs, recurrence_flags={}, **kwargs):
         """
         returns history of agent interaction with environment for given number of turns.
         
@@ -229,126 +215,95 @@ class Recurrence(TupleLayer):
             [state_sequences] + [output sequences] - a list of all states and all outputs sequences
             Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
         """
-        
-        #set batch size
+
+        # set batch size
         if len(inputs) != 0:
             batch_size = inputs[0].shape[0]
         else:
             batch_size = self.batch_size
-        
-        
-        #parse inputs
-        input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
 
         n_states = len(self.state_variables)
         n_state_inits = len(self.state_init)
         n_input_nonseq = len(self.input_nonsequences)
         n_input_seq = len(self.input_sequences)
         n_outputs = len(self.tracked_outputs)
-        
-        initial_states, nonsequences, sequences = unpack_list(inputs, n_state_inits,n_input_nonseq,n_input_seq)
-        
-        
+
+        initial_states, nonsequences, sequences = unpack_list(inputs, [n_state_inits, n_input_nonseq, n_input_seq])
+
         # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
-        sequences = [seq.swapaxes(1,0) for seq in sequences]
-        
-        
+        sequences = [seq.swapaxes(1, 0) for seq in sequences]
+
         # create outputs_info for scan
-        initial_states = OrderedDict(list(zip(self.state_init,initial_states)))
-        
+        initial_states = OrderedDict(list(zip(self.state_init, initial_states)))
+
         def get_initial_state(state_out_layer):
-            """ pick dedicated initial state or create zeros of appropriate shape and dtype"""
-            #if we have a dedicated init
+            """Pick dedicated initial state or create zeros of appropriate shape and dtype"""
+            # if we have a dedicated init
             if state_out_layer in initial_states:
-                
-                #use it
+
+                # use it
                 initial_state = initial_states[state_out_layer]
-                                    
-            #otherwise initialize with zeros
+
+            # otherwise initialize with zeros
             else:
-                initial_state = T.zeros((batch_size,)+tuple(state_out_layer.output_shape[1:]), 
-                                    dtype = get_layer_dtype(state_out_layer))
+                initial_state = T.zeros((batch_size,) + tuple(state_out_layer.output_shape[1:]),
+                                        dtype=get_layer_dtype(state_out_layer))
             return initial_state
-        
-        
+
         initial_state_variables = list(map(get_initial_state, self.state_variables))
-        
-        outputs_info = initial_state_variables + [None]*len(self.tracked_outputs)
-        
-        #recurrent step function
+
+        outputs_info = initial_state_variables + [None] * len(self.tracked_outputs)
+
+        # recurrent step function
         def step(*args):
 
-            sequence_slices,prev_states,prev_outputs,nonsequences = unpack_list(args,
-                                                                               n_input_seq,
-                                                                               n_states, 
-                                                                               n_outputs,
-                                                                               n_input_nonseq,
-                                                                               )
+            sequence_slices, prev_states, prev_outputs, nonsequences = \
+                unpack_list(args, [n_input_seq, n_states, n_outputs, n_input_nonseq])
 
-            #make dicts of prev_states and inputs
-            prev_states_dict = OrderedDict(list(zip(list(self.state_variables.keys()),prev_states)))
-            
-            input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
-            
-            assert len(input_layers)== len(nonsequences+sequence_slices)
-            
-            inputs_dict = OrderedDict(list(zip(input_layers,nonsequences+sequence_slices)))
-            
-            #call one step recurrence
-            new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict,**recurrence_flags)
-            
+            # make dicts of prev_states and inputs
+            prev_states_dict = OrderedDict(zip(list(self.state_variables.keys()), prev_states))
+
+            input_layers = chain(self.input_nonsequences.keys(), self.input_sequences.keys())
+            assert len(input_layers) == len(nonsequences + sequence_slices)
+
+            inputs_dict = OrderedDict(zip(input_layers, nonsequences + sequence_slices))
+
+            # call one step recurrence
+            new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
             return new_states + new_outputs
-        
-        
-        #call scan itself (unroll it to avoid randomness issues that may have ceased to exist already)
-        
+
+
+        # call scan itself (unroll it to avoid randomness issues)
         history = unroll_scan(step,
-            sequences = sequences,
-            outputs_info = outputs_info,
-            non_sequences = nonsequences,
-            n_steps = self.n_steps
-        )
+                              sequences=sequences,
+                              outputs_info=outputs_info,
+                              non_sequences=nonsequences,
+                              n_steps=self.n_steps
+                              )
 
+        # reordering from [time,batch,...] to [batch,time,...]
+        history = [(var.swapaxes(1, 0) if var.ndim > 1 else var) for var in history]
 
-        #from [time,batch,...] to [batch,time,...]
-        history = [ (var.swapaxes(1,0) if var.ndim >1 else var) for var in history]
-        
-        
-        state_seqs, output_seqs = unpack_list(history, 
-                                            n_states,
-                                            n_outputs)
-        
-        #handle delayed_states
-        #selectively shift state sequences by 1 tick into the past, padding with their initializers 
+        state_seqs, output_seqs = unpack_list(history, [n_states, n_outputs])
+
+        # handle delayed_states
+        # selectively shift state sequences by 1 tick into the past, padding with their initializers
         for i in range(len(state_seqs)):
             if list(self.state_variables.keys())[i] in self.delayed_states:
-                
                 state_seq = state_seqs[i]
                 state_init = initial_state_variables[i]
-                state_seq = T.concatenate([
-                                    insert_dim(state_init,1),
-                                    state_seq[:,:-1]
-                                    ],
-                                    axis = 1)
-                
-                
-                state_seqs[i] = state_seq    
-        
-        
-        
-        
-        return state_seqs+ output_seqs
-                        
-                        
+                state_seq = T.concatenate([insert_dim(state_init, 1), state_seq[:, :-1]], axis=1)
+                state_seqs[i] = state_seq
+
+        return state_seqs + output_seqs
+
     @property
     def output_shapes(self):
         """returns shapes of each respective output"""
-        shapes = [ tuple(layer.output_shape) for layer in list(self.state_variables.keys()) + self.tracked_outputs]
-        return [ shape[:1]+(self.n_steps,)+shape[1:] for shape in shapes]
-        
-                            
-                            
-    def get_one_step(self,prev_states={},current_inputs={},**flags):
+        shapes = [tuple(layer.output_shape) for layer in list(self.state_variables.keys()) + self.tracked_outputs]
+        return [shape[:1] + (self.n_steps,) + shape[1:] for shape in shapes]
+
+    def get_one_step(self, prev_states={}, current_inputs={}, **flags):
         """
         Applies one-step recurrence.
         parameters:
@@ -371,72 +326,60 @@ class Recurrence(TupleLayer):
             
         """
 
-
-            
-                 
-        #standartize prev_states to a dicitonary
-        if not isinstance(prev_states,dict):
-            #if only one layer given, make a single-element list of it
+        # standardize prev_states to a dictionary
+        if not isinstance(prev_states, dict):
+            # if only one layer given, make a single-element list of it
             prev_states = check_list(prev_states)
-            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()),prev_states)))
+            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()), prev_states)))
         else:
-            prev_states = check_ordict(prev_states)
-        
+            prev_states = check_ordered_dict(prev_states)
+
         assert len(prev_states) == len(self.state_variables)
-        
-        #input map
-        ##prev state input layer: prev state expression
-        prev_states_kv = [(self.state_variables[s],prev_states[s]) 
-                          for s in list(self.state_variables.keys())] #prev states
 
+        # input map
+        ## prev state input layer: prev state expression
+        prev_states_kv = [(self.state_variables[s], prev_states[s])
+                          for s in list(self.state_variables.keys())]  # prev states
 
-        
-        #prepare both sequence and nonsequence inputs in one dict
+        # prepare both sequence and nonsequence inputs in one dict
         input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
 
-            
-        #standartize current_inputs to a dictionary
+        # standardize current_inputs to a dictionary
 
-        if not isinstance(current_inputs,dict):
-            
-            #if only one layer given, make a single-element list of it
+        if not isinstance(current_inputs, dict):
+            # if only one layer given, make a single-element list of it
             current_inputs = check_list(current_inputs)
-            current_inputs = OrderedDict(list(zip(input_layers,current_inputs)))
+            current_inputs = OrderedDict(list(zip(input_layers, current_inputs)))
         else:
-            current_inputs = check_ordict(current_inputs)
-            
-        
+            current_inputs = check_ordered_dict(current_inputs)
+
         assert len(current_inputs) == len(input_layers)
 
-        #second half of input map
-        ##external input layer: input expression
+        # second half of input map
+        ## external input layer: input expression
         inputs_kv = list(current_inputs.items())
 
-        
-        #compose input map
+        # compose input map
         input_map = OrderedDict(prev_states_kv + inputs_kv)
-        
-        #compose output_list
+
+        # compose output_list
         output_list = list(self.state_variables.keys()) + self.tracked_outputs
 
-        
-        #call get output
+        # call get output
         results = lasagne.layers.get_output(
             layer_or_layers=output_list,
-            inputs= input_map,
+            inputs=input_map,
             **flags
-          )
-        
-        #parse output array
+        )
+
+        # parse output array
         n_states = len(self.state_variables)
         n_outputs = len(self.tracked_outputs)
-        
-        new_states,new_outputs = unpack_list(results,n_states,n_outputs)
-        
-        return new_states,new_outputs
 
-    
-    
+        new_states, new_outputs = unpack_list(results, [n_states, n_outputs])
+
+        return new_states, new_outputs
+
     def get_sequence_layers(self):
         """
         returns history of agent interaction with environment for given number of turns.
@@ -445,11 +388,9 @@ class Recurrence(TupleLayer):
         """
 
         outputs = list(self)
-        
+
         n_states = len(self.state_variables)
-        
-        state_dict = OrderedDict(list(zip( self.state_variables,outputs[:n_states])))
-        
+
+        state_dict = OrderedDict(zip(self.state_variables, outputs[:n_states]))
+
         return state_dict, outputs[n_states:]
-        
-    

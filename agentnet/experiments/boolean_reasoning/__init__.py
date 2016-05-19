@@ -1,7 +1,5 @@
-
-
-__doc__="""
-This is a dummy experiment setup that requires agent to make advantage of
+"""
+Boolean reasoning is a dummy experiment setup that requires agent to make advantage of
 a simple logical formula in order to maximize expected reward.
 
 The world agent exists in has a number of boolean hidden factors:
@@ -29,8 +27,7 @@ will learn the policy
 The experiment setup contains a single class BooleanReasoningEnvironment that
 implements both BaseEnvironment and BaseObjective.
 """
-
-
+from __future__ import division, print_function, absolute_import
 
 import pandas as pd
 import numpy as np
@@ -38,66 +35,58 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-
 from agentnet.objective import BaseObjective
 from agentnet.environment import BaseEnvironment
 
 from agentnet.utils.tensor_ops import in1d
-from agentnet.utils import create_shared,set_shared
+from agentnet.utils import create_shared, set_shared
 from agentnet.utils.format import check_list
 
 n_attrs = 3
 n_categories = 2
 
-x_names = list(map("X{}".format, list(range(1, n_attrs+1))))
-y_names = list(map("Y{}".format, list(range(1, n_categories+1))))
+x_names = list(map("X{}".format, list(range(1, n_attrs + 1))))
+y_names = list(map("Y{}".format, list(range(1, n_categories + 1))))
 
 
-class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
+class BooleanReasoningEnvironment(BaseObjective, BaseEnvironment):
+    """generating data"""
 
+    feature_names = x_names + y_names + ["End_session_now"]
+    n_actions = n_attrs + n_categories + 1
 
-    def __init__(self,batch_size = 10):
-        
-        
-        #fill shared variables with dummy values
-        self.attributes = create_shared("X_attrs_data",np.zeros([batch_size,n_attrs]),'uint8')
-        self.categories =  create_shared("categories_data",np.zeros([batch_size,n_categories]),'uint8')
+    def __init__(self, batch_size=10):
+        # fill shared variables with dummy values
+        self.attributes = create_shared("X_attrs_data", np.zeros([batch_size, n_attrs]), 'uint8')
+        self.categories = create_shared("categories_data", np.zeros([batch_size, n_categories]), 'uint8')
         self.batch_size = self.attributes.shape[0]
-        
-        
 
-        #"end_session_now" action
-        end_action = T.zeros([self.batch_size,1], dtype='uint8')
+        # "end_session_now" action
+        end_action = T.zeros([self.batch_size, 1], dtype='uint8')
 
-        #concatenate data and cast it to float to avoid gradient problems
+        # concatenate data and cast it to float to avoid gradient problems
         self.joint_data = T.concatenate([self.attributes,
-                                          self.categories,
-                                          end_action,
-                                         ],axis=1).astype(theano.config.floatX)
-    
-        #indices
+                                         self.categories,
+                                         end_action,
+                                         ], axis=1).astype(theano.config.floatX)
+
+        # indices
         self.category_action_ids = T.arange(
             self.attributes.shape[1],
-            self.attributes.shape[1]+self.categories.shape[1]
+            self.attributes.shape[1] + self.categories.shape[1]
         )
-        
-        #last action id corresponds to the "end session" action
-        self.end_action_id = self.joint_data.shape[1]-1
-        
-        #fill in one data sample
+
+        # last action id corresponds to the "end session" action
+        self.end_action_id = self.joint_data.shape[1] - 1
+
+        # fill in one data sample
         self.generate_new_data_batch(batch_size)
-    """generating data"""
-    
-    feature_names = x_names+y_names+["End_session_now"]
-    n_actions = n_attrs+n_categories+1
-       
-    def _generate_data(self,batch_size):
+
+    def _generate_data(self, batch_size):
         """generates data batch"""
-        df = pd.DataFrame(np.random.randint(0,2,[batch_size,n_attrs]),
+        df = pd.DataFrame(np.random.randint(0, 2, [batch_size, n_attrs]),
                           columns=x_names)
-        
-        
-        
+
         df[y_names[0]] = df.X1.astype('int32')
         # You can use any logical expressions here,
         # e.g. np.logical_or(
@@ -105,81 +94,76 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         #   np.logical_and(df.X2, np.logical_not(df.X1))
         #    ).astype(int)
         df[y_names[1]] = 1 - df[y_names[0]]
-    
+
         return df[x_names].values, df[y_names].values
-    
 
-    def set_data_batch(self,attrs_batch,categories_batch):
+    def set_data_batch(self, attrs_batch, categories_batch):
         """load data into model"""
-        set_shared(self.attributes,attrs_batch)
-        set_shared(self.categories,categories_batch)
+        set_shared(self.attributes, attrs_batch)
+        set_shared(self.categories, categories_batch)
 
-    def generate_new_data_batch(self,batch_size=10):
+    def generate_new_data_batch(self, batch_size=10):
         """this method generates new data batch and loads it into the environment. Returns None"""
-        
-        attrs_batch,categories_batch = self._generate_data(batch_size)
-        
-        self.set_data_batch(attrs_batch,categories_batch)
-        
-    """dimensions"""
-    
-    
-    #flags that denote whether environment should get a single state/action instead of iterable of these
-    
+
+        attrs_batch, categories_batch = self._generate_data(batch_size)
+
+        self.set_data_batch(attrs_batch, categories_batch)
+
+    # dimensions
+
+    # flags that denote whether environment should get a single state/action instead of iterable of these
+
     @property
     def observation_shapes(self):
         """a single observation. Treated as one-element list"""
-        return [int((self.joint_data.shape[1]+2).eval())]
+        return [int((self.joint_data.shape[1] + 2).eval())]
+
     @property
     def state_shapes(self):
         """ a single state here. Treated as one-element list"""
         return [int(self.joint_data.shape[1].eval())]
-    
-    
-    def get_whether_alive(self,observation_tensors):
+
+    def get_whether_alive(self, observation_tensors):
         """Given observations, returns whether session has or has not ended.
         Returns uint8 [batch,time_tick] where 1 means session is alive and 0 means session ended already.
         Note that session is considered still alive while agent is commiting end_action
         """
         observation_tensors = check_list(observation_tensors)
-        return T.eq(observation_tensors[0][:,:,1],0)
-    
-    
-    """agent interaction"""
-    
-    def get_action_results(self,last_states,actions):
-        
-        #state is a boolean vector: whether or not i-th action
-        #was tried already during this session
-        #last output[:,end_code] always remains 1 after first being triggered
-        
-        
+        return T.eq(observation_tensors[0][:, :, 1], 0)
+
+    # agent interaction
+
+    def get_action_results(self, last_states, actions):
+        # state is a boolean vector: whether or not i-th action
+        # was tried already during this session
+        # last output[:,end_code] always remains 1 after first being triggered
+
         last_state = check_list(last_states)[0]
         action = check_list(actions)[0]
-        
+
         batch_range = T.arange(action.shape[0])
 
-        session_active = T.eq(last_state[:,self.end_action_id],0)
-        
-        state_after_action = T.set_subtensor(last_state[batch_range,action],1)
-        
+        session_active = T.eq(last_state[:, self.end_action_id], 0)
+
+        state_after_action = T.set_subtensor(last_state[batch_range, action], 1)
+
         new_state = T.switch(
-            session_active.reshape([-1,1]),
+            session_active.reshape([-1, 1]),
             state_after_action,
             last_state
         )
-        
-        session_terminated = T.eq(new_state[:,self.end_action_id],1)
-        
+
+        session_terminated = T.eq(new_state[:, self.end_action_id], 1)
+
         observation = T.concatenate([
-                self.joint_data[batch_range,action,None],#uint8[batch,1]
-                session_terminated.reshape([-1,1]), #whether session has been terminated by now
-                T.extra_ops.to_one_hot(action,self.joint_data.shape[1]),
-            ],axis=1)
-        
+            self.joint_data[batch_range, action, None],  # uint8[batch,1]
+            session_terminated.reshape([-1, 1]),  # whether session has been terminated by now
+            T.extra_ops.to_one_hot(action, self.joint_data.shape[1]),
+        ], axis=1)
+
         return new_state, observation
 
-    def get_reward(self,state_sequences,action_sequences,batch_i):
+    def get_reward(self, state_sequences, action_sequences, batch_id):
         """
         WARNING! this runs on a single session, not on a batch
         reward given for taking the action in current environment state
@@ -189,46 +173,42 @@ class BooleanReasoningEnvironment(BaseObjective,BaseEnvironment):
         returns:
             reward float[batch_id]: reward for taking action from the given state
         """
-        
+
         state_sequence = check_list(state_sequences)[0]
         action_sequence = check_list(action_sequences)[0]
-        
-        time_range = T.arange(action_sequence.shape[0])
-        
 
-        has_tried_already = state_sequence[time_range,action_sequence]
-        session_is_active = T.eq(state_sequence[:,self.end_action_id],0)
-        has_finished_now = T.eq(action_sequence,self.end_action_id)
+        time_range = T.arange(action_sequence.shape[0])
+
+        has_tried_already = state_sequence[time_range, action_sequence]
+        session_is_active = T.eq(state_sequence[:, self.end_action_id], 0)
+        has_finished_now = T.eq(action_sequence, self.end_action_id)
         action_is_categorical = in1d(action_sequence, self.category_action_ids)
-        
-        response = self.joint_data[batch_i,action_sequence].ravel()
-        
-        #categorical and attributes
+
+        response = self.joint_data[batch_id, action_sequence].ravel()
+
+        # categorical and attributes
         reward_for_intermediate_action = T.switch(
             action_is_categorical,
-            response*6-3,
-            response*2-1
+            response * 6 - 3,
+            response * 2 - 1
         )
-        #include end action
+        # include end action
         reward_for_action = T.switch(
             has_finished_now,
             0,
             reward_for_intermediate_action,
         )
-        
+
         reward_if_first_time = T.switch(
-                has_tried_already,
-                -0.5,
-                reward_for_action,
-            )
-        
+            has_tried_already,
+            -0.5,
+            reward_for_action,
+        )
+
         final_reward = T.switch(
             session_is_active,
             reward_if_first_time,
             0,
-
-            
         )
-        
-        
+
         return final_reward.astype(theano.config.floatX)

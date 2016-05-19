@@ -1,11 +1,10 @@
 FROM yandex/rep:0.6.5
 MAINTAINER Alexander Panin <justheuristic@gmail.com>
+
 RUN apt-get -qq update
 RUN apt-get install -y libopenblas-dev
 RUN apt-get install -y cmake zlib1g-dev libjpeg-dev xvfb libav-tools xorg-dev python-opengl
 RUN apt-get -y install swig #!This won't work with Box2D!
-
-
 
 
 RUN /bin/bash --login -c "\
@@ -15,6 +14,7 @@ RUN /bin/bash --login -c "\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
     pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip \
     "
+
 RUN /bin/bash --login -c "\
     source activate jupyterhub_py3 && \ 
     pip install --upgrade pip && \
