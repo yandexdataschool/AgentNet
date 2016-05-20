@@ -26,6 +26,7 @@ addons:
       - libsdl2-dev
       - libjpeg-dev
       - zlib1g-dev
+      - gfortran
 
 install:
   - pip install numpy
