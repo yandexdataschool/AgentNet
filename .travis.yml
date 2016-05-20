@@ -16,6 +16,7 @@ addons:
       - cmake-data
       - python-dev
       - python3-dev
+      - python-numpy
       - swig
       - libav-tools
       - libboost-all-dev
@@ -40,6 +41,3 @@ install:
 
 script:
   - nosetests tests
-
-cache:
-  - apt
