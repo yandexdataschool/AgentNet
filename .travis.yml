@@ -1,13 +1,39 @@
+language: python
 sudo: required
 
 services:
   - docker
 
-before_install:
-  - docker build -t agentnet .
+python:
+  - "2.7"
+  - "3.4"
 
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports
+    packages:
+      - libblas-dev
+      - liblapack-dev
+      - cmake
+      - cmake-data
+      - python-dev
+      - python3-dev
+      - swig
+      - libav-tools
+      - python-numpy
+      - libboost-all-dev
+      - libsdl2-dev
+      - libjpeg-dev
+      - zlib1g-dev
 install:
-  - docker run -d -p 1234:8888 --name agentnet agentnet
+  - pip install numpy
+  - pip install scipy
+  - pip install -r requirements.txt
+  - pip install nosetests
+  - pip install .
+  - git clone https://github.com/openai/gym.git
+  - cd gym && pip install -e '.[all]' && cd ..
 
 script:
-  - echo "Yuppi!"
+  - nosetests tests
