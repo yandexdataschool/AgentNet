@@ -1,9 +1,6 @@
 language: python
 sudo: required
 
-services:
-  - docker
-
 python:
   - "2.7"
   - "3.4"
@@ -34,8 +31,8 @@ install:
   - export PATH=$HOME/miniconda/bin:$PATH
   - conda update --yes conda
   - travis_retry conda install --yes python=$TRAVIS_PYTHON_VERSION
-  - travis_retry conda install --yes pip numpy scipy six pandas
-  - travis_retry conda install --yes theano scikit-learn nose
+  - travis_retry conda install --yes pip numpy scipy six pandas nomkl
+  - travis_retry conda install --yes theano scikit-learn nose matplotlib
   - pip install -r requirements.txt
   - pip install nosetests
   - pip install .
@@ -44,3 +41,6 @@ install:
 
 script:
   - nosetests tests
+
+cache:
+  - apt
