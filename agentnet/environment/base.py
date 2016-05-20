@@ -9,7 +9,10 @@ from ..utils.format import check_list, check_tuple
 from ..utils.layers import TupleLayer
 
 
-# TODO fuzz with name as kwarg should be removed
+# TODO (arogozhnikov) current BaseEnvironment should be rewritten to follow OOP conventions
+# dtypes, shapes, whatever should be passed and checked in ctor.
+# TODO rename states, observations to follow general conventions.
+
 
 class BaseEnvironment(object):
     """
@@ -67,7 +70,7 @@ class BaseEnvironment(object):
     @property
     def state_dtypes(self):
         """ types of respective observations"""
-        return [theano.config.floatX for _ in check_list(self.observation_shapes)]
+        return [theano.config.floatX for _ in check_list(self.state_shapes)]
 
     @property
     def observation_dtypes(self):
@@ -89,15 +92,17 @@ class BaseEnvironment(object):
             actions list(int[batch_id]): agent action after observing last state
         returns:
             new_states list(float[batch_id, memory_id0,[memory_id1],...]): environment state after processing agent's action
-            observations list(float[batch_id,n_agent_inputs]): what agent observes after commiting the last action
+            observations list(float[batch_id,n_agent_inputs]): what agent observes after committing the last action
         """
 
         # a dummy update rule where new state is equal to last state
         new_states = prev_states
-        observations = new_states  # mdp with full observability
+        # mdp with full observability
+        observations = new_states
         return prev_states, observations
 
-    def as_layers(self, prev_state_layers=None, action_layers=None, **kwargs):
+    def as_layers(self, prev_state_layers=None, action_layers=None,
+                  environment_layer_name='EnvironmentLayer'):
         """
         Lasagne Layer compatibility method.
         Understanding this is not required when implementing your own environments.
@@ -108,15 +113,14 @@ class BaseEnvironment(object):
             None means create InputLayers automatically
         :param action_layers: a layer or a list of layers that provide agent's chosen action
             None means create InputLayers automatically
-        :param kwargs:
-        :param str name: layer's name
+        :param str environment_layer_name: layer's name
         :return:
             [new_states], [observations]: 2 lists of Lasagne layers
             new states - all states in the same order as in self.state_shapes
             observations - all observations in the order of self.observation_shapes
                 
         """
-        outputs = EnvironmentStepLayer(self, prev_state_layers, action_layers, **kwargs)
+        outputs = EnvironmentStepLayer(self, prev_state_layers, action_layers, name=environment_layer_name)
 
         pivot = len(self.state_shapes)
         return outputs[:pivot], outputs[pivot:]
@@ -127,11 +131,11 @@ class EnvironmentStepLayer(TupleLayer):
                  environment,
                  prev_state_layers=None,
                  action_layers=None,
-                 **kwargs):
+                 name=None):
         """
         Creates a lasagne layer that makes one step environment updates given agent actions.
 
-        :param BaseEnvironment environment:
+        :param BaseEnvironment environment: environment to interact with
         :param prev_state_layers: a layer or a list of layers that provide previous environment state
             None means create automatically
         :param action_layers: a layer or a list of layers that provide agent's chosen action
@@ -141,10 +145,8 @@ class EnvironmentStepLayer(TupleLayer):
         self.env = environment
 
         # default name
-        if "name" not in kwargs:
-            kwargs["name"] = self.env.__class__.__name__ + ".OneStep"
-
-        name = kwargs["name"]
+        if name is None:
+            name = self.env.__class__.__name__ + ".OneStep"
 
         # create default prev_state and action inputs, if none provided
         if prev_state_layers is None:
@@ -160,14 +162,15 @@ class EnvironmentStepLayer(TupleLayer):
 
         incomings = prev_state_layers + action_layers
 
-        super(EnvironmentStepLayer, self).__init__(incomings, **kwargs)
+        super(EnvironmentStepLayer, self).__init__(incomings, name=name)
 
     def get_output_for(self, inputs, **kwargs):
         """
         Computes get_action_results as a lasagne layer.
 
-        :param inputs: a list/tuple that contains previous states and agent actions
-                - first, all previous states, then all actions in the original order
+        :param inputs: list of previous states and agent actions
+            first, all previous states, then all actions in the original order
+        :type inputs: list or tuple
         :return: a list of [all new states, than all observations]
         """
 

@@ -269,8 +269,6 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         
         Note that if this environment did not load is_alive or preceding_memory, 
         you won't be able to use them at the SessionBatchEnvironment
-        
-        
         """
         selected_observations = [observation_seq[selector] for observation_seq in self.observations]
         selected_actions = [action_seq[selector] for action_seq in self.actions]
