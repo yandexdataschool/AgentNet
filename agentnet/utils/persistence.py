@@ -3,7 +3,7 @@ Utils to save and load lasagne model weights
 """
 
 import sys
-from six import cPickle as pickle
+from six.moves import cPickle as pickle
 import lasagne
 
 

@@ -128,9 +128,9 @@ class Recurrence(TupleLayer):
         self.state_init = check_ordered_dict(state_init)
 
         # init base class
-        incomings = chain(self.state_init.values(),
-                          self.input_nonsequences.values(),
-                          self.input_sequences.values())
+        incomings = list(chain(self.state_init.values(),
+                               self.input_nonsequences.values(),
+                               self.input_sequences.values()))
 
         # if we have no inputs or initialisations, make sure batch_size is specified
         if len(incomings) == 0:
@@ -143,10 +143,10 @@ class Recurrence(TupleLayer):
 
         if verify_graph:
             # verifying graph topology (assertions)
-            all_inputs = chain(self.state_variables.values(),
-                               self.state_init.keys(),
-                               self.input_nonsequences.keys(),
-                               self.input_sequences.keys())
+            all_inputs = list(chain(self.state_variables.values(),
+                                    self.state_init.keys(),
+                                    self.input_nonsequences.keys(),
+                                    self.input_sequences.keys()))
 
             # all recurrent graph inputs and prev_states are unique (no input/prev_state is used more than once)
             assert len(all_inputs) == len(set(all_inputs))
@@ -166,9 +166,9 @@ class Recurrence(TupleLayer):
                         raise ValueError(message.format(layer_name=layer.name))
 
         # verifying shapes (assertions)
-        nonseq_pairs = chain(self.state_variables.items(),
-                             self.state_init.items(),
-                             self.input_nonsequences.items())
+        nonseq_pairs = list(chain(self.state_variables.items(),
+                                  self.state_init.items(),
+                                  self.input_nonsequences.items()))
 
         for layer_out, layer_in in nonseq_pairs:
             assert tuple(layer_in.output_shape) == tuple(layer_out.output_shape)
@@ -258,7 +258,7 @@ class Recurrence(TupleLayer):
             # make dicts of prev_states and inputs
             prev_states_dict = OrderedDict(zip(list(self.state_variables.keys()), prev_states))
 
-            input_layers = chain(self.input_nonsequences.keys(), self.input_sequences.keys())
+            input_layers = list(chain(self.input_nonsequences.keys(), self.input_sequences.keys()))
             assert len(input_layers) == len(nonsequences + sequence_slices)
 
             inputs_dict = OrderedDict(zip(input_layers, nonsequences + sequence_slices))

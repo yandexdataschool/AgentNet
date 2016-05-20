@@ -105,9 +105,9 @@ class MDPAgent(object):
         new_state_outputs, new_observation_outputs = env.as_layers(prev_env_states, self.action_layers)
 
         # add state changes to memory dict
-        all_state_pairs = chain(self.agent_states.items(),
-                                zip(new_state_outputs, prev_env_states),
-                                zip(new_observation_outputs, self.observation_layers))
+        all_state_pairs = list(chain(self.agent_states.items(),
+                                     zip(new_state_outputs, prev_env_states),
+                                     zip(new_observation_outputs, self.observation_layers)))
 
         # compose state initialization dict
         state_init_pairs = []
