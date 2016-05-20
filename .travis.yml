@@ -20,7 +20,6 @@ addons:
       - swig
       - libav-tools
       - libboost-all-dev
-      - libsdl2-dev
       - libjpeg-dev
       - zlib1g-dev
       - gfortran
