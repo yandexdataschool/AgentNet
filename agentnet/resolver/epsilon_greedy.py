@@ -1,19 +1,20 @@
 import numpy as np
 import theano
 import theano.tensor as T
+import theano.tensor.shared_randomstreams as random_streams
 
 from .base import BaseResolver
 
 
 class EpsilonGreedyResolver(BaseResolver):
     """
-    instance, that:
+    Epsilon-greedy resolver:
         - determines which action should be taken given agent's policy,
         - takes maximum policy action with probability 1 - epsilon
         - takes random action with probability epsilon
     """
 
-    def __init__(self, incoming, epsilon=None, seed=1234, **kwargs):
+    def __init__(self, incoming, epsilon=None, seed=1234, name='EpsilonGreedyResolver'):
         """
             epsilon float scalar: probability of random choice instead of optimal one
             seed constant: - random seed
@@ -27,9 +28,9 @@ class EpsilonGreedyResolver(BaseResolver):
 
         self.probas = T.stack([epsilon, 1 - epsilon])
 
-        self.rng = T.shared_randomstreams.RandomStreams(seed)
+        self.rng = random_streams.RandomStreams(seed)
 
-        super(EpsilonGreedyResolver, self).__init__(incoming, **kwargs)
+        super(EpsilonGreedyResolver, self).__init__(incoming, name=name)
 
     def get_output_for(self, policy, **kwargs):
         """

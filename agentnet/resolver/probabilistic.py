@@ -1,4 +1,5 @@
 import theano.tensor as T
+import theano.tensor.shared_randomstreams as random_streams
 
 from .base import BaseResolver
 
@@ -11,11 +12,11 @@ class ProbabilisticResolver(BaseResolver):
     """
 
     def __init__(self, incoming, assume_normalized=False, seed=1234, action_dtype='int32',
-                 **kwargs):
+                 name='ProbabilisticResolver'):
         """
             incoming - a lasagne layer that outputs policy vectors
             assume_normalized - if set to True, the incoming layer is assumed to return outputs
-                that add up to 1 (e.g. softmax)
+                that add up to 1 (e.g. softmax output)
             seed constant: - random seed
         """
 
@@ -24,9 +25,9 @@ class ProbabilisticResolver(BaseResolver):
         self.assume_normalized = assume_normalized
         self.action_dtype = action_dtype
 
-        self.rng = T.shared_randomstreams.RandomStreams(seed)
+        self.rng = random_streams.RandomStreams(seed)
 
-        super(ProbabilisticResolver, self).__init__(incoming, **kwargs)
+        super(ProbabilisticResolver, self).__init__(incoming, name=name)
 
     def get_output_for(self, policy, greedy=False, **kwargs):
         """
@@ -36,20 +37,24 @@ class ProbabilisticResolver(BaseResolver):
         returns:
             actions int[batch_id]: ids of actions picked  
         """
+        if greedy:
+            # greedy branch
+            chosen_action_ids = T.argmax(policy, axis=-1).astype(self.action_dtype)
 
-        if not greedy:
+        else:
             # probabilistic branch
             batch_size, n_actions = policy.shape
 
             if self.assume_normalized:
                 probas = policy
             else:
+                # TODO (arogozhnikov) problems with negative values?
                 probas = policy / T.sum(policy, axis=1, keepdims=True)
 
             # p1, p1+p2, p1+p2+p3, ... 1
             cum_probas = T.cumsum(probas, axis=1)
 
-            batch_randomness = self.rng.uniform(low=0., high=1., size=[probas.shape[0], 1])
+            batch_randomness = self.rng.uniform(low=0., high=1., size=[batch_size, 1])
 
             # idea: to compute the chosen action we count how many cumulative probabilities are
             # less than the random number [0,1].
@@ -58,10 +63,5 @@ class ProbabilisticResolver(BaseResolver):
             # inaccurate float32 computation, causing algorithm to pick action id = (n_actions)+1
             # which results in IndexError
             chosen_action_ids = T.sum((batch_randomness > cum_probas[:, :-1]), axis=1, dtype=self.action_dtype)
-
-        else:
-            # greedy branch
-
-            chosen_action_ids = T.argmax(policy, axis=-1).astype(self.action_dtype)
 
         return chosen_action_ids
