@@ -22,6 +22,7 @@ addons:
       - swig
       - libav-tools
       - python-numpy
+      - python-scipy
       - libboost-all-dev
       - libsdl2-dev
       - libjpeg-dev
