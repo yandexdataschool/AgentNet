@@ -1,9 +1,9 @@
-import theano
-import theano.tensor as T
 import lasagne
 import numpy as np
-from lasagne.layers import Gate,InputLayer,flatten
-from lasagne import nonlinearities,init
+import theano
+import theano.tensor as T
+from lasagne import nonlinearities, init
+from lasagne.layers import Gate, flatten
 
 
 class GRUMemoryLayer(lasagne.layers.MergeLayer):
@@ -13,16 +13,11 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
                  prev_state_input,
                  resetgate=Gate(W_cell=None),
                  updategate=Gate(W_cell=None),
-                 hidden_update=Gate(W_cell=None,
-                                    nonlinearity=nonlinearities.tanh),
-                 
-                 
-                 bias_init = init.Constant(),
-                 weight_init = init.Normal(),
+                 hidden_update=Gate(W_cell=None, nonlinearity=nonlinearities.tanh),
 
-                 
-                 
-                 
+                 bias_init=init.Constant(),
+                 weight_init=init.Normal(),
+
                  grad_clipping=5.,
                  **kwargs):
         """
@@ -47,37 +42,32 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
         - determines new agent state given previous agent state and an observation|previous input
 
         """
-        assert len(prev_state_input.output_shape) ==2
-        
-        if len(observation_input.output_shape) !=2:
-            observation_input = flatten(observation_input,outdim=2)
-        
-        assert len(observation_input.output_shape)  == 2
+        assert len(prev_state_input.output_shape) == 2
 
+        if len(observation_input.output_shape) != 2:
+            observation_input = flatten(observation_input, outdim=2)
 
-        
-        #default name
+        assert len(observation_input.output_shape) == 2
+
+        # default name
         if "name" not in kwargs:
-            kwargs["name"] = "YetAnother"+self.__class__.__name__
-        
+            kwargs["name"] = "YetAnother" + self.__class__.__name__
+
         self.num_units = num_units
 
-        
-        super(GRUMemoryLayer, self).__init__([prev_state_input,observation_input], **kwargs)
+        super(GRUMemoryLayer, self).__init__([prev_state_input, observation_input], **kwargs)
         self.grad_clipping = grad_clipping
-        
-            
+
         # Retrieve the dimensionality of the incoming layer
         last_state_shape, observation_shape = self.input_shapes
-        
+
         # Input dimensionality is the output dimensionality of the input layer
         last_num_units = np.prod(last_state_shape[1:])
         inp_num_inputs = np.prod(observation_shape[1:])
 
-        #hidden shapes must match
+        # hidden shapes must match
         assert last_num_units == self.num_units
-        
-        
+
         def add_gate_params(gate, gate_name):
             """ Convenience function for adding layer parameters from a Gate
             instance. """
@@ -89,7 +79,7 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
                                    name="b_{}".format(gate_name),
                                    regularizable=False),
                     gate.nonlinearity)
-        
+
         # Add in all parameters from gates
         (self.W_in_to_updategate, self.W_hid_to_updategate, self.b_updategate,
          self.nonlinearity_updategate) = add_gate_params(updategate,
@@ -99,8 +89,8 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
 
         (self.W_in_to_hidden_update, self.W_hid_to_hidden_update,
          self.b_hidden_update, self.nonlinearity_hid) = add_gate_params(
-             hidden_update, 'hidden_update')
-        
+            hidden_update, 'hidden_update')
+
         # Stack input weight matrices into a (num_inputs, 3*num_units)
         # matrix, which speeds up computation
         self.W_in_stacked = T.concatenate(
@@ -117,8 +107,6 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
             [self.b_resetgate, self.b_updategate,
              self.b_hidden_update], axis=0)
 
-
-
     def get_output_for(self, inputs, **kwargs):
         """
         computes agent's memory state after processing observation given last state
@@ -129,21 +117,18 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
             memory_state float[batch_id, memory_id]: agent's memory state at this tick
         """
         last_memory_state, input_data = inputs
-        
-        assert last_memory_state.ndim ==2
-        assert input_data.ndim  == 2
-        
-        
-        input_data = input_data.reshape([input_data.shape[0],-1])
-        
+
+        assert last_memory_state.ndim == 2
+        assert input_data.ndim == 2
+
+        input_data = input_data.reshape([input_data.shape[0], -1])
+
         # At each call to scan, input_n will be (n_time_steps, 3*num_units).
         # We define a slicing function that extract the input to each GRU gate
 
         def slice_w(x, n):
-            return x[:, n*self.num_units:(n+1)*self.num_units]
+            return x[:, n * self.num_units:(n + 1) * self.num_units]
 
-        
-        
         # Compute W_{hr} h_{t - 1}, W_{hu} h_{t - 1}, and W_{hc} h_{t - 1}
         hid_input = T.dot(last_memory_state, self.W_hid_stacked)
 
@@ -151,32 +136,30 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
             input_data = theano.gradient.grad_clip(
                 input_data, -self.grad_clipping, self.grad_clipping)
             hid_input = theano.gradient.grad_clip(
-                    hid_input, -self.grad_clipping, self.grad_clipping)
+                hid_input, -self.grad_clipping, self.grad_clipping)
 
         # Compute W_{xr}x_t + b_r, W_{xu}x_t + b_u, and W_{xc}x_t + b_c
         input_n = T.dot(input_data, self.W_in_stacked) + self.b_stacked
 
         # Reset and update gates
-        resetgate = slice_w(hid_input, 0) + slice_w(input_n, 0)
-        updategate = slice_w(hid_input, 1) + slice_w(input_n, 1)
-        resetgate = self.nonlinearity_resetgate(resetgate)
-        updategate = self.nonlinearity_updategate(updategate)
+        reset_gate = slice_w(hid_input, 0) + slice_w(input_n, 0)
+        update_gate = slice_w(hid_input, 1) + slice_w(input_n, 1)
+        reset_gate = self.nonlinearity_resetgate(reset_gate)
+        update_gate = self.nonlinearity_updategate(update_gate)
 
         # Compute W_{xc}x_t + r_t \odot (W_{hc} h_{t - 1})
         hidden_update_in = slice_w(input_n, 2)
         hidden_update_hid = slice_w(hid_input, 2)
-        hidden_update = hidden_update_in + resetgate*hidden_update_hid
-            
+        hidden_update = hidden_update_in + reset_gate * hidden_update_hid
+
         if self.grad_clipping:
             hidden_update = theano.gradient.grad_clip(
-                    hidden_update, -self.grad_clipping, self.grad_clipping)
+                hidden_update, -self.grad_clipping, self.grad_clipping)
         hidden_update = self.nonlinearity_hid(hidden_update)
 
         # Compute (1 - u_t)h_{t - 1} + u_t c_t
-        hid = (1 - updategate)*last_memory_state + updategate*hidden_update
+        hid = (1 - update_gate) * last_memory_state + update_gate * hidden_update
 
-        
-        
         return hid
 
     def get_output_shape_for(self, input_shapes):
@@ -186,7 +169,6 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
         returns:
                output shape
         """
-        last_memory_state_shape,observation_shape = input_shapes
-        
-        return last_memory_state_shape
+        last_memory_state_shape, observation_shape = input_shapes
 
+        return last_memory_state_shape
