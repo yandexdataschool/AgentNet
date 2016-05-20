@@ -10,6 +10,7 @@ If you wish to quickly get Recurrence class corresponding to MDPAgent,
 
 See agentnet.agent.recurrence.Recurrence.as_layers docs for detailed info.
 """
+from __future__ import division, print_function, absolute_import
 
 from collections import OrderedDict
 from itertools import chain
@@ -21,11 +22,11 @@ from lasagne.layers import InputLayer
 from theano import tensor as T
 
 from .recurrence import Recurrence
-from ..environment import SessionPoolEnvironment, SessionBatchEnvironment
+from ..environment import SessionPoolEnvironment, SessionBatchEnvironment, BaseEnvironment
 from ..utils.format import supported_sequences, unpack_list, check_list, check_tuple, check_ordered_dict
 
 
-# TODO agent_state vs game_state (=environment_state) vs state
+# TODO (arogozhnikov) fix docstrings!
 
 class MDPAgent(object):
     def __init__(self,
@@ -36,17 +37,17 @@ class MDPAgent(object):
                  ):
         """
         A generic agent within MDP (markov decision process) abstraction,
-        
+
             state_variables - OrderedDict{ memory_output: memory_input}, where
                 memory_output: lasagne layer
                     - generates first agent state (before any interaction)
                     - determines new agent state given previous agent state and an observation
-                    
+
                 memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
-            
-            policy - whatever determines agent policy, lasagne.Layer child instance (e.g. Q-values) 
+
+            policy - whatever determines agent policy, lasagne.Layer child instance (e.g. Q-values)
                     or a tuple of such instances (state value + action probabilities)
-                     
+
             action_layers - agent's action, represented by resolver.BaseResolver child instance or any appropriate layer
                 or a tuple of such, that can be fed into environment to get next state and observation.
                 Basically, whatever is fed into your environment as agent actions.
@@ -68,35 +69,36 @@ class MDPAgent(object):
                       initial_env_states='zeros',
                       initial_observations='zeros',
                       initial_hidden='zeros',
-                      **kwargs
+                      recurrence_name='AgentRecurrence',
                       ):
-        """returns a Recurrence lasagne layer that contains :
-        parameters:
-            environment - an environment to interact with (BaseEnvironment instance).
-            session_length - how many turns of interaction shall there be for each batch
-            batch_size - [required parameter] amount of independed sessions [number or symbolic].
-                rrelevant if there's at least one input or if you manually set any initial_*.
-            
+        """
+        Returns a Recurrence lasagne layer that contains :
+
+        :param environment: an environment to interact with
+        :type environment: BaseEnvironment
+        :param session_length: how many turns of interaction shall there be for each batch
+        :type session_length: int
+        :param batch_size: amount of independent sessions [number or symbolic].
+            irrelevant if there's at least one input or if you manually set any initial_*.
+        :type batch_size: int or theano.tensor.TensorVariable
+
             initial_<something> - layers providing initial values for all variables at 0-th time step
                 'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
             flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
 
+        :returns: Recurrence instance that returns
+              [agent memory states] + [env states] + [env_observations] + [agent policy] + [action_layers outputs]
+              all concatenated into one list
+        :rtype: agentnet.agent.recurrence.Recurrence
 
-        returns:
-            
-            an agentnet.agent.recurrence.Recurrence instance that returns
-              [agent memory states] + [env states] + [env_observations] [agent policy] + [action_layers outputs]
-                  all concatenated into one list
-            
         """
         env = environment
 
         assert len(check_list(env.observation_shapes)) == len(self.observation_layers)
 
         # initialize prev states
-        prev_env_states = [InputLayer((None,) + check_tuple(shape),
-                                      name="env.prev_state[%i]" % (i))
+        prev_env_states = [InputLayer((None,) + check_tuple(shape), name="env.prev_state[{i}]".format(i=i))
                            for i, shape in enumerate(check_list(env.state_shapes))]
 
         # apply environment changes after agent action
@@ -109,23 +111,23 @@ class MDPAgent(object):
 
         # compose state initialization dict
         state_init_pairs = []
-        for initializers, layers in zip(
+        for initialization, layers in zip(
                 [initial_env_states, initial_observations, initial_hidden],
                 [new_state_outputs, new_observation_outputs, list(self.agent_states.keys())]
         ):
-            if initializers == "zeros":
+            if initialization == "zeros":
                 continue
-            elif isinstance(initializers, dict):
-                state_init_pairs += list(initializers.items())
+            elif isinstance(initialization, dict):
+                state_init_pairs += list(initialization.items())
             else:
-                initializers = check_list(initializers)
-                assert len(initializers) == len(layers)
+                initialization = check_list(initialization)
+                assert len(initialization) == len(layers)
 
-                for layer, init in zip(layers, initializers):
+                for layer, init in zip(layers, initialization):
                     if init is not None:
                         state_init_pairs.append([layer, init])
 
-        # convert all inits into layers:
+        # convert all initializations into layers:
         for i in range(len(state_init_pairs)):
             layer, init = state_init_pairs[i]
 
@@ -144,7 +146,7 @@ class MDPAgent(object):
             n_steps=session_length,
             batch_size=batch_size,
             delayed_states=new_state_outputs + new_observation_outputs,
-            **kwargs
+            name=recurrence_name,
         )
 
         return recurrence
@@ -153,13 +155,17 @@ class MDPAgent(object):
                              environment,
                              session_length=10,
                              initial_hidden='zeros',
-                             **kwargs
+                             recurrence_name='AgentRecurrence',
                              ):
-        """returns a Recurrence lasagne layer that contains :
-        parameters:
-            environment - an environment to interact with (BaseEnvironment instance).
-            session_length - how many turns of interaction shall there be for each batch
-            batch_size - [required parameter] amount of independed sessions [number or symbolic].
+        """
+        returns a Recurrence lasagne layer that contains.
+
+        :param environment: an environment to interact with
+        :type environment: BaseEnvironment
+        :param session_length: how many turns of interaction shall there be for each batch
+        :type session_length: int
+
+            batch_size - [required parameter] amount of independent sessions [number or symbolic].
                 rrelevant if there's at least one input or if you manually set any initial_*.
             
             initial_<something> - layers providing initial values for all variables at 0-th time step
@@ -173,7 +179,7 @@ class MDPAgent(object):
             an agentnet.agent.recurrence.Recurrence instance that returns
               [agent memory states] + [env states] + [env_observations] [agent policy] + [action_layers outputs]
                   all concatenated into one list
-            
+
         """
         env = environment
 
@@ -229,7 +235,7 @@ class MDPAgent(object):
             input_sequences=observation_sequences,
             tracked_outputs=self.policy + self.action_layers,
             n_steps=session_length,
-            **kwargs
+            name=recurrence_name,
         )
 
         return recurrence
@@ -354,7 +360,10 @@ class MDPAgent(object):
 
         return env_states, observations, agent_states, actions, policy
 
-    def get_agent_reaction(self, prev_states={}, current_observations=[], **flags):
+    def get_agent_reaction(self,
+                           prev_states={},
+                           current_observations=tuple(),
+                           **kwargs):
         """
             prev_states: a dict [memory output: prev state]
             current_observations: a list of inputs where i-th input corresponds to 
@@ -372,7 +381,7 @@ class MDPAgent(object):
         if not hasattr(prev_states, 'keys'):
             # if only one layer given, make a single-element list of it
             prev_states = check_list(prev_states)
-            prev_states = OrderedDict(list(zip(list(self.agent_states.keys()), prev_states)))
+            prev_states = OrderedDict(zip(self.agent_states.keys(), prev_states))
         else:
             prev_states = check_ordered_dict(prev_states)
 
@@ -402,7 +411,7 @@ class MDPAgent(object):
         results = lasagne.layers.get_output(
             layer_or_layers=output_list,
             inputs=input_map,
-            **flags
+            **kwargs
         )
 
         # parse output array

@@ -1,3 +1,5 @@
+from __future__ import division, print_function, absolute_import
+
 from collections import OrderedDict
 from itertools import chain
 from warnings import warn
@@ -12,6 +14,9 @@ from ..utils.format import check_list, check_ordered_dict, unpack_list, supporte
 from ..utils.layers import TupleLayer, get_layer_dtype
 
 
+# TODO (arogozhnikov) avoid packing / unpacking of tensors (see e.g. get_output_for)
+# this is a non-trivial issue which makes whole system very error-prone
+
 class Recurrence(TupleLayer):
     def __init__(self,
                  input_nonsequences=OrderedDict(),
@@ -22,59 +27,56 @@ class Recurrence(TupleLayer):
                  n_steps=10,
                  batch_size=None,
                  delayed_states=tuple(),
-                 strict=True,
-                 **kwargs
+                 verify_graph=True,
+                 name="YetAnotherRecurrence",
                  ):
         """
-        A generic recurrent unit that works with a custom graph
-        Takes:
-        
-            input_nonsequences: inputs that are same at each time tick.
-                Technically it's a dictionary that maps InputLayer from one-step graph
-                to layers from the outer graph.
-                
-            input_sequences: layers that represent time sequences, fed into graph tick by tick.
-                This has to be a dict (one-step input -> sequence layer).
-                All such sequences are iterated over FIRST AXIS (axis=1),
-                since we consider their shape to be [batch, time, whatever_else...]
+        A generic recurrent unit that works with a custom graph.
+        Recurrence is used to compile recurrent computations while
+
+        :param input_nonsequences: inputs that are same at each time tick.
+            Technically it's a dictionary that maps InputLayer from one-step graph
+            to layers from the outer graph.
+
+        :param input_sequences: layers that represent time sequences, fed into graph tick by tick.
+            This has to be a dict (one-step input -> sequence layer).
+            All such sequences are iterated over FIRST AXIS (axis=1),
+            since we consider their shape to be [batch, time, whatever_else...]
             
-            tracked_outputs: any layer from the one-state graph which outputs should be
-                recorded at every time tick.
-                Note that all state_variables are tracked separately, so their inclusion is not needed.
+        :param tracked_outputs: any layer from the one-state graph which outputs should be
+            recorded at every time tick.
+            Note that all state_variables are tracked separately, so their inclusion is not needed.
 
 
-            state_variables: a dictionary that maps next state variables to their respective previous state
-                keys (new states) must be lasagne layers and values (previous states) must be InputLayers
-                
-                Note that state dtype is defined thus:
-                 - if state key layer has output_dtype, than that type is used for the entire state
-                 - otherwise, theano.config.floatX is used
+        :param state_variables: a dictionary that maps next state variables to their respective previous state
+            keys (new states) must be lasagne layers and values (previous states) must be InputLayers
+
+            Note that state dtype is defined thus:
+             - if state key layer has output_dtype, than that type is used for the entire state
+             - otherwise, theano.config.floatX is used
             
-            state_init: what are the default values for state_variables. In other words, what is
-                prev_state for the first iteration. By default it's T.zeros of the appropriate shape.
-                Can be a dict mapping state OUTPUTS to their initializers.
-                    - if so, any states not mentioned in it will be considered zeros
-                Can be a list of initializer layers for states in the order of dict.items()
-                    - if so, it's length must match len(state_variables)
-                    
-                
-            n_steps - how many time steps will the recurrence unroll for
+        :param state_init: what are the default values for state_variables. In other words, what is
+            prev_state for the first iteration. By default it's T.zeros of the appropriate shape.
+            Can be a dict mapping state OUTPUTS to their initialisations.
+                - if so, any states not mentioned in it will be considered zeros
+            Can be a list of initializer layers for states in the order of dict.items()
+                - if so, it's length must match len(state_variables)
+
+        :param n_steps: how many time steps will the recurrence unroll for
             
-            batch_size - if the process has no inputs, this expression (int or theano scalar),
-                this variable defines the batch size
+        :param batch_size: if the process has no inputs, this expression (int or theano scalar),
+            this variable defines the batch size
                 
-            delayed_states - any states mentioned in this list will be shifted 1 turn backwards 
-                    - from init to n_steps -1. They will be padded with their initial values
-                    This is intended to allow flipping the recurrence graph to synchronize corresponding values. 
-                    E.g. for MDP, if environment reaction follows agent action,  synchronize observations with actions
-                    [at i-th turn agent sees i-th observation, than chooses i-th action and gets i-th reward]
+        :param delayed_states: any states mentioned in this list will be shifted 1 turn backwards
+            - from init to n_steps -1. They will be padded with their initial values
+            This is intended to allow flipping the recurrence graph to synchronize corresponding values.
+            E.g. for MDP, if environment reaction follows agent action,  synchronize observations with actions
+            [at i-th turn agent sees i-th observation, than chooses i-th action and gets i-th reward]
             
-            strict - whether to assert that all inner graph input layers are registered for the recurrence
-                as inputs or prev states and all inputs/prev states are actually needed to compute next states/outputs.
-                NOT the same as theano.scan(strict=True).
+        :param verify_graph : whether to assert that all inner graph input layers are registered for the recurrence
+            as inputs or prev states and all inputs/prev states are actually needed to compute next states/outputs.
+            NOT the same as theano.scan(strict=True).
                 
-            **kwargs - layer name and other lasagne layer attributes you want that suit the MergeLayer
-        
         Outputs:
             returns a tuple of sequences with shape [batch,tick, ...]
                 - state variable sequences in order of dict.items()
@@ -92,11 +94,6 @@ class Recurrence(TupleLayer):
                         
             
         """
-
-        # default name
-        if "name" not in kwargs:
-            kwargs["name"] = "YetAnother" + self.__class__.__name__
-
         self.n_steps = n_steps
 
         self.input_nonsequences = check_ordered_dict(input_nonsequences)
@@ -135,18 +132,17 @@ class Recurrence(TupleLayer):
                           self.input_nonsequences.values(),
                           self.input_sequences.values())
 
-        # if we have no inputs or inits, make sure batch_size is specified
+        # if we have no inputs or initialisations, make sure batch_size is specified
         if len(incomings) == 0:
             assert batch_size is not None
         self.batch_size = batch_size
 
-        super(Recurrence, self).__init__(incomings, **kwargs)
+        super(Recurrence, self).__init__(incomings, name=name)
 
         # assertions and only assertions. From now this function only asserts stuff.
 
-        if strict:
+        if verify_graph:
             # verifying graph topology (assertions)
-
             all_inputs = chain(self.state_variables.values(),
                                self.state_init.keys(),
                                self.input_nonsequences.keys(),
@@ -166,11 +162,10 @@ class Recurrence(TupleLayer):
             for layer in lasagne.layers.get_all_layers(all_outputs):
                 if type(layer) is InputLayer:
                     if layer not in all_inputs:
-                        raise ValueError("One of your network dependencies (%s) is not mentioned " \
-                                         "as a Recurrence inputs" % (str(layer.name)))
+                        message = "One of your network dependencies ({layer_name}) isn't mentioned in Recurrence inputs"
+                        raise ValueError(message.format(layer_name=layer.name))
 
         # verifying shapes (assertions)
-
         nonseq_pairs = chain(self.state_variables.items(),
                              self.state_init.items(),
                              self.input_nonsequences.items())
@@ -189,14 +184,14 @@ class Recurrence(TupleLayer):
                 warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
                      "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
 
-    def get_params(self, **kwargs):
+    def get_params(self, **tags):
         """returns all params. If include_recurrence is set ot True, includes recurrent params from one-step network"""
 
-        params = super(Recurrence, self).get_params(**kwargs)
+        params = super(Recurrence, self).get_params(**tags)
 
         # include inner recurrence params
         outputs = list(self.state_variables.keys()) + self.tracked_outputs
-        inner_params = lasagne.layers.get_all_params(outputs, **kwargs)
+        inner_params = lasagne.layers.get_all_params(outputs, **tags)
         params += inner_params
 
         return params
@@ -272,7 +267,7 @@ class Recurrence(TupleLayer):
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
             return new_states + new_outputs
 
-
+        # TODO (arogozhnikov) does random_streams.updates resolves the problem?
         # call scan itself (unroll it to avoid randomness issues)
         history = unroll_scan(step,
                               sequences=sequences,
@@ -287,7 +282,7 @@ class Recurrence(TupleLayer):
         state_seqs, output_seqs = unpack_list(history, [n_states, n_outputs])
 
         # handle delayed_states
-        # selectively shift state sequences by 1 tick into the past, padding with their initializers
+        # selectively shift state sequences by 1 tick into the past, padding with their initialisations
         for i in range(len(state_seqs)):
             if list(self.state_variables.keys())[i] in self.delayed_states:
                 state_seq = state_seqs[i]
@@ -303,7 +298,7 @@ class Recurrence(TupleLayer):
         shapes = [tuple(layer.output_shape) for layer in list(self.state_variables.keys()) + self.tracked_outputs]
         return [shape[:1] + (self.n_steps,) + shape[1:] for shape in shapes]
 
-    def get_one_step(self, prev_states={}, current_inputs={}, **flags):
+    def get_one_step(self, prev_states={}, current_inputs={}, **get_output_kwargs):
         """
         Applies one-step recurrence.
         parameters:
@@ -315,9 +310,8 @@ class Recurrence(TupleLayer):
                         i-th input slot from concatenated sequences and nonsequences 
                         self.input_nonsequences.keys() + self.input_sequences.keys()
             
-            flags: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
-            
-            
+            get_output_kwargs: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
+
             returns:
                 new_states: a list of all new_state values, where i-th element corresponds
                         to i-th self.state_variables key
@@ -369,7 +363,7 @@ class Recurrence(TupleLayer):
         results = lasagne.layers.get_output(
             layer_or_layers=output_list,
             inputs=input_map,
-            **flags
+            **get_output_kwargs
         )
 
         # parse output array
