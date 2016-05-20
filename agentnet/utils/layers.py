@@ -28,6 +28,7 @@ def add(*args, **kwargs):
     return ElemwiseMergeLayer(args, T.add, **kwargs)
 
 
+# TODO (arogozhnikov) delete completely. This is a synonym
 def transform(a, fun=lambda x: x, **kwargs):
     """Alias for NonlinearityLayer"""
     kwargs["name"] = kwargs.get("name",
@@ -36,11 +37,11 @@ def transform(a, fun=lambda x: x, **kwargs):
     return NonlinearityLayer(a, fun, **kwargs)
 
 
-def clip_grads(layer, grad_clipping):
+def clip_grads(layer, clipping_bound):
     """Clips grads passing through a lasagne.layers.layer"""
-    grad_clipping = abs(grad_clipping)
-    grad_clip_op = lambda v: theano.gradient.grad_clip(v, -grad_clipping, grad_clipping)
-    name = layer.name or "layer"
+    clipping_bound = abs(clipping_bound)
+    grad_clip_op = lambda v: theano.gradient.grad_clip(v, -clipping_bound, clipping_bound)
+    name = layer.name or "clipping_layer"
     return NonlinearityLayer(layer, grad_clip_op, name=name + ".grad_clip")
 
 
@@ -51,6 +52,10 @@ def get_layer_dtype(layer, default=None):
     otherwise defaults to default or (if it's not given) theano.config.floatX"""
     return layer.output_dtype if hasattr(layer, "output_dtype") else default or theano.config.floatX
 
+
+# TODO (arogozhnikov) use names for outputs. Recommended interface
+#  tuple_layer = TupleLayer(dict(old_memory=old_memory, observations=observations))
+#  new_memory, action = tuple_layer['new_memory', 'action']
 
 class TupleLayer(MergeLayer):
     """
@@ -86,6 +91,7 @@ class TupleLayer(MergeLayer):
         return [name + "[{}]".format(i)
                 for i in range(len(self.output_shapes))]
 
+    # TODO (arogozhnikov) Remove this option. Always return tuple, even with single output
     @property
     def disable_tuple(self):
         """
@@ -129,8 +135,7 @@ class TupleLayer(MergeLayer):
     def __iter__(self):
         """ iterate over tuple output layers"""
         if self.disable_tuple:
+            # TODO (arogozhnikov) kill this branch
             return [self]
         else:
             return (self[i] for i in range(len(self)))
-
-# TODO implement rev_grad here?
