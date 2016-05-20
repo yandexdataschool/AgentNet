@@ -34,7 +34,6 @@ install:
   - travis_retry conda install --yes pip numpy scipy six pandas nomkl
   - travis_retry conda install --yes theano scikit-learn nose matplotlib
   - pip install -r requirements.txt
-  - pip install nosetests
   - pip install .
   - git clone https://github.com/openai/gym.git
   - cd gym && pip install -e '.[all]' && cd ..
