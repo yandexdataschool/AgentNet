@@ -12,7 +12,7 @@ RUN /bin/bash --login -c "\
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip \
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/develop.zip \
     "
 
 RUN /bin/bash --login -c "\
@@ -20,11 +20,11 @@ RUN /bin/bash --login -c "\
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
-    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip \
+    pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/develop.zip \
     "
 
 RUN /bin/bash --login -c "\
-    git clone https://github.com/yandexdataschool/AgentNet -b master &&\
+    git clone https://github.com/yandexdataschool/AgentNet -b develop &&\
     sed -i -e '3iln -s ~/AgentNet/examples /notebooks/agentnet_examples\' /root/install_modules.sh \
     "
     
