@@ -53,7 +53,7 @@ setup(
     # List run-time dependencies here. These will be installed by pip when your project is installed.
     install_requires=[
         'six',
-        'lasagne',  # TODO github
+        'lasagne',
         'theano >= 0.8.2',
         'pandas>=0.14',
         'numpy>=1.9',
