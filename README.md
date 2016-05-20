@@ -23,7 +23,7 @@ List of already implemented reinforcement techniques:
 - N-step Deterministic Policy Gradient
 
 Apart from this, 
-- __AgentNet__  handles both discrete and continuous control.
+- __AgentNet__  handles both discrete and continuous control
 - you can use hierarchical reinforcement learning in __AgentNet__ 
 
 ## Installation
