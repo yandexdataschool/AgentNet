@@ -42,6 +42,7 @@ On Windows/OSX install Docker [Kitematic](https://kitematic.com/),
 then simply run `justheuristic/agentnet` container and click on 'web preview'.
 
 Otherwise: 
+
 1. install [Docker](http://docs.docker.com/installation/),
 2. make sure `docker` daemon is running (`sudo service docker start`)
 3. make sure no application is using port 1234 (this is the default port that can be changed)
