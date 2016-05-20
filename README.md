@@ -22,7 +22,9 @@ List of already implemented reinforcement techniques:
 - N-step Advantage Actor-Critic (A2c)
 - N-step Deterministic Policy Gradient
 
-AgentNet handles both discrete and continious control.
+Apart from this, 
+- __AgentNet__  handles both discrete and continuous control.
+- you can use hierarchical reinforcement learning in __AgentNet__ 
 
 ## Installation
 
@@ -34,16 +36,17 @@ AgentNet handles both discrete and continious control.
 2. Install dependencies: `pip install -r requirements.txt`
 3. Install library itself: `pip install -e .`
 
-### [Docker container](https://hub.docker.com/r/justheuristic/agentnet/)
+### Docker container
 
-If you use Docker Kitematic, simply run `justheuristic/agentnet` container and click on 'web preview'.
+On Windows/OSX install Docker [Kitematic](https://kitematic.com/), 
+then simply run `justheuristic/agentnet` container and click on 'web preview'.
 
 Otherwise: 
 1. install [Docker](http://docs.docker.com/installation/),
 2. make sure `docker` daemon is running (`sudo service docker start`)
 3. make sure no application is using port 1234 (this is the default port that can be changed)
 4. `[sudo] docker run -d -p 1234:8888 justheuristic/agentnet`
-5. Access via localhost:1234 or whatever port you chose
+5. Access from browser via localhost:1234 
   
 
 
