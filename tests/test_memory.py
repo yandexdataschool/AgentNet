@@ -1,5 +1,6 @@
 """
-and omni-test for memory and value-based learning methods
+and omni-test for memory and augmentations: window, stack, grucell, rnncell, grulayer
+also tests greedy resolver
 """
 from __future__ import print_function
 

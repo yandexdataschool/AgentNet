@@ -1,3 +1,7 @@
+"""
+i test learning methods for discrete action space: q-learning, n-step q-learning, sarsa, a2c
+Also tests probabilistic resolver.
+"""
 from __future__ import print_function
 
 # import matplotlib.pyplot as plt
