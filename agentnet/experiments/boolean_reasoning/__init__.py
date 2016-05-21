@@ -55,10 +55,10 @@ class BooleanReasoningEnvironment(BaseObjective, BaseEnvironment):
     feature_names = x_names + y_names + ["End_session_now"]
     n_actions = n_attrs + n_categories + 1
 
-    def __init__(self, batch_size=10):
+    def __init__(self):
         # fill shared variables with dummy values
-        self.attributes = create_shared("X_attrs_data", np.zeros([batch_size, n_attrs]), 'uint8')
-        self.categories = create_shared("categories_data", np.zeros([batch_size, n_categories]), 'uint8')
+        self.attributes = create_shared("X_attrs_data", np.zeros([10, n_attrs]), 'uint8')
+        self.categories = create_shared("categories_data", np.zeros([10, n_categories]), 'uint8')
         self.batch_size = self.attributes.shape[0]
 
         # "end_session_now" action
@@ -79,8 +79,24 @@ class BooleanReasoningEnvironment(BaseObjective, BaseEnvironment):
         # last action id corresponds to the "end session" action
         self.end_action_id = self.joint_data.shape[1] - 1
 
-        # fill in one data sample
-        self.generate_new_data_batch(batch_size)
+        # generate dummy data sample
+        self.generate_new_data_batch(10)
+        
+        
+        #fill in the shapes
+        #single-element lists for states and observations
+        observation_shapes=[int((self.joint_data.shape[1] + 2).eval())]
+        env_state_shapes=[int(self.joint_data.shape[1].eval())]
+        action_shapes=[(),]
+        
+        #use default dtypes: int32 for actions, floatX for states and observations
+        
+        BaseEnvironment.__init__(
+            self,
+            env_state_shapes,
+            observation_shapes,
+            action_shapes,
+        )
 
     def _generate_data(self, batch_size):
         """generates data batch"""
@@ -109,20 +125,7 @@ class BooleanReasoningEnvironment(BaseObjective, BaseEnvironment):
 
         self.set_data_batch(attrs_batch, categories_batch)
 
-    # dimensions
-
-    # flags that denote whether environment should get a single state/action instead of iterable of these
-
-    @property
-    def observation_shapes(self):
-        """a single observation. Treated as one-element list"""
-        return [int((self.joint_data.shape[1] + 2).eval())]
-
-    @property
-    def state_shapes(self):
-        """ a single state here. Treated as one-element list"""
-        return [int(self.joint_data.shape[1].eval())]
-
+    
     def get_whether_alive(self, observation_tensors):
         """Given observations, returns whether session has or has not ended.
         Returns uint8 [batch,time_tick] where 1 means session is alive and 0 means session ended already.

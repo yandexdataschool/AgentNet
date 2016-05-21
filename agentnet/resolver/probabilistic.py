@@ -14,10 +14,22 @@ class ProbabilisticResolver(BaseResolver):
     def __init__(self, incoming, assume_normalized=False, seed=1234, action_dtype='int32',
                  name='ProbabilisticResolver'):
         """
-            incoming - a lasagne layer that outputs policy vectors
-            assume_normalized - if set to True, the incoming layer is assumed to return outputs
-                that add up to 1 (e.g. softmax output)
-            seed constant: - random seed
+        :param incoming: a lasagne layer that outputs action probability vectors
+                WARNING! We assume that incoming probabilities are all nonnegative even if assume_normalized=False.
+        :type incoming: lasagne.layers.Layer
+        
+        :param assume_normalized: if set to True, the incoming layer is assumed to 
+            return outputs that add up to 1 (e.g. softmax output) along last axis
+        :type assume_normalized: bool   
+        
+        :param seed: - random seed
+        :type seed: int
+        
+        :action_dtype: type of action (usually (u)int 32 or 64)
+        :type action_dtype: string or dtype
+        
+        :param name: layer name (using lasagne conventions)
+        :type name: string
         """
 
         # probas float[2] - probability of random and optimal action respectively
@@ -32,10 +44,11 @@ class ProbabilisticResolver(BaseResolver):
     def get_output_for(self, policy, greedy=False, **kwargs):
         """
         picks the action with probabilities from policy
-        arguments:
-            policy float[batch_id, action_id]: policy values for all actions (e.g. Q-values of action probabilities)
-        returns:
-            actions int[batch_id]: ids of actions picked  
+        :param policy: probabilities for all actions (e.g. a2c actor policy or standartized Q-values)
+        :type policy: tensor of float[batch_id, action_id]
+        
+        :returns: actions ids of actions picked  
+        :rtype: vector of int[batch_id]
         """
         if greedy:
             # greedy branch
@@ -48,7 +61,6 @@ class ProbabilisticResolver(BaseResolver):
             if self.assume_normalized:
                 probas = policy
             else:
-                # TODO (arogozhnikov) problems with negative values?
                 probas = policy / T.sum(policy, axis=1, keepdims=True)
 
             # p1, p1+p2, p1+p2+p3, ... 1

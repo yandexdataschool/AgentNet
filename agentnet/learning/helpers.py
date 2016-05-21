@@ -110,7 +110,9 @@ def get_n_step_value_reference(state_values,
                         is_alive,
                         next_Vpred,
                         time_i,
-                        next_Vref):
+                        next_Vref,
+                        *args #you won't dare delete me
+                       ):
         """scan inner computation step, going backwards in time
         params:
         rewards, is_alive, next_Vpred, time_i - sequences

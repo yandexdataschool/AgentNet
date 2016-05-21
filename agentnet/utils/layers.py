@@ -28,15 +28,6 @@ def add(*args, **kwargs):
     return ElemwiseMergeLayer(args, T.add, **kwargs)
 
 
-# TODO (arogozhnikov) delete completely. This is a synonym
-def transform(a, fun=lambda x: x, **kwargs):
-    """Alias for NonlinearityLayer"""
-    kwargs["name"] = kwargs.get("name",
-                                (a.name or "layer") + ".transform", )
-
-    return NonlinearityLayer(a, fun, **kwargs)
-
-
 def clip_grads(layer, clipping_bound):
     """Clips grads passing through a lasagne.layers.layer"""
     clipping_bound = abs(clipping_bound)

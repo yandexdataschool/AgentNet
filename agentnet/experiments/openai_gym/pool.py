@@ -17,9 +17,9 @@ class GamePool(object):
            - prev memory states - last agent hidden states
         """
 
-        self.atari_games = [gym.make(game_title) for _ in range(n_games)]
+        self.games = [gym.make(game_title) for _ in range(n_games)]
 
-        self.prev_observations = [atari.reset() for atari in self.atari_games]
+        self.prev_observations = [atari.reset() for atari in self.games]
 
         self.prev_memory_states = 'zeros'
 
@@ -48,15 +48,15 @@ class GamePool(object):
             new_observations, cur_rewards, is_done, infos = \
                 zip(*map(
                     lambda atari, action: atari.step(action),
-                    self.atari_games,
+                    self.games,
                     actions)
                     )
 
             new_observations = np.array(new_observations)
 
-            for i in range(len(self.atari_games)):
+            for i in range(len(self.games)):
                 if is_done[i]:
-                    new_observations[i] = self.atari_games[i].reset()
+                    new_observations[i] = self.games[i].reset()
 
                     for m_i in range(len(new_memory_states)):
                         new_memory_states[m_i][i] = 0

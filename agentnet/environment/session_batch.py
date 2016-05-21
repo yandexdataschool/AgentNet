@@ -60,40 +60,22 @@ class SessionBatchEnvironment(BaseEnvironment, BaseObjective):
 
         self.batch_size = self.observations[0].shape[0]
         self.sequence_length = self.observations[0].shape[1]
+        
+        
+        
+        BaseEnvironment.__init__(self,
+                                 state_shapes = [tuple()],
+                                 observation_shapes = self.single_observation_shapes,
+                                 action_shapes = self.single_action_shapes,
+                                 state_dtypes= ["int32"],
+                                 observation_dtypes = [obs.dtype for obs in self.observations],
+                                 action_dtypes = [act.dtype for act in self.actions]
+                                )
 
-    @property
-    def state_shapes(self):
-        """Environment state sizes. In this case, it's a timer"""
-        return [tuple()]
 
-    @property
-    def state_dtypes(self):
-        """environment state dtypes. In this case, it's a timer"""
-        return ["int32"]
 
-    @property
-    def observation_shapes(self):
-        """observation shapes"""
-        return self.single_observation_shapes
 
-    @property
-    def observation_dtypes(self):
-        """observation dtypes"""
-        return [obs.dtype for obs in self.observations]
-
-    @property
-    def action_shapes(self):
-        """action shapes"""
-        assert self.actions is not None
-        return self.single_action_shapes
-
-    @property
-    def action_dtypes(self):
-        """action dtypes"""
-        return [act.dtype for act in self.actions]
-
-    # TODO kwargs
-    def get_action_results(self, last_states, actions):
+    def get_action_results(self, last_states, actions,**kwargs):
         """
         computes environment state after processing agent's action
         arguments:

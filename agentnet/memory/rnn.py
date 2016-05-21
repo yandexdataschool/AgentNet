@@ -2,7 +2,7 @@ import lasagne
 from lasagne.layers import DenseLayer, NonlinearityLayer
 
 from ..utils.format import check_list
-from ..utils.layers import clip_grads, add, mul, transform
+from ..utils.layers import clip_grads, add, mul
 from ..memory.gate import GateLayer
 
 
@@ -129,18 +129,18 @@ def GRUCell(prev_state,
     inp_forget, inp_update, hidden_update_in = inp_to_gates
 
     # compute forget and update gates
-    forgetgate = transform(
+    forgetgate = NonlinearityLayer(
         add(inp_forget, hid_forget),
         forgetgate_nonlinearity,
         name="forgetgate"
     )
-    updategate = transform(
+    updategate = NonlinearityLayer(
         add(inp_update, hid_update),
         updategate_nonlinearity,
         name="updategate"
     )
 
-    inv_updategate = transform(updategate,
+    inv_updategate = NonlinearityLayer(updategate,
                                lambda x: 1 - x,
                                name="1 - updategate")
 
