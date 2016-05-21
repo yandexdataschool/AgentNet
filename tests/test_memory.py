@@ -1,3 +1,6 @@
+"""
+and omni-test for memory and value-based learning methods
+"""
 from __future__ import print_function
 
 # import matplotlib.pyplot as plt
@@ -5,9 +8,10 @@ import numpy as np
 import gym
 import lasagne
 from lasagne.layers import InputLayer, DimshuffleLayer
-from agentnet.memory import WindowAugmentation
+from agentnet.memory import WindowAugmentation, StackAugmentation
+from agentnet.memory import GRUCell,RNNCell,GRUMemoryLayer
 from agentnet.resolver import EpsilonGreedyResolver
-from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer
+from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer, concat,flatten
 from agentnet.learning import qlearning
 import theano
 from agentnet.display import Metrics
@@ -16,10 +20,13 @@ from agentnet.experiments.openai_gym.pool import GamePool
 from agentnet.agent import Agent
 from agentnet.environment import SessionPoolEnvironment
 
-__author__ = 'Alex Rogozhnikov'
+from collections import OrderedDict
+
+__author__ = 'Alex Rogozhnikov, Hedgehog'
 
 
-def test_space_invaders(game_title='SpaceInvaders-v0',
+
+def test_memory(game_title='SpaceInvaders-v0',
                         n_parallel_games=3,
                         replay_seq_len=2,
                         ):
@@ -46,29 +53,83 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
     observation_reshape = DimshuffleLayer(observation_layer, (0, 3, 1, 2))
 
     # Agent memory states
+    
+    memory_dict = OrderedDict([])
+    
+    
+    ###Window
     window_size = 3
 
     # prev state input
     prev_window = InputLayer((None, window_size) + tuple(observation_reshape.output_shape[1:]),
                              name="previous window state")
+    
 
     # our window
     window = WindowAugmentation(observation_reshape,
                                 prev_window,
                                 name="new window state")
-
-    memory_dict = {window: prev_window}
-
-    # ##### Neural network body
-    # you may use any other lasagne layers, including convolutions, batch_norms, maxout, etc
-
+    
     # pixel-wise maximum over the temporal window (to avoid flickering)
     window_max = ExpressionLayer(window,
                                  lambda a: a.max(axis=1),
                                  output_shape=(None,) + window.output_shape[2:])
 
+    
+    memory_dict[window] = prev_window
+    
+    ###Stack
+    #prev stack
+    stack_w,stack_h = 4, 5
+    stack_inputs = DenseLayer(observation_reshape,stack_w,name="prev_stack")
+    stack_controls = DenseLayer(observation_reshape,3,
+                              nonlinearity=lasagne.nonlinearities.softmax,
+                              name="prev_stack")
+    prev_stack = InputLayer((None,stack_h,stack_w),
+                             name="previous stack state")
+    stack = StackAugmentation(stack_inputs,prev_stack, stack_controls)
+    memory_dict[stack] = prev_stack
+    
+    stack_top = lasagne.layers.SliceLayer(stack,0,1)
+
+    
+    ###RNN preset
+    
+    prev_rnn = InputLayer((None,64),
+                             name="previous RNN state")
+    new_rnn = RNNCell(prev_rnn,observation_reshape)
+    memory_dict[new_rnn] = prev_rnn
+    
+    ###GRU preset
+    prev_gru = InputLayer((None,32),
+                             name="previous GRUcell state")
+    new_gru = GRUCell(prev_gru,observation_reshape)
+    memory_dict[new_gru] = prev_gru
+    
+    ###GRUmemorylayer
+    prev_gru1 = InputLayer((None,48),
+                             name="previous GRUcell state")
+    new_gru1 = GRUMemoryLayer(48,observation_reshape,prev_gru1)
+    memory_dict[new_gru1] = prev_gru1
+    
+    
+    
+    
+    ##concat everything
+    
+    for i in [flatten(window_max),stack_top,new_rnn,new_gru,new_gru1]:
+        print(i.output_shape)
+    all_memory = concat([flatten(window_max),stack_top,new_rnn,new_gru,new_gru1])
+    
+    
+    
+
+    # ##### Neural network body
+    # you may use any other lasagne layers, including convolutions, batch_norms, maxout, etc
+
+
     # a simple lasagne network (try replacing with any other lasagne network and see what works best)
-    nn = DenseLayer(window_max, num_units=500, name='dense0')
+    nn = DenseLayer(all_memory, num_units=500, name='dense0')
     nn = DropoutLayer(nn, name="dropout", p=0.05)  # will get deterministic during evaluation
     nn = DenseLayer(nn, num_units=300, name='dense1')
 

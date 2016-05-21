@@ -24,10 +24,13 @@ class Metrics(defaultdict):
 
     def plot(self,
              title="metrics",
-             legend_loc='best'):
+             legend_loc='best',
+             show=True,):
         for metric_name, metric_dict in list(self.items()):
             plt.plot(*list(zip(*sorted(metric_dict.items()))), label=metric_name)
 
         plt.title(title)
         plt.grid()
         plt.legend(loc=legend_loc)
+        if show:
+            plt.show()

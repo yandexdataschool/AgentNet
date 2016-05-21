@@ -70,9 +70,15 @@ dataset_url = "https://www.dropbox.com/s/6ymf16w7t2vwpwl/musicians_categorized.c
 class WikicatEnvironment(BaseObjective,BaseEnvironment):
 
 
-    def __init__(self,rewards = default_rewards):
+    def __init__(self,rewards = default_rewards,min_occurences = 15,experiment_path=""):
         
-        #dummy initial values
+        
+        
+        #data params
+        self.experiment_path=experiment_path
+        self.min_occurences=min_occurences
+        
+        
         
         #fill shared variables with dummy values
         self.attributes = create_shared("X_attrs_data",np.zeros([1,1]),'uint8')
@@ -103,15 +109,29 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         
         
         
+        #dimensions
+        data_attrs,data_cats,_ = self.get_dataset()
+        env_state_shapes = (data_cats.shape[1]+data_attrs.shape[1]+1,)
+        observation_shapes = (env_state_shapes[0] +2,)
+        #the rest is default
+        
+        #init default (some shapes will be overloaded below
+        BaseEnvironment.__init__(self,
+                                env_state_shapes,
+                                observation_shapes)
+
+        
+        
+        
         
     """reading/loading data"""
            
-    def get_dataset(self,min_occurences = 15,experiment_path=experiment_path):
+    def get_dataset(self):
         """loads dataset; returns:
             attributes: np.array
             wikipedia cetegories: np.array
             action names: list(str)"""
-        dataset_path = os.path.join(experiment_path,"musicians_categorized.csv")
+        dataset_path = os.path.join(self.experiment_path,"musicians_categorized.csv")
 
         
         if not os.path.isfile(dataset_path):
@@ -124,13 +144,14 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
             urlretrieve(dataset_url,dataset_path)
             
         df = pd.DataFrame.from_csv(dataset_path)
-        df =  df[df.values.sum(axis=1) > min_occurences]
+        df =  df[df.values.sum(axis=1) > self.min_occurences]
         
         
         feature_names = list(df.columns)
         categorical_columns = np.nonzero([s.startswith("category:") for s in feature_names])[0]
         attribute_columns = np.nonzero([not s.startswith("category:") for s in feature_names])[0]
 
+        
         data_cats = df.iloc[:,categorical_columns]
         data_attrs = df.iloc[:,attribute_columns]
 
@@ -152,15 +173,6 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         self.load_data_batch(attrs[batch_ids],cats[batch_ids])
 
          
-    """dimensions"""
-    
-    @property
-    def observation_shapes(self):
-        return [int((self.joint_data.shape[1]+2).eval())]
-    @property
-    def state_shapes(self):
-        return [int(self.joint_data.shape[1].eval())]
-    
     
     def get_whether_alive(self,observation_tensors):
         """Given observations, returns whether session has or has not ended.

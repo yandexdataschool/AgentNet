@@ -26,40 +26,43 @@ from ..environment import SessionPoolEnvironment, SessionBatchEnvironment, BaseE
 from ..utils.format import supported_sequences, unpack_list, check_list, check_tuple, check_ordered_dict
 
 
-# TODO (arogozhnikov) fix docstrings!
 
 class MDPAgent(object):
     def __init__(self,
                  observation_layers,
                  agent_states,
-                 policy,
+                 policy_estimators,
                  action_layers,
                  ):
         """
-        A generic agent within MDP (markov decision process) abstraction,
+        A generic agent within MDP (markov decision process) abstraction.
 
-            state_variables - OrderedDict{ memory_output: memory_input}, where
+        :param agent_states: OrderedDict{ memory_output: memory_input}, where
                 memory_output: lasagne layer
                     - generates first agent state (before any interaction)
                     - determines new agent state given previous agent state and an observation
-
+                    
                 memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
-
-            policy - whatever determines agent policy, lasagne.Layer child instance (e.g. Q-values)
-                    or a tuple of such instances (state value + action probabilities)
-
-            action_layers - agent's action, represented by resolver.BaseResolver child instance or any appropriate layer
-                or a tuple of such, that can be fed into environment to get next state and observation.
-                Basically, whatever is fed into your environment as agent actions.
+         :type agent_states: collections.OrderedDict or dict
+         
+         :param policy_estimators: whatever determines agent policy
+         :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances 
+                 (e.g. state value + action probabilities for a2c)
+         
+         :param action_layers: agent's action(s), or whatever is fed into your environment as agent actions.
+         :type action_layers: resolver.BaseResolver child instance or any appropriate layer
+                 or a tuple of such, that can be fed into environment to get next state and observation.
+                 
+                 
         """
 
         self.single_action = type(action_layers) not in supported_sequences
-        self.single_policy = type(policy) not in supported_sequences
+        self.single_policy = type(policy_estimators) not in supported_sequences
         self.single_observation = type(observation_layers) not in supported_sequences
 
         self.observation_layers = check_list(observation_layers)
         self.agent_states = check_ordered_dict(agent_states)
-        self.policy = check_list(policy)
+        self.policy = check_list(policy_estimators)
         self.action_layers = check_list(action_layers)
 
     def as_recurrence(self,
@@ -250,47 +253,42 @@ class MDPAgent(object):
                      optimize_experience_replay=False,
                      **kwargs
                      ):
-        """returns history of agent interaction with environment for given number of turns:
-        parameters:
-            environment - an environment to interact with (BaseEnvironment instance)
-            session_length - how many turns of interaction shall there be for each batch
-            batch_size - [required parameter] amount of independed sessions [number or symbolic].Irrelevant if you manually set all initial_*.
-            
-            initial_<something> - layers or lists of layers or theano expressions providing initial <something> 
-                for the first tick of recurrent applier. 
-                If return_layers is True, they must be layers, if False - theano expressions
-                Default 'zeros' means filling variables/layers with zeros of appropriate shape/type.
-            
-            return_layers - if True, works with lasagne layers and returns a bunch of them.
-                    Otherwise (default) returns symbolic expressions.
-                    Turning this on may be useful when traing nested MDP agents
-            
-            optimize_experience_replay - if True, assumes environment to be have a pre-defined sequence of observations.
+        """
+        Returns history of agent interaction with environment for given number of turns:
+        
+        :param environment: an environment to interact with
+        :type environment: BaseEnvironment
+        :param session_length: how many turns of interaction shall there be for each batch
+        :type session_length: int
+        :param batch_size: amount of independent sessions [number or symbolic].
+            irrelevant if there's at least one input or if you manually set any initial_*.
+        :type batch_size: int or theano.tensor.TensorVariable
+
+        initial_<something> - layers providing initial values for all variables at 0-th time step
+                'zeros' default means filling variables with zeros
+        Initial values are NOT included in history sequences
+        
+        
+        :param optimize_experience_replay: whether or not to optimize for experience replay
+           if True, assumes environment to have a pre-defined sequence of observations(as env.observations).
                 Saves some time by directly using environment.observations (list of sequences) instead of calling
                     environment.get_action_results via environment.as_layers(...).
                 Note that this parameter is not required since experience replay environments have everythin required to
                     behave as regular environments
+        :type optimize_experience_replay: bool
             
-            kwargs: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
-
-
-        returns:
         
+        :param kwargs: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+        :type kwargs: several kw flags (flag=value,flag2=value,...)
         
-            state_seq,observation_seq,hidden_seq,action_seq,policy_seq,
+        :returns: state_seq,observation_seq,hidden_seq,action_seq,policy_seq,
             for environment state, observation, hidden state, chosen actions and agent policy respectively
             each of them having dimensions of [batch_i,seq_i,...]
-
-                    
-            an agentnet.agent.recurrence.Recurrence instance that returns
-              - state sequences - [agent memory states] + [env states] + [env_observations] concatenated into one list
-              - output sequences - [agent policy] + [action_layers outputs] concatenated into one list
-            
-            
             time synchronization policy:
                 env_states[:,i] was observed as observation[:,i] BASED ON WHICH agent generated his
                 policy[:,i], resulting in action[:,i], and also updated his memory from hidden[:,i-1] to hiden[:,i]
-            
+        :rtype: tuple of Theano tensors
+
         """
         env = environment
 
@@ -365,15 +363,23 @@ class MDPAgent(object):
                            current_observations=tuple(),
                            **kwargs):
         """
-            prev_states: a dict [memory output: prev state]
-            current_observations: a list of inputs where i-th input corresponds to 
+        Symbolic expression for a one-tick agent reaction
+        
+        :param prev_states: values for previous states
+        :type prev_states: a dict [memory output: prev memory state value]
+        
+        :param current_observations: agent observations at this step
+        :type current_observations: a list of inputs where i-th input corresponds to 
                 i-th input slot from self.observations
-            flags: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
-            
-            returns:
-                actions: a list of all action layer outputs
-                new_states: a list of all new_state values, where i-th element corresponds
+        
+        :param flags: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
+        
+        :return: a tuple of [actions, new agent states]
+            actions: a list of all action layer outputs
+            new_states: a list of all new_state values, where i-th element corresponds
                         to i-th self.state_variables key
+        :rtype: the return type description
+        
             
         """
 
@@ -425,7 +431,22 @@ class MDPAgent(object):
 
     def get_react_function(self):
         """
-        TODO !!!
+        compiles and returns a function that performs one step of agent network
+
+        :returns: a theano function.
+            The returned function takes all observation inputs, followed by all agent memories.
+            It's outputs are all actions, followed by all new agent memories
+        :rtype: theano.function
+        
+        
+        :Example:
+        
+        The regular use case would look something like this:
+        (assuming agent is an MDPagent with single observation, single action and 2 memory slots)
+        >> react = agent.get_react_function
+        >> action, new_mem0, new_mem1 = react(observation, mem0, mem1)
+        
+        
         """
         # observation variables
         applier_observations = [layer.input_var for layer in self.observation_layers]

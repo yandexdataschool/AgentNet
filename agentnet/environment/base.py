@@ -9,9 +9,8 @@ from ..utils.format import check_list, check_tuple
 from ..utils.layers import TupleLayer
 
 
-# TODO (arogozhnikov) current BaseEnvironment should be rewritten to follow OOP conventions
-# dtypes, shapes, whatever should be passed and checked in ctor.
 # TODO rename states, observations to follow general conventions.
+# SUGG do we really need to prepend env? environment.states vs environment.env_states
 
 
 class BaseEnvironment(object):
@@ -46,53 +45,59 @@ class BaseEnvironment(object):
     the expression and then iteratively replace their type with a similar one (like int8 -> uint8 or int32) 
     until the error message dtype changes. Once id does, you have found the cause of the exception.
     """
-
-    # shapes
-
-    @property
-    def state_shapes(self):
-        """Environment state size: a single shape tuple or several such tuples in a list/tuple """
-        return []
-
-    @property
-    def observation_shapes(self):
-        """Single observation size: a single shape tuple or several such tuples in a list/tuple """
-        # base: mdp with full observability
-        return []
-
-    @property
-    def action_shapes(self):
-        """Single agent action size: a single shape tuple or several such tuples in a list/tuple """
-        return [1]
-
-    # types
-
-    @property
-    def state_dtypes(self):
-        """ types of respective observations"""
-        return [theano.config.floatX for _ in check_list(self.state_shapes)]
-
-    @property
-    def observation_dtypes(self):
-        """type of observations. Most cases require floatX"""
-        return [theano.config.floatX for _ in check_list(self.observation_shapes)]
-
-    @property
-    def action_dtypes(self):
-        """type of an action: a single theano-compatible dtype or several such dtypes in a list/tuple """
-        return ["int32" for _ in check_list(self.action_shapes)]
+    
+    def __init__(self,
+                 state_shapes=(),
+                 observation_shapes=(),
+                 action_shapes=((),),
+                 state_dtypes=None,
+                 observation_dtypes=None,
+                 action_dtypes=None):
+        """
+        :param state_shapes: Environment state size: a single shape tuple or several such tuples in a list/tuple
+        :type state_shapes: tuple
+        :param observation_shapes: Single observation size: a single shape tuple or several such tuples in a list/tuple
+        :type observation_shapes: tuple
+        :param action_shapes: Single agent action size: a single shape tuple or several such tuples in a list/tuple
+        :type action_shapes: tuple
+        :param state_dtypes: types of respective observations, None means all theano.config.floatX
+        :type state_dtypes: tuple or None
+        :param observation_dtypes: types of observations. None means all theano.config.floatX
+        :type observation_dtypes: tuple or None
+        :param action_dtypes: types of actions. None means all "int32"
+        :type action_dtypes: tuple or None
+        
+        """
+        
+        # shapes
+        self.state_shapes = check_tuple(state_shapes)
+        self.observation_shapes = check_tuple(observation_shapes)
+        self.action_shapes = check_tuple(action_shapes)
+        
+        # types
+        floatX = theano.config.floatX
+        self.state_dtypes = check_tuple(state_dtypes or [floatX for _ in self.state_shapes])
+        self.observation_dtypes = check_tuple(observation_dtypes or [floatX for _ in self.observation_shapes])
+        self.action_dtypes = check_tuple( action_dtypes or ["int32" for _ in self.action_shapes])
+        
+        
 
     # interaction with agent (one step)
-
     def get_action_results(self, prev_states, actions, **kwargs):
         """
         computes environment state after processing agent's action
-        parameters:
-            prev_states list(float[batch_id, memory_id0,[memory_id1],...]): environment state on previous tick
-            actions list(int[batch_id]): agent action after observing last state
-        returns:
-            new_states list(float[batch_id, memory_id0,[memory_id1],...]): environment state after processing agent's action
-            observations list(float[batch_id,n_agent_inputs]): what agent observes after committing the last action
+        
+        :param prev_states: environment state on previous tick
+        :type prev_states: list(float[batch_id, memory_id0,[memory_id1],...])
+        :param actions: agent action after observing last state
+        :param actions: list(int[batch_id])
+        
+        :returns: a tuple of new_states,actions
+            new_states: environment state after processing agent's action
+            observations: what agent observes after committing the last action
+        :rtype: tuple of
+            new_states: list(float[batch_id, memory_id0,[memory_id1],...]),
+            observations: list(float[batch_id,n_agent_inputs])
         """
 
         # a dummy update rule where new state is equal to last state
@@ -178,7 +183,7 @@ class EnvironmentStepLayer(TupleLayer):
         pivot = len(self.prev_state_layers)
         prev_states, actions = inputs[:pivot], inputs[pivot:]
 
-        new_states, observations = self.env.get_action_results(prev_states, actions)
+        new_states, observations = self.env.get_action_results(prev_states, actions,**kwargs)
 
         return check_list(new_states) + check_list(observations)
 

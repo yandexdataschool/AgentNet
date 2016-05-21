@@ -6,9 +6,9 @@ import gym
 import lasagne
 from lasagne.layers import InputLayer, DimshuffleLayer
 from agentnet.memory import WindowAugmentation
-from agentnet.resolver import EpsilonGreedyResolver
+from agentnet.resolver import ProbabilisticResolver
 from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer
-from agentnet.learning import qlearning
+from agentnet.learning import qlearning, sarsa,qlearning_n_step, a2c_n_step
 import theano
 from agentnet.display import Metrics
 from lasagne.regularization import regularize_network_params, l2
@@ -78,13 +78,22 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
                         nonlinearity=lasagne.nonlinearities.linear,
                         name="QEvaluator")
 
+    #fakes for a2c
+    policy_eval = DenseLayer(nn,
+                        num_units=n_actions,
+                        nonlinearity=lasagne.nonlinearities.softmax,
+                        name="a2c action probas")
+    state_value_eval = DenseLayer(nn,
+                        num_units=1,
+                        nonlinearity=None,
+                        name="a2c state values")
     # resolver
-    resolver = EpsilonGreedyResolver(q_eval, epsilon=0.1, name="resolver")
+    resolver = ProbabilisticResolver(policy_eval,  name="resolver")
 
     # agent
     agent = Agent(observation_layer,
                   memory_dict,
-                  q_eval, resolver)
+                  (q_eval,policy_eval,state_value_eval), resolver)
 
     # Since it's a single lasagne network, one can get it's weights, output, etc
     weights = lasagne.layers.get_all_params(resolver, trainable=True)
@@ -139,25 +148,49 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
     # A more sophisticated way of training is to store a large pool of sessions and train on random batches of them.
     # ### Training via experience replay
 
-    # get agent's Q-values obtained via experience replay
-    _env_states, _observations, _memories, _imagined_actions, q_values_sequence = agent.get_sessions(
+    # get agent's Q-values, policy, etc obtained via experience replay
+    _env_states, _observations, _memories, _imagined_actions, estimators = agent.get_sessions(
         env,
         session_length=replay_seq_len,
         batch_size=env.batch_size,
         optimize_experience_replay=True,
     )
+    (q_values_sequence,policy_sequence,value_sequence) = estimators
 
     # Evaluating loss function
 
     scaled_reward_seq = env.rewards
     # For SpaceInvaders, however, not scaling rewards is at least working
 
-
-    elwise_mse_loss = qlearning.get_elementwise_objective(q_values_sequence,
-                                                          env.actions[0],
-                                                          scaled_reward_seq,
-                                                          env.is_alive,
-                                                          gamma_or_gammas=0.99, )
+    elwise_mse_loss = 0.
+    
+    #1-step algos
+    for algo in qlearning,sarsa:
+        elwise_mse_loss += algo.get_elementwise_objective(q_values_sequence,
+                                                              env.actions[0],
+                                                              scaled_reward_seq,
+                                                              env.is_alive,
+                                                              gamma_or_gammas=0.99, )
+    #qlearning_n_step
+    for n in (1,3,replay_seq_len-1, replay_seq_len, replay_seq_len+1,None):
+        elwise_mse_loss += qlearning_n_step.get_elementwise_objective(q_values_sequence,
+                                                              env.actions[0],
+                                                              scaled_reward_seq,
+                                                              env.is_alive,
+                                                              gamma_or_gammas=0.99,
+                                                              n_steps=n)
+        
+    #a2c n_step
+    
+    elwise_mse_loss += a2c_n_step.get_elementwise_objective(policy_sequence,
+                                                            value_sequence[:,:,0],
+                                                            env.actions[0],
+                                                            scaled_reward_seq,
+                                                            env.is_alive,
+                                                            gamma_or_gammas=0.99,
+                                                            n_steps=3)
+    
+    
 
     # compute mean over "alive" fragments
     mse_loss = elwise_mse_loss.sum() / env.is_alive.sum()

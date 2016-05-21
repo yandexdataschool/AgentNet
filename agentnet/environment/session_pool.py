@@ -136,38 +136,22 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
 
         # rng used to .sample_session_batch
         self.rng = T.shared_randomstreams.RandomStreams(rng_seed)
-
-    @property
-    def state_shapes(self):
-        """Environment state sizes. In this case, it's a timer"""
-        return [tuple()]
-
-    @property
-    def state_dtypes(self):
-        """environment state dtypes. In this case, it's a timer"""
-        return ["int32"]
-
-    @property
-    def observation_shapes(self):
-        """observation shapes"""
-        return [obs.get_value().shape[2:] for obs in self.observations]
-
-    @property
-    def observation_dtypes(self):
-        """observation dtypes"""
-        return [obs.dtype for obs in self.observations]
-
-    @property
-    def action_shapes(self):
-        """action shapes"""
-        return [act.get_value().shape[2:] for act in self.actions]
-
-    @property
-    def action_dtypes(self):
-        """action dtypes"""
-        return [act.dtype for act in self.actions]
-
-    def get_action_results(self, last_states, actions):
+        
+        
+        
+        
+        BaseEnvironment.__init__(self,
+                                 state_shapes = [tuple()],
+                                 observation_shapes = [obs.get_value().shape[2:] for obs in self.observations],
+                                 action_shapes = [act.get_value().shape[2:] for act in self.actions],
+                                 state_dtypes= ["int32"],
+                                 observation_dtypes = [obs.dtype for obs in self.observations],
+                                 action_dtypes = [act.dtype for act in self.actions]
+                                 )
+                                 
+        
+   
+    def get_action_results(self, last_states, actions,**kwargs):
         """
         computes environment state after processing agent's action
         arguments:
