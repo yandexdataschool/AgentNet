@@ -35,9 +35,12 @@ install:
   - travis_retry conda install --yes pip numpy scipy six pandas nomkl
   - travis_retry conda install --yes theano scikit-learn nose matplotlib
   - pip install -r requirements.txt
+  # intalling AgentNet
   - pip install .
   - git clone https://github.com/openai/gym.git
-  - cd gym && pip install -e '.[all]' && cd ..
+  - cd gym && pip install -e . && cd ..
+  - cd gym && pip install -e '.[atari]' && cd ..
+  - cd gym && pip install -e '.[classic_control]' && cd ..
 
 script:
   - nosetests tests
