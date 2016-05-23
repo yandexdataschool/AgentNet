@@ -145,7 +145,6 @@ class DictLayer(MergeLayer):
         if type(key) in supported_sequences:
             return tuple(self[key_i] for key_i in key)
         else:
-            print key
             assert key in self.keys()
             return DictElementLayer(self,key)
             
