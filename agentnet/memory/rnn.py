@@ -114,7 +114,8 @@ def GRUCell(prev_state,
                              gate_nonlinearities=None,
                              bias_init=None,
                              name=name + ".hidden_to_gates_stacked")
-    hid_forget, hid_update, hidden_update_hid = hid_to_gates
+    
+    hid_forget, hid_update, hidden_update_hid = hid_to_gates.values()
 
     # clip grads #1
     if grad_clipping:
@@ -126,7 +127,7 @@ def GRUCell(prev_state,
     inp_to_gates = GateLayer(inputs, [num_units] * 3,
                              gate_nonlinearities=None,
                              name=name + ".input_to_gates_stacked")
-    inp_forget, inp_update, hidden_update_in = inp_to_gates
+    inp_forget, inp_update, hidden_update_in = inp_to_gates.values()
 
     # compute forget and update gates
     forgetgate = NonlinearityLayer(

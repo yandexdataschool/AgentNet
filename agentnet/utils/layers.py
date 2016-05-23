@@ -9,7 +9,7 @@ from lasagne.layers import MergeLayer, Layer
 from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
 from collections import OrderedDict
 
-from .format import supported_sequences, check_list, check_ordered_dict
+from format import supported_sequences, check_list, check_ordered_dict
 
 
 # shortcut functions
@@ -123,6 +123,10 @@ class DictLayer(MergeLayer):
     def keys(self):
         """a dict-like memthod that returns all keys"""
         return self.output_keys
+    def values(self):
+        """ list of output layers"""
+        return self[self.keys()]
+
     
     def __len__(self):
         """an amount of output layers in a tuple"""
@@ -138,19 +142,14 @@ class DictLayer(MergeLayer):
             - a slice of values if slice is given
         """
 
-        #key is a slice
-        if type(key) is slice:
-            return list(self)[key]
-        elif type(key) in supported_sequences:
+        if type(key) in supported_sequences:
             return tuple(self[key_i] for key_i in key)
         else:
+            print key
             assert key in self.keys()
             return DictElementLayer(self,key)
             
 
-    def __iter__(self):
-        """ iterate over output layers"""
-        return (self[k] for k in self.keys())
 
         
 class DictElementLayer(Layer):

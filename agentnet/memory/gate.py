@@ -98,10 +98,8 @@ class GateLayer(DictLayer):
 
         
         output_shapes = [ chl.output_shape if is_layer(chl) else (batch_size,chl) for chl in self.channels]
-        
-
-        
         output_shapes = OrderedDict(zip(output_names,output_shapes))
+        
         output_dtypes = [ get_layer_dtype(chl) for chl in self.channels]
         output_dtypes = OrderedDict(zip(output_names,output_dtypes))
         

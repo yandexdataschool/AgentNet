@@ -138,14 +138,13 @@ class Recurrence(DictLayer):
         
         #output shapes and dtypes
         all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
-        all_output_names = [(layer.name or "<unnamed>") +".sequence" for layer in all_outputs]
         
         output_shapes = [tuple(layer.output_shape) for layer in all_outputs]
         output_shapes =  [shape[:1] + (self.n_steps,) + shape[1:] for shape in output_shapes]
-        output_shapes = OrderedDict(zip(all_output_names,output_shapes))
+        output_shapes = OrderedDict(zip(all_outputs,output_shapes))
         
         output_dtypes = [get_layer_dtype(layer) for layer in all_outputs]
-        output_dtypes = OrderedDict(zip(all_output_names,output_dtypes))
+        output_dtypes = OrderedDict(zip(all_outputs,output_dtypes))
 
         super(Recurrence, self).__init__(incomings, 
                                          output_shapes = output_shapes,
@@ -386,11 +385,8 @@ class Recurrence(DictLayer):
             [state_sequences] , [output sequences] - a list of all state sequences and  a list of all output sequences
             Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
         """
-
-        outputs = list(self)
-
-        n_states = len(self.state_variables)
-
-        state_dict = OrderedDict(zip(self.state_variables, outputs[:n_states]))
-
-        return state_dict, outputs[n_states:]
+        state_keys = list(self.state_variables.keys())
+        state_dict = OrderedDict(zip(state_keys, self[state_keys]))
+        
+        output_dict = self[self.tracked_outputs]
+        return state_dict, output_dict
