@@ -125,7 +125,7 @@ class DictLayer(MergeLayer):
         return self.output_keys
     def values(self):
         """ list of output layers"""
-        return self[self.keys()]
+        return self[list(self.keys())]
 
     
     def __len__(self):
