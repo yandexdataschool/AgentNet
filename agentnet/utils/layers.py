@@ -9,7 +9,7 @@ from lasagne.layers import MergeLayer, Layer
 from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
 from collections import OrderedDict
 
-from format import supported_sequences, check_list, check_ordered_dict
+from .format import supported_sequences, check_list, check_ordered_dict
 
 
 # shortcut functions
