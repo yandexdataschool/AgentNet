@@ -11,13 +11,11 @@ from theano import tensor as T
 
 from ..utils import insert_dim
 from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences
-from ..utils.layers import TupleLayer, get_layer_dtype
+from ..utils.layers import DictLayer, get_layer_dtype
 
 
-# TODO (arogozhnikov) avoid packing / unpacking of tensors (see e.g. get_output_for)
-# this is a non-trivial issue which makes whole system very error-prone
 
-class Recurrence(TupleLayer):
+class Recurrence(DictLayer):
     def __init__(self,
                  input_nonsequences=OrderedDict(),
                  input_sequences=OrderedDict(),
@@ -136,8 +134,23 @@ class Recurrence(TupleLayer):
         if len(incomings) == 0:
             assert batch_size is not None
         self.batch_size = batch_size
+        
+        
+        #output shapes and dtypes
+        all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
+        all_output_names = [(layer.name or "<unnamed>") +".sequence" for layer in all_outputs]
+        
+        output_shapes = [tuple(layer.output_shape) for layer in all_outputs]
+        output_shapes =  [shape[:1] + (self.n_steps,) + shape[1:] for shape in output_shapes]
+        output_shapes = OrderedDict(zip(all_output_names,output_shapes))
+        
+        output_dtypes = [get_layer_dtype(layer) for layer in all_outputs]
+        output_dtypes = OrderedDict(zip(all_output_names,output_dtypes))
 
-        super(Recurrence, self).__init__(incomings, name=name)
+        super(Recurrence, self).__init__(incomings, 
+                                         output_shapes = output_shapes,
+                                         output_dtypes = output_dtypes,
+                                         name = name)
 
         # assertions and only assertions. From now this function only asserts stuff.
 
@@ -183,6 +196,7 @@ class Recurrence(TupleLayer):
             if seq_len is None:
                 warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
                      "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
+
 
     def get_params(self, **tags):
         """returns all params. If include_recurrence is set ot True, includes recurrent params from one-step network"""
@@ -233,12 +247,9 @@ class Recurrence(TupleLayer):
 
         def get_initial_state(state_out_layer):
             """Pick dedicated initial state or create zeros of appropriate shape and dtype"""
-            # if we have a dedicated init
+            # if we have a dedicated init, use it
             if state_out_layer in initial_states:
-
-                # use it
                 initial_state = initial_states[state_out_layer]
-
             # otherwise initialize with zeros
             else:
                 initial_state = T.zeros((batch_size,) + tuple(state_out_layer.output_shape[1:]),
@@ -290,13 +301,8 @@ class Recurrence(TupleLayer):
                 state_seq = T.concatenate([insert_dim(state_init, 1), state_seq[:, :-1]], axis=1)
                 state_seqs[i] = state_seq
 
-        return state_seqs + output_seqs
+        return OrderedDict(zip(self.keys(),state_seqs + output_seqs))
 
-    @property
-    def output_shapes(self):
-        """returns shapes of each respective output"""
-        shapes = [tuple(layer.output_shape) for layer in list(self.state_variables.keys()) + self.tracked_outputs]
-        return [shape[:1] + (self.n_steps,) + shape[1:] for shape in shapes]
 
     def get_one_step(self, prev_states={}, current_inputs={}, **get_output_kwargs):
         """
