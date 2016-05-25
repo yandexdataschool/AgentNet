@@ -5,8 +5,11 @@
 import theano
 import theano.tensor as T
 
-from lasagne.layers import MergeLayer, ExpressionLayer
+from lasagne.layers import MergeLayer, Layer
 from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
+from collections import OrderedDict
+
+from .format import supported_sequences, check_list, check_ordered_dict
 
 
 # shortcut functions
@@ -44,89 +47,133 @@ def get_layer_dtype(layer, default=None):
     return layer.output_dtype if hasattr(layer, "output_dtype") else default or theano.config.floatX
 
 
-# TODO (arogozhnikov) use names for outputs. Recommended interface
-#  tuple_layer = TupleLayer(dict(old_memory=old_memory, observations=observations))
-#  new_memory, action = tuple_layer['new_memory', 'action']
 
-class TupleLayer(MergeLayer):
+class DictLayer(MergeLayer):
     """
     An abstract base class for Lasagne layer that returns several outputs.
     Has to implement get_output_shape so that it contains a list/tuple of output shapes(tuples),
     one for each output.
 
-    In other words, if you return 2 elements of shape (None, 25) and (None,15,5,7),
-    self.get_output_shape must return [(None,25),(None,15,5,7)]
+    In other words, if you return 'foo' and 'bar' of shapes (None, 25) and (None,15,5,7),
+    self.get_output_shape must be { 'foo':(None,25), 'bar': (None,15,5,7)]
 
-    warning: this layer is needed for the purposes of optimal coding,
-    it slightly breaks Lasagne conventions, so it is hacky.
+    warning: this layer is needed for the purpose of graph optimization,
+        it slightly breaks Lasagne conventions, so it is hacky.
     """
+    
+    
+    def __init__(self,incomings,output_shapes, output_dtypes=None,**kwargs):
+        
+        #infer keys
+        if isinstance(output_shapes,dict):
+            keys = output_shapes.keys()
+            if not isinstance(output_shapes,OrderedDict):
+                warn("DictLayer output_shapes should be collections.OrderedDict, instead given a regular dict. "
+                     "Assuming keys order to be {}. If you want a different order, consider sending an OrderedDict"
+                     " instead.".format(keys))
 
-    @property
-    def output_shapes(self):
-        """
-        One must implement this method when inheriting from TupleLayer.
-        TupleLayer's shape must be a sequence of shapes for each output (depth-2 list or tuple)
-        """
-        raise NotImplementedError
-
+        elif isinstance(output_dtypes,dict):
+            keys = output_dtypes.keys()
+            warn("Warning: DictLayer running with keys inferred from dtypes:"+str(keys))
+        else: 
+            keys = range(len(check_list(output_shapes)))
+            warn("Warning: DictLayer running with default keys:"+str(keys))
+        
+        #convert * to OrderedDict with same order of keys
+        if not isinstance(output_shapes,dict):
+            output_shapes = OrderedDict(
+                zip(keys,check_list(output_shapes)))
+        else:
+            #output_shapes is dict
+            output_shapes = check_ordered_dict(output_shapes)
+        
+        if not isinstance(output_dtypes,dict):
+            if output_dtypes is None:
+                output_dtypes = {key: theano.config.floatX for key in keys}
+            else: 
+                output_dtypes = OrderedDict(
+                    zip(keys,check_list(output_dtypes)))
+        else:
+            #output_dtypes is dict
+            output_dtypes = OrderedDict([(key,output_dtypes[key]) for key in keys])
+            
+                     
+        #save them all
+        self.output_shapes = output_shapes
+        self.output_dtypes = output_dtypes
+        self.output_keys = keys
+        
+        super(DictLayer,self).__init__(check_list(incomings),**kwargs)
+                     
+    def get_output_for(self):
+        raise NotImplementedError("One must implement get_output_for logic for DictLayer")
+        
     def get_output_shape_for(self, input_shape):
         """
-        This is a mock output_shape that should only be used for service reasons.
-        To get actual shapes, consider self.output_shapes
+        DictLayer's shape is a dictionary of shapes for each output (each value is a tuple)
         """
-        return (len(self.output_shapes),)
-
-    @property
-    def element_names(self):
-        name = (self.name or "tuple layer")
-        return [name + "[{}]".format(i)
-                for i in range(len(self.output_shapes))]
-
-    # TODO (arogozhnikov) Remove this option. Always return tuple, even with single output
-    @property
-    def disable_tuple(self):
-        """
-        if True, forces tuple to work as a single layer.
-        Useful if your layer has a different behavior depending on parameters
-        """
-        return False
-
+        return self.output_shapes
+    
     @property
     def output_dtype(self):
-        """ dtypes of tuple outputs"""
-        return [theano.config.floatX for i in range(len(self))]
+        """ dtypes of dict outputs"""
+        return self.output_dtypes
+    
+    
+    def keys(self):
+        """a dict-like memthod that returns all keys"""
+        return self.output_keys
+    def values(self):
+        """ list of output layers"""
+        return self[list(self.keys())]
 
+    
     def __len__(self):
         """an amount of output layers in a tuple"""
-        return len(self.output_shapes) if not self.disable_tuple else 1
+        return len(self.output_shapes)
 
-    def __getitem__(self, ind):
-        """ returns a lasagne layer that yields i-th output of the tuple.
+    def __getitem__(self, key):
+        """ returns a lasagne layer that yields value corresponding to i-th key.
         parameters:
-            ind - an integer index or a slice.
+            key - an key or an iterable of keys or a slice.
         returns:
-            a particular layer of the tuple or a list of such layers if slice is given 
+            - a particular layer if a single index is given
+            - a list of layers if list/tuple of keys is given
+            - a slice of values if slice is given
         """
-        assert not self.disable_tuple
-        assert type(ind) in (int, slice)
 
-        if type(ind) is slice:
-            return list(self)[ind]
-
-        assert type(ind) == int
-
-        item_layer = ExpressionLayer(self, lambda values: values[ind],
-                                     output_shape=self.output_shapes[ind],
-                                     name=self.element_names[ind])
-
-        item_layer.output_dtype = self.output_dtype[ind]
-
-        return item_layer
-
-    def __iter__(self):
-        """ iterate over tuple output layers"""
-        if self.disable_tuple:
-            # TODO (arogozhnikov) kill this branch
-            return [self]
+        if type(key) in supported_sequences:
+            return tuple(self[key_i] for key_i in key)
         else:
-            return (self[i] for i in range(len(self)))
+            assert key in self.keys()
+            return DictElementLayer(self,key)
+            
+
+
+        
+class DictElementLayer(Layer):
+    """A special-purpose layer that returns a particular element of DictLayer"""
+    def __init__(self,incoming,key,name=None):
+        
+        assert isinstance(incoming,DictLayer)
+        assert key in incoming.keys()
+        
+        self.input_layer = incoming
+        self.input_shape = incoming.output_shape
+        self.key = key
+        
+        self.name = name
+        self.params = OrderedDict()
+        self.get_output_kwargs = []
+        
+    def get_output_for(self,inputs_dict,**flags):
+        return inputs_dict[self.key]
+    def get_output_shape_for(self,input_shapes_dict,**flags):
+        return input_shapes_dict[self.key]
+    
+    @property
+    def output_dtype(self):
+        input_dtypes = get_layer_dtype(self.input_layer)
+        assert isinstance(input_dtypes, dict)
+        return input_dtypes[self.key]
+    

@@ -327,7 +327,7 @@ class MDPAgent(object):
         state_layers_dict, output_layers = recurrence.get_sequence_layers()
 
         # convert sequence layers into actual theano variables
-        theano_expressions = lasagne.layers.get_output(list(state_layers_dict.values()) + output_layers)
+        theano_expressions = lasagne.layers.get_output(list(state_layers_dict.values()) + list(output_layers))
 
         n_states = len(state_layers_dict)
         states_list, outputs = theano_expressions[:n_states], theano_expressions[n_states:]
