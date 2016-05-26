@@ -7,7 +7,7 @@ from lasagne.layers import InputLayer
 
 from ..utils.format import check_list, check_tuple
 from ..utils.layers import DictLayer
-
+from collections import OrderedDict
 
 
 class BaseEnvironment(object):
@@ -122,7 +122,7 @@ class BaseEnvironment(object):
             observations - all observations in the order of self.observation_shapes
                 
         """
-        outputs = EnvironmentStepLayer(self, prev_state_layers, action_layers, name=environment_layer_name)
+        outputs = EnvironmentStepLayer(self, prev_state_layers, action_layers, name=environment_layer_name).values()
 
         pivot = len(self.state_shapes)
         return outputs[:pivot], outputs[pivot:]
