@@ -3,7 +3,9 @@ MAINTAINER Alexander Panin <justheuristic@gmail.com>
 
 RUN apt-get -qq update
 RUN apt-get install -y libopenblas-dev
-RUN apt-get install -y cmake zlib1g-dev libjpeg-dev 
+RUN apt-get install -y cmake
+RUN apt-get install -y zlib1g-dev
+RUN apt-get install -y libjpeg-dev 
 RUN apt-get install -y xvfb libav-tools xorg-dev python-opengl
 RUN apt-get -y install swig #!This won't work with Box2D!
 
