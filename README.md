@@ -12,25 +12,34 @@ A lightweight library to build and train deep reinforcement learning and custom 
 
 No time to play games? Let machines do this for you!
 
-AgentNet is a reinforcement learning framework, 
-which is currently used to play different games (i.e. OpenAI Gym).
+AgentNet is a deep reinforcement learning framework, 
+which is designed for ease of research and prototyping of Deep Learning models for Markov Decision Processes.
+
+All techno-babble set aside, you can use it to __train your pet neural network to play games!__ [e.g. OpenAI Gym]
+
+We have a full in-and-out support for __Lasagne__ deep learning library, granting you access to all convolutions, maxouts, poolings, dropouts, etc. etc. etc.
+
+__AgentNet__  handles both discrete and continuous control problems and supports hierarchical reinforcement learning [experimental].
 
 List of already implemented reinforcement techniques:
 - Q-learning (or deep Q-learning, since we support arbitrary complexity of network)
 - N-step Q-learning
 - SARSA
 - N-step Advantage Actor-Critic (A2c)
-- N-step Deterministic Policy Gradient
+- N-step Deterministic Policy Gradient (DPG)
 
-Apart from this, 
-- __AgentNet__  handles both discrete and continuous control
-- you can use hierarchical reinforcement learning in __AgentNet__ 
+As a side-quest, we also provide a boilerplate to custom long-term memory network architectures (see examples).
 
 ## Installation
 
 [Detailed installation guide](https://github.com/yandexdataschool/AgentNet/wiki/Installing-AgentNet)
 
-### Manual install
+### Quick install
+
+* [sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip
+
+
+### Full install (with examples)
 
 1. Clone this repository: `git clone https://github.com/yandexdataschool/AgentNet.git && cd AgentNet`
 2. Install dependencies: `pip install -r requirements.txt`
