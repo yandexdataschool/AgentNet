@@ -57,6 +57,6 @@ setup(
         'theano >= 0.8.2',
         'pandas>=0.14',
         'numpy>=1.9',
-        'matplotlib >= 1.4'
+        #'matplotlib >= 1.4'
     ],
 )
