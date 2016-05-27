@@ -68,7 +68,8 @@ def get_reference_Qvalues(Qvalues, actions, rewards,
 def get_elementwise_objective(Qvalues, actions, rewards,
                               is_alive="always",
                               gamma_or_gammas=0.95,
-                              force_qvalues_after_end=True,
+                              crop_last = True,
+                              force_qvalues_after_end=False,
                               qvalues_after_end="zeros",
                               consider_reference_constant=True,
                               aggregation_function=lambda qv: T.max(qv, axis=2)):
@@ -88,6 +89,8 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                             Default value of is_alive implies a simplified computation algorithm for Qlearning loss
         
         gamma_or_gammas - a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts 
+        
+        crop_last - if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
         
         force_qvalues_after_end - if true, sets reference Qvalues at session end to rewards[end] + qvalues_after_end
         
@@ -155,5 +158,8 @@ def get_elementwise_objective(Qvalues, actions, rewards,
 
         # zero-out loss after session ended
         elwise_squared_error = elwise_squared_error * is_alive
+
+    if crop_last:
+        elwise_squared_error = T.set_subtensor(elwise_squared_error[:,-1],0)
 
     return elwise_squared_error
