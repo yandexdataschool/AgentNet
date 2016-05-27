@@ -23,6 +23,7 @@ def get_elementwise_objective(policy,
                               is_alive="always",
                               n_steps=None,
                               gamma_or_gammas=0.99,
+                              crop_last=True,
                               force_values_after_end=True,
                               state_values_after_end="zeros",
                               consider_value_reference_constant=True,
@@ -52,6 +53,8 @@ def get_elementwise_objective(policy,
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
         
         gamma_or_gammas - a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts 
+        
+        crop_last - if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
         
         force_values_after_end - if true, sets reference policy at session end to rewards[end] + qvalues_after_end
         
@@ -104,6 +107,11 @@ def get_elementwise_objective(policy,
     action_probas = get_action_Qvalues(policy, actions)
 
     reference_state_values = consider_constant(reference_state_values)
+    if crop_last:
+        reference_state_values = T.set_subtensor(reference_state_values[:,-1],
+                                                 consider_constant(state_values[:,-1]))
+
+    
 
     log_probas = T.maximum(T.log(action_probas), min_log_proba)
 
