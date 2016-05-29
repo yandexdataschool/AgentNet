@@ -1,9 +1,11 @@
 import lasagne
+from lasagne import init
 from lasagne.layers import DenseLayer, NonlinearityLayer
 
 from ..utils.format import check_list
 from ..utils.layers import clip_grads, add, mul
 from ..memory.gate import GateLayer
+
 
 
 # Vanilla RNN cell
@@ -24,13 +26,13 @@ def RNNCell(prev_state,
         nonlinearity: which nonlinearity to use
         num_units: how many recurrent cells to use. None means "as in prev_state"
         grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
-        
     
     for developers:
         Works by stacking DenseLayers with ElemwiseSumLayer.
         is a function mock, not actual class.
     
     """
+    #TODO weight init!
 
     assert len(prev_state.output_shape) == 2
     # if needed, infer num_units
@@ -40,6 +42,7 @@ def RNNCell(prev_state,
     assert num_units == prev_state.output_shape[1]
 
     inputs = check_list(input_or_inputs)
+    
 
     if grad_clipping:
         prev_state = clip_grads(prev_state, grad_clipping)
@@ -76,6 +79,8 @@ def RNNCell(prev_state,
 def GRUCell(prev_state,
             input_or_inputs=tuple(),
             num_units=None,
+            weight_init=init.Normal(),
+            bias_init=init.Constant(),
             forgetgate_nonlinearity=lasagne.nonlinearities.sigmoid,
             updategate_nonlinearity=lasagne.nonlinearities.sigmoid,
             hidden_update_nonlinearity=lasagne.nonlinearities.tanh,
@@ -86,13 +91,26 @@ def GRUCell(prev_state,
         
     Implements a one-step gated recurrent unit (GRU) with arbitrary number of units.
     
-    parameters:
-        prev_state: input that denotes previous state (shape must be (None, n_units) )
-        input_or_inputs: a single layer or a list/tuple of layers that go as inputs
-        *_nonlinearity: which nonlinearity to use for a particular gate
-        num_units: how many recurrent cells to use. None means "as in prev_state"
-        grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
-        
+    
+    :param prev_state: input that denotes previous state (shape must be (None, n_units) )
+    :type prev_state: lasagne.layers.Layer
+    :param input_or_inputs: a single layer or a list/tuple of layers that go as inputs
+    :type input_or_inputs: lasagne.layers.Layer or list of such
+    
+    :param num_units: how many recurrent cells to use. None means "as in prev_state"
+    :type num_units: int
+    
+    :param weight_init: either a lasagne initializer to use for every gate weights
+                        or a list of two initializers, 
+                            - first used for all weights from hidden -> *_gate and hidden update
+                            - second used for all weights from input(s) -> *_gate weights and hidden update
+                        or a list of two objects elements,
+                            - second list is hidden -> forget gate, update gate, hidden update
+                            - second list of lists where 
+                                list[i][0,1,2] = input[i] -> [forget gate, update gate, hidden update]
+    :param *_nonlinearity: which nonlinearity to use for a particular gate
+    
+    :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"    
     
     for developers:
         Works by stacking other lasagne layers;
@@ -108,11 +126,19 @@ def GRUCell(prev_state,
     assert num_units == prev_state.output_shape[1]
 
     inputs = check_list(input_or_inputs)
+    
+    #handle weight init
+    weight_init = check_list(weight_init)
+    if len(weight_init) == 1:
+        weight_init *= 2
+    hidden_W_init, input_W_init = weight_init
+
 
     # hidden to gates
     hid_to_gates = GateLayer(prev_state, [num_units] * 3,
                              gate_nonlinearities=None,
                              bias_init=None,
+                             weight_init=hidden_W_init,
                              name=name + ".hidden_to_gates_stacked")
     
     hid_forget, hid_update, hidden_update_hid = hid_to_gates.values()
@@ -126,6 +152,8 @@ def GRUCell(prev_state,
     # input to gates
     inp_to_gates = GateLayer(inputs, [num_units] * 3,
                              gate_nonlinearities=None,
+                             bias_init = bias_init,
+                             weight_init = input_W_init,
                              name=name + ".input_to_gates_stacked")
     inp_forget, inp_update, hidden_update_in = inp_to_gates.values()
 
