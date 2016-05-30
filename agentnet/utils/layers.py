@@ -132,6 +132,10 @@ class DictLayer(MergeLayer):
         """an amount of output layers in a tuple"""
         return len(self.output_shapes)
 
+    def __iter__(self):
+        """Dict layer should not be iterated"""
+        raise NotImplementedError("DictLayer.__iter__ not supported. One must use .keys() or .values().")
+
     def __getitem__(self, key):
         """ returns a lasagne layer that yields value corresponding to i-th key.
         parameters:
