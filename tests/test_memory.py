@@ -96,21 +96,21 @@ def test_memory(game_title='SpaceInvaders-v0',
     
     ###RNN preset
     
-    prev_rnn = InputLayer((None,64),
+    prev_rnn = InputLayer((None,16),
                              name="previous RNN state")
     new_rnn = RNNCell(prev_rnn,observation_reshape)
     memory_dict[new_rnn] = prev_rnn
     
     ###GRU preset
-    prev_gru = InputLayer((None,32),
+    prev_gru = InputLayer((None,16),
                              name="previous GRUcell state")
     new_gru = GRUCell(prev_gru,observation_reshape)
     memory_dict[new_gru] = prev_gru
     
     ###GRUmemorylayer
-    prev_gru1 = InputLayer((None,48),
+    prev_gru1 = InputLayer((None,15),
                              name="previous GRUcell state")
-    new_gru1 = GRUMemoryLayer(48,observation_reshape,prev_gru1)
+    new_gru1 = GRUMemoryLayer(15,observation_reshape,prev_gru1)
     memory_dict[new_gru1] = prev_gru1
     
     
@@ -130,9 +130,7 @@ def test_memory(game_title='SpaceInvaders-v0',
 
 
     # a simple lasagne network (try replacing with any other lasagne network and see what works best)
-    nn = DenseLayer(all_memory, num_units=500, name='dense0')
-    nn = DropoutLayer(nn, name="dropout", p=0.05)  # will get deterministic during evaluation
-    nn = DenseLayer(nn, num_units=300, name='dense1')
+    nn = DenseLayer(all_memory, num_units=50, name='dense0')
 
     # Agent policy and action picking
     q_eval = DenseLayer(nn,
