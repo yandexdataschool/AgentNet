@@ -15,9 +15,6 @@ addons:
       - liblapack-dev
       - cmake
       - cmake-data
-      - python-dev
-      - python3-dev
-      - python-numpy
       - swig
       - libav-tools
       - libboost-all-dev
@@ -38,10 +35,11 @@ install:
   - pip install -r requirements.txt
   # intalling AgentNet
   - pip install .
+  # installing Gym
   - git clone https://github.com/openai/gym.git
   - cd gym && pip install -e . && cd ..
   - cd gym && pip install -e '.[atari]' && cd ..
   - cd gym && pip install -e '.[classic_control]' && cd ..
 
 script:
-  - nosetests tests
+  - nosetests tests --verbose --nocapture  --failure-detail
