@@ -24,7 +24,7 @@ from theano import tensor as T
 from .recurrence import Recurrence
 from ..environment import SessionPoolEnvironment, SessionBatchEnvironment, BaseEnvironment
 from ..utils.format import supported_sequences, unpack_list, check_list, check_tuple, check_ordered_dict
-
+from ..deprecated import deprecated
 
 
 class MDPAgent(object):
@@ -64,6 +64,11 @@ class MDPAgent(object):
         self.agent_states = check_ordered_dict(agent_states)
         self.policy = check_list(policy_estimators)
         self.action_layers = check_list(action_layers)
+        
+    @property
+    @deprecated(".agent_states")
+    def state_variables(self):
+        return self.agent_states
 
     def as_recurrence(self,
                       environment,
@@ -327,7 +332,7 @@ class MDPAgent(object):
         state_layers_dict, output_layers = recurrence.get_sequence_layers()
 
         # convert sequence layers into actual theano variables
-        theano_expressions = lasagne.layers.get_output(list(state_layers_dict.values()) + output_layers)
+        theano_expressions = lasagne.layers.get_output(list(state_layers_dict.values()) + list(output_layers))
 
         n_states = len(state_layers_dict)
         states_list, outputs = theano_expressions[:n_states], theano_expressions[n_states:]

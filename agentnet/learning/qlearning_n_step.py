@@ -14,6 +14,7 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                               is_alive="always",
                               n_steps=None,
                               gamma_or_gammas=0.95,
+                              crop_last=True,
                               force_qvalues_after_end=True,
                               optimal_qvalues_after_end="zeros",
                               consider_reference_constant=True,
@@ -35,6 +36,9 @@ def get_elementwise_objective(Qvalues, actions, rewards,
         
         is_alive [batch,tick] - whether given session is still active at given tick. Defaults to always active.
                             Default value of is_alive implies a simplified computation algorithm for Qlearning loss
+                            
+        crop_last - if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
+
         
         n_steps: if an integer is given, the references are computed in loops of 3 states.
             Defaults to None: propagating rewards throughout the whole session.
@@ -106,6 +110,9 @@ def get_elementwise_objective(Qvalues, actions, rewards,
             # "set reference Q-values at end action ids to the immediate rewards + qvalues after end"
             new_reference_values = rewards[end_ids] + gamma_or_gammas * optimal_qvalues_after_end
             reference_Qvalues = T.set_subtensor(reference_Qvalues[end_ids], new_reference_values[end_ids[0], 0])
+
+    if crop_last:
+        reference_Qvalues = T.set_subtensor(reference_Qvalues[:,-1],action_Qvalues[:,-1])
 
     if return_reference:
         return reference_Qvalues

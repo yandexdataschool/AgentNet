@@ -6,11 +6,8 @@ import theano
 from lasagne.layers import InputLayer
 
 from ..utils.format import check_list, check_tuple
-from ..utils.layers import TupleLayer
-
-
-# TODO rename states, observations to follow general conventions.
-# SUGG do we really need to prepend env? environment.states vs environment.env_states
+from ..utils.layers import DictLayer
+from collections import OrderedDict
 
 
 class BaseEnvironment(object):
@@ -125,13 +122,13 @@ class BaseEnvironment(object):
             observations - all observations in the order of self.observation_shapes
                 
         """
-        outputs = EnvironmentStepLayer(self, prev_state_layers, action_layers, name=environment_layer_name)
+        outputs = EnvironmentStepLayer(self, prev_state_layers, action_layers, name=environment_layer_name).values()
 
         pivot = len(self.state_shapes)
         return outputs[:pivot], outputs[pivot:]
 
 
-class EnvironmentStepLayer(TupleLayer):
+class EnvironmentStepLayer(DictLayer):
     def __init__(self,
                  environment,
                  prev_state_layers=None,
@@ -165,10 +162,30 @@ class EnvironmentStepLayer(TupleLayer):
         self.prev_state_layers = check_list(prev_state_layers)
         self.action_layers = check_list(action_layers)
 
+        #incomings
         incomings = prev_state_layers + action_layers
-
-        super(EnvironmentStepLayer, self).__init__(incomings, name=name)
-
+        
+        output_names = ["environment_new_state.%i"%(i) for i in range(len(self.prev_state_layers))]+\
+                       ["new_observations.%i"%(i) for i in range(len(self.env.observation_shapes))]
+        
+        
+        #output shapes
+        state_shapes = [(None,) + check_tuple(shape) for shape in check_list(self.env.state_shapes)]
+        observation_shapes = [(None,) + check_tuple(shape) for shape in check_list(self.env.observation_shapes)]
+        output_shapes = state_shapes + observation_shapes
+        output_shapes = OrderedDict(zip(output_names,output_shapes))
+        
+        #output_dtypes
+        output_dtypes = check_list(self.env.state_dtypes) + check_list(self.env.observation_dtypes)
+        output_dtypes = OrderedDict(zip(output_names,output_dtypes))
+        
+        
+        #dict layer init
+        super(EnvironmentStepLayer, self).__init__(incomings, 
+                                                   output_shapes=output_shapes,
+                                                   output_dtypes=output_dtypes,
+                                                   name=name)
+        
     def get_output_for(self, inputs, **kwargs):
         """
         Computes get_action_results as a lasagne layer.
@@ -185,16 +202,7 @@ class EnvironmentStepLayer(TupleLayer):
 
         new_states, observations = self.env.get_action_results(prev_states, actions,**kwargs)
 
-        return check_list(new_states) + check_list(observations)
+        return OrderedDict(zip(self.keys(),check_list(new_states) + check_list(observations)))
 
-    @property
-    def output_shapes(self):
-        """Returns a tuple of shapes for every output layer"""
-        state_shapes = [(None,) + check_tuple(shape) for shape in check_list(self.env.state_shapes)]
-        observation_shapes = [(None,) + check_tuple(shape) for shape in check_list(self.env.observation_shapes)]
-        return state_shapes + observation_shapes
+        
 
-    @property
-    def output_dtype(self):
-        """Returns dtype of output tensors"""
-        return check_list(self.env.state_dtypes) + check_list(self.env.observation_dtypes)

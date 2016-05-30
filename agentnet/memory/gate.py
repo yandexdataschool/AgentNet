@@ -5,16 +5,17 @@ An overly generic layer that implements a custom [stacked] gate to be used in al
 from functools import reduce
 from operator import add
 from warnings import warn
+from collections import OrderedDict
 
 import theano.tensor as T
 from lasagne import nonlinearities, init
 from lasagne.layers import flatten
 
 from ..utils.format import is_layer, check_list, supported_sequences
-from ..utils.layers import TupleLayer
+from ..utils.layers import DictLayer, get_layer_dtype
 
 
-class GateLayer(TupleLayer):
+class GateLayer(DictLayer):
     def __init__(self,
                  gate_controllers,
                  channels,
@@ -43,10 +44,7 @@ class GateLayer(TupleLayer):
             - OR a list of lists of initializers (channel, controller) 
             - (lasagne.init, theano variable or numpy array) 
         """
-
-        # remember if user wants us to only handle a single channel (in that case, return one output instead of list
-        self.single_channel = type(channels) not in supported_sequences
-
+        
         self.channels = check_list(channels)
         self.gate_controllers = check_list(gate_controllers)
 
@@ -90,8 +88,26 @@ class GateLayer(TupleLayer):
 
         # default name
         kwargs["name"] = kwargs.get("name", "YetAnother" + self.__class__.__name__)
+        
+        output_names = ["%s.channel.%i"%(kwargs["name"],i) for i in range(len(self.channels))]
 
-        super(GateLayer, self).__init__(incomings, **kwargs)
+        
+        # determine whether or not user defined a fixed batch size
+        batch_sizes = [chl.output_shape[0] for chl in filter(is_layer, self.channels)]
+        batch_size = reduce(lambda a,b: a or b, batch_sizes,None)
+
+        
+        output_shapes = [ chl.output_shape if is_layer(chl) else (batch_size,chl) for chl in self.channels]
+        output_shapes = OrderedDict(zip(output_names,output_shapes))
+        
+        output_dtypes = [ get_layer_dtype(chl) for chl in self.channels]
+        output_dtypes = OrderedDict(zip(output_names,output_dtypes))
+        
+        
+        super(GateLayer, self).__init__(incomings, 
+                                        output_shapes=output_shapes,
+                                        output_dtypes=output_dtypes,
+                                        **kwargs)
 
         # nonlinearities
         self.gate_nonlinearities = check_list(gate_nonlinearities)
@@ -123,7 +139,7 @@ class GateLayer(TupleLayer):
 
         self.gate_b = []  # a list of biases for channels
         self.gate_W = [list() for _ in self.gate_controllers]  # a list of lists of weights [controller][channel]
-
+        
         for chl_i, (channel, b_init, channel_w_inits) in enumerate(zip(self.channels,
                                                                        bias_init,
                                                                        weight_init
@@ -166,9 +182,6 @@ class GateLayer(TupleLayer):
         # a list of biases for the respective outputs stacked
         self.gate_b_stacked = T.concatenate(self.gate_b)
 
-    @property
-    def disable_tuple(self):
-        return self.single_channel
 
     def get_output_for(self, inputs, **kwargs):
         """
@@ -220,38 +233,7 @@ class GateLayer(TupleLayer):
             else:
                 assert type(chl_layer_or_int) == int
                 gated_channels.append(gate)
-        # if user only wants one channel, give him that channel instead of a one-item list
-        if self.single_channel:
-            gated_channels = gated_channels[0]
-
+        
         # otherwise return list
-        return gated_channels
+        return OrderedDict(zip(self.keys(),gated_channels))
 
-    @property
-    def output_shapes(self):
-        """
-        a list of shapes of all gates
-        parameters: 
-            shapes of all incomings [gate controllers and channels (only those defined by layers, not n_units)]
-            -- Actually this parameter is unused, so you may provide anything (like None)
-        returns:
-           list of tuples of shapes of all inputs
-        """
-        # determine whether or not user defined a fixed batch size
-        batch_size = None
-        for chl in filter(is_layer, self.channels):
-            if chl.output_shape[0] is not None:
-                batch_size = chl.output_shape[0]
-                break
-
-        channel_shapes = [
-            chl.output_shape if is_layer(chl) else (batch_size, chl)
-            for chl in self.channels
-            ]
-
-        # if user wants a single channel, return single channel shape
-        if self.single_channel:
-            channel_shapes = channel_shapes[0]
-
-        # otherwise return a list of shapes
-        return channel_shapes
