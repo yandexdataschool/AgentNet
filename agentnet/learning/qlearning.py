@@ -69,7 +69,7 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                               is_alive="always",
                               gamma_or_gammas=0.95,
                               crop_last = True,
-                              force_qvalues_after_end=False,
+                              force_qvalues_after_end=True,
                               qvalues_after_end="zeros",
                               consider_reference_constant=True,
                               aggregation_function=lambda qv: T.max(qv, axis=2)):
