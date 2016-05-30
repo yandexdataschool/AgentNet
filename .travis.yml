@@ -34,6 +34,7 @@ install:
   - travis_retry conda install --yes python=$TRAVIS_PYTHON_VERSION
   - travis_retry conda install --yes pip numpy scipy six pandas nomkl
   - travis_retry conda install --yes theano scikit-learn nose matplotlib
+  - travis_retry pip install nose-parameterized
   - pip install -r requirements.txt
   # intalling AgentNet
   - pip install .
