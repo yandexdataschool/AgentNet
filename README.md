@@ -35,7 +35,7 @@ As a side-quest, we also provide a boilerplate to custom long-term memory networ
 [Detailed installation guide](https://github.com/yandexdataschool/AgentNet/wiki/Installing-AgentNet)
 
 ### Quick install
-
+* install [bleeding edge lasagne](http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version)
 * [sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip
 
 
