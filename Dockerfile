@@ -20,6 +20,7 @@ RUN /bin/bash --login -c "\
     pip install --upgrade pip && \
     pip install --upgrade https://github.com/Theano/Theano/archive/master.zip &&\
     pip install --upgrade https://github.com/Lasagne/Lasagne/archive/master.zip &&\
+    pip install --upgrade matplotlib &&\
     pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/develop.zip \
     "
 
