@@ -1,6 +1,5 @@
 """
-i test learning methods for discrete action space: q-learning, n-step q-learning, sarsa, a2c
-Also tests probabilistic resolver.
+i test that theano scan works without unrolling
 """
 from __future__ import print_function
 
