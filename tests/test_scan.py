@@ -1,5 +1,5 @@
 """
-i test whether learning algorithms converge on boolean reasoning problem
+i test that theano scan works without unrolling
 """
 from __future__ import print_function
 
@@ -19,16 +19,7 @@ from agentnet.learning import qlearning, sarsa,qlearning_n_step, a2c_n_step
 from agentnet.display import Metrics
 
 
-
-from nose_parameterized import parameterized
-
-@parameterized([
-    (25, qlearning),
-    (25, qlearning_n_step),
-    (25, sarsa),
-
-])
-def test_reasoning_value_based(n_parallel_games=25,
+def test_scan(n_parallel_games=25,
                    algo = qlearning,
                   ):
     """
@@ -69,8 +60,8 @@ def test_reasoning_value_based(n_parallel_games=25,
     
     # Since it's a lasagne network, one can get it's weights, output, etc
     weights = lasagne.layers.get_all_params(resolver,trainable=True)
-    weights
-    
+
+
     
     # produce interaction sequences of length <= 10
     (state_seq,), observation_seq, agent_state, action_seq, qvalues_seq = agent.get_sessions(
@@ -78,6 +69,7 @@ def test_reasoning_value_based(n_parallel_games=25,
         session_length=10,
         batch_size=env.batch_size,
     )
+    auto_updates = agent.get_automatic_updates()
 
     hidden_seq = agent_state[rnn]
 
@@ -114,14 +106,14 @@ def test_reasoning_value_based(n_parallel_games=25,
     # take sum over steps, average over sessions
     mean_session_reward = rewards_seq.sum(axis=1).mean()
 
-    train_fun = theano.function([], [loss, mean_session_reward], updates=updates)
+    train_fun = theano.function([], [loss, mean_session_reward], updates=updates+auto_updates)
 
-    compute_mean_session_reward = theano.function([], mean_session_reward)
+    compute_mean_session_reward = theano.function([], mean_session_reward,updates=auto_updates)
 
 
     score_log = Metrics()
         
-    for epoch in range(5000):        
+    for epoch in range(50):
 
         # update resolver's epsilon (chance of random action instead of optimal one)
         # epsilon decreases over time
@@ -132,24 +124,5 @@ def test_reasoning_value_based(n_parallel_games=25,
         env.generate_new_data_batch(n_parallel_games)
         loss, avg_reward = train_fun()
 
-        # show current learning progress
-        if epoch % 100 == 0:
-            print(epoch),
+        compute_mean_session_reward()
 
-            # estimate reward for epsilon-greedy strategy
-            avg_reward_current = compute_mean_session_reward()
-            score_log["expected epsilon-greedy reward"][epoch] = avg_reward_current
-
-            # estimating the reward under assumption of greedy strategy
-            resolver.epsilon.set_value(0)
-            avg_reward_greedy = compute_mean_session_reward()
-            score_log["expected greedy reward"][epoch] = avg_reward_greedy
-            
-            
-            if avg_reward_greedy > 2:
-                print("converged")
-                break
-    else:
-        print("diverged")
-        raise ValueError("Algorithm diverged")
-            

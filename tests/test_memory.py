@@ -10,7 +10,7 @@ import gym
 import lasagne
 from lasagne.layers import InputLayer, DimshuffleLayer
 from agentnet.memory import WindowAugmentation, StackAugmentation
-from agentnet.memory import GRUCell,RNNCell,GRUMemoryLayer
+from agentnet.memory import GRUCell,RNNCell,LSTMCell, GRUMemoryLayer
 from agentnet.resolver import EpsilonGreedyResolver
 from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer, concat,flatten
 from agentnet.learning import qlearning
@@ -113,14 +113,40 @@ def test_memory(game_title='SpaceInvaders-v0',
     new_gru1 = GRUMemoryLayer(15,observation_reshape,prev_gru1)
     memory_dict[new_gru1] = prev_gru1
     
+    #LSTM with peepholes
+    prev_lstm0_cell = InputLayer((None,13),
+                             name="previous LSTMCell hidden state [with peepholes]")
     
+    prev_lstm0_out = InputLayer((None,13),
+                             name="previous LSTMCell output state [with peepholes]")
+
+    new_lstm0_cell,new_lstm0_out = LSTMCell(prev_lstm0_cell,prev_lstm0_out,
+                                            input_or_inputs = observation_reshape,
+                                            peepholes=True,name="newLSTM1 [with peepholes]")
     
+    memory_dict[new_lstm0_cell] = prev_lstm0_cell
+    memory_dict[new_lstm0_out] = prev_lstm0_out
+
+
+    #LSTM without peepholes
+    prev_lstm1_cell = InputLayer((None,14),
+                             name="previous LSTMCell hidden state [no peepholes]")
+    
+    prev_lstm1_out = InputLayer((None,14),
+                             name="previous LSTMCell output state [no peepholes]")
+
+    new_lstm1_cell,new_lstm1_out = LSTMCell(prev_lstm1_cell,prev_lstm1_out,
+                                            input_or_inputs = observation_reshape,
+                                            peepholes=False,name="newLSTM1 [no peepholes]")
+    
+    memory_dict[new_lstm1_cell] = prev_lstm1_cell
+    memory_dict[new_lstm1_out] = prev_lstm1_out
     
     ##concat everything
     
     for i in [flatten(window_max),stack_top,new_rnn,new_gru,new_gru1]:
         print(i.output_shape)
-    all_memory = concat([flatten(window_max),stack_top,new_rnn,new_gru,new_gru1])
+    all_memory = concat([flatten(window_max),stack_top,new_rnn,new_gru,new_gru1,new_lstm0_out,new_lstm1_out,])
     
     
     
