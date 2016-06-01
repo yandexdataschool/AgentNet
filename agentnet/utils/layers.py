@@ -10,6 +10,7 @@ from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
 from collections import OrderedDict
 
 from .format import supported_sequences, check_list, check_ordered_dict
+from warnings import warn
 
 
 # shortcut functions
@@ -134,7 +135,7 @@ class DictLayer(MergeLayer):
 
     def __iter__(self):
         """Dict layer should not be iterated"""
-        raise NotImplementedError("DictLayer.__iter__ not supported. One must use .keys() or .values().")
+        raise TypeError("DictLayer.__iter__ not supported. One must use .keys() or .values().")
 
     def __getitem__(self, key):
         """ returns a lasagne layer that yields value corresponding to i-th key.

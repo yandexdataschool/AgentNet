@@ -78,6 +78,7 @@ class MDPAgent(object):
                       initial_observations='zeros',
                       initial_hidden='zeros',
                       recurrence_name='AgentRecurrence',
+                      unroll_scan=True,
                       ):
         """
         Returns a Recurrence lasagne layer that contains :
@@ -94,6 +95,8 @@ class MDPAgent(object):
                 'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
             flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+
+        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
 
         :returns: Recurrence instance that returns
               [agent memory states] + [env states] + [env_observations] + [agent policy] + [action_layers outputs]
@@ -155,6 +158,7 @@ class MDPAgent(object):
             batch_size=batch_size,
             delayed_states=new_state_outputs + new_observation_outputs,
             name=recurrence_name,
+            unroll_scan=unroll_scan
         )
 
         return recurrence
@@ -164,6 +168,7 @@ class MDPAgent(object):
                              session_length=10,
                              initial_hidden='zeros',
                              recurrence_name='AgentRecurrence',
+                             unroll_scan=True,
                              ):
         """
         returns a Recurrence lasagne layer that contains.
@@ -180,6 +185,9 @@ class MDPAgent(object):
                 'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
             flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+
+        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
+
 
 
         returns:
@@ -244,6 +252,7 @@ class MDPAgent(object):
             tracked_outputs=self.policy + self.action_layers,
             n_steps=session_length,
             name=recurrence_name,
+            unroll_scan=unroll_scan
         )
 
         return recurrence
@@ -256,6 +265,8 @@ class MDPAgent(object):
                      initial_observations='zeros',
                      initial_hidden='zeros',
                      optimize_experience_replay=False,
+                     unroll_scan=True,
+                     return_automatic_updates=False,
                      **kwargs
                      ):
         """
@@ -279,9 +290,12 @@ class MDPAgent(object):
                 Saves some time by directly using environment.observations (list of sequences) instead of calling
                     environment.get_action_results via environment.as_layers(...).
                 Note that this parameter is not required since experience replay environments have everythin required to
-                    behave as regular environments
+                behave as regular environments
         :type optimize_experience_replay: bool
-            
+
+        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
+        :param return_automatic_updates: whether to append automatic updates to returned tuple (as last element)
+
         
         :param kwargs: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
         :type kwargs: several kw flags (flag=value,flag2=value,...)
@@ -307,9 +321,10 @@ class MDPAgent(object):
                 warn("In experience replay mode, initial env states and initial observations parameters are unused")
 
             # create recurrence
-            recurrence = self.as_replay_recurrence(environment=environment,
+            self.recurrence = self.as_replay_recurrence(environment=environment,
                                                    session_length=session_length,
                                                    initial_hidden=initial_hidden,
+                                                   unroll_scan=unroll_scan,
                                                    **kwargs
                                                    )
 
@@ -321,15 +336,16 @@ class MDPAgent(object):
                     "by using passing optimize_experience_replay = True to .get_sessions")
 
             # create recurrence in active mode (using environment.get_action_results)
-            recurrence = self.as_recurrence(environment=environment,
+            self.recurrence = self.as_recurrence(environment=environment,
                                             session_length=session_length,
                                             batch_size=batch_size,
                                             initial_env_states=initial_env_states,
                                             initial_observations=initial_observations,
                                             initial_hidden=initial_hidden,
+                                            unroll_scan=unroll_scan,
                                             **kwargs
                                             )
-        state_layers_dict, output_layers = recurrence.get_sequence_layers()
+        state_layers_dict, output_layers = self.recurrence.get_sequence_layers()
 
         # convert sequence layers into actual theano variables
         theano_expressions = lasagne.layers.get_output(list(state_layers_dict.values()) + list(output_layers))
@@ -361,7 +377,23 @@ class MDPAgent(object):
         if self.single_policy:
             policy = policy[0]
 
-        return env_states, observations, agent_states, actions, policy
+        ret_tuple = env_states, observations, agent_states, actions, policy
+
+        if return_automatic_updates:
+            ret_tuple += (self.get_automatic_updates(),)
+
+        if unroll_scan == return_automatic_updates:
+            warn("return_automatic_updates useful when and only when unroll_scan == False")
+
+        return ret_tuple
+
+    def get_automatic_updates(self,recurrent=True):
+        """
+        Gets all random state updates that happened inside scan.
+        :param recurrent: if True, appends automatic updates from previous layers
+        :return: theano.OrderedUpdates with all automatic updates
+        """
+        return self.recurrence.get_automatic_updates(recurrent=recurrent)
 
     def get_agent_reaction(self,
                            prev_states={},
