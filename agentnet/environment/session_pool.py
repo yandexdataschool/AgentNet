@@ -213,8 +213,11 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                             cast_dtypes=True):
         """
         returns a dictionary of updates that will set shared variables to argument state
-        is cast_dtypes is True, casts all updates to the dtypes of their respective variables
+        if cast_dtypes is True, casts all updates to the dtypes of their respective variables
         """
+        observation_sequences = check_list(observation_sequences)
+        action_sequences = check_list(action_sequences)
+
         assert len(observation_sequences) == len(self.observations)
         assert len(action_sequences) == len(self.actions)
         if prev_memory is not None:
@@ -233,7 +236,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             updates[self.is_alive] = is_alive
 
         if prev_memory is not None:
-            for prev_memory_var, prev_memory_value in zip(self.preceding_agent_memories, prev_memory):
+            for prev_memory_var, prev_memory_value in zip(self.preceding_agent_memories, check_list(prev_memory)):
                 updates[prev_memory_var] = prev_memory
 
         if cast_dtypes:
