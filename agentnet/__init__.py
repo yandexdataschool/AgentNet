@@ -12,4 +12,4 @@ from . import resolver
 from . import utils
 
 __version__ = '0.9.0'
-__author__ = 'Alexander Panin and contributors.'
+__author__ = 'YandexDataSchool and contributors.'

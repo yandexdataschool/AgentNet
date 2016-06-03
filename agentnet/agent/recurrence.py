@@ -7,7 +7,9 @@ from warnings import warn
 import lasagne
 from lasagne.layers import InputLayer
 from lasagne.utils import unroll_scan
+import theano
 from theano import tensor as T
+
 
 from ..utils import insert_dim
 from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences
@@ -22,6 +24,7 @@ class Recurrence(DictLayer):
                  tracked_outputs=tuple(),
                  state_variables=OrderedDict(),
                  state_init='zeros',
+                 unroll_scan=True,
                  n_steps=10,
                  batch_size=None,
                  delayed_states=tuple(),
@@ -30,7 +33,7 @@ class Recurrence(DictLayer):
                  ):
         """
         A generic recurrent unit that works with a custom graph.
-        Recurrence is used to compile recurrent computations while
+        Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
 
         :param input_nonsequences: inputs that are same at each time tick.
             Technically it's a dictionary that maps InputLayer from one-step graph
@@ -60,7 +63,12 @@ class Recurrence(DictLayer):
             Can be a list of initializer layers for states in the order of dict.items()
                 - if so, it's length must match len(state_variables)
 
-        :param n_steps: how many time steps will the recurrence unroll for
+        :param unroll_scan: whether or not to use lasagne.utils.unroll_scan instead of theano.scan.
+            Note that if unroll_scan == False, one should use .get_rng_updates after .get_output to collect
+            automatic updates
+
+        :param n_steps: how many time steps will the recurrence roll for. If n_steps=None, tries to infer it.
+                        n_steps == None will only work when unroll_scan==False and there are at least some input sequences
             
         :param batch_size: if the process has no inputs, this expression (int or theano scalar),
             this variable defines the batch size
@@ -93,9 +101,17 @@ class Recurrence(DictLayer):
             
         """
         self.n_steps = n_steps
+        self.unroll_scan = unroll_scan
+        self.updates=theano.OrderedUpdates()
 
         self.input_nonsequences = check_ordered_dict(input_nonsequences)
         self.input_sequences = check_ordered_dict(input_sequences)
+
+
+        if self.n_steps is None and (self.unroll_scan or len(self.input_sequences) ==0):
+            raise ValueError("Inferring n_steps is only possible when scan is not unrolled and"
+                             "there is at least one sequence in input_sequences")
+
 
         self.tracked_outputs = check_list(tracked_outputs)
 
@@ -198,7 +214,7 @@ class Recurrence(DictLayer):
 
 
     def get_params(self, **tags):
-        """returns all params. If include_recurrence is set ot True, includes recurrent params from one-step network"""
+        """returns all params, including recurrent params from one-step network"""
 
         params = super(Recurrence, self).get_params(**tags)
 
@@ -223,7 +239,6 @@ class Recurrence(DictLayer):
             [state_sequences] + [output sequences] - a list of all states and all outputs sequences
             Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
         """
-
         # set batch size
         if len(inputs) != 0:
             batch_size = inputs[0].shape[0]
@@ -277,14 +292,29 @@ class Recurrence(DictLayer):
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
             return new_states + new_outputs
 
-        # TODO (arogozhnikov) does random_streams.updates resolves the problem?
-        # call scan itself (unroll it to avoid randomness issues)
-        history = unroll_scan(step,
-                              sequences=sequences,
-                              outputs_info=outputs_info,
-                              non_sequences=nonsequences,
-                              n_steps=self.n_steps
-                              )
+        if self.unroll_scan:
+            # call scan itself
+            history = unroll_scan(step,
+                                  sequences=sequences,
+                                  outputs_info=outputs_info,
+                                  non_sequences=nonsequences,
+                                  n_steps=self.n_steps
+                                  )
+            self.updates=OrderedDict()
+        else:
+            history,updates = theano.scan(step,
+                                  sequences=sequences,
+                                  outputs_info=outputs_info,
+                                  non_sequences=nonsequences,
+                                  n_steps=self.n_steps
+                                  )
+            self.updates = updates
+            if len(updates) !=0:
+                warn("Warning: recurrent loop without unroll_scan got nonempty random state updates list. That happened"
+                     " because there is some source of randomness (e.g. dropout) inside recurrent step graph."
+                     " To compile such graph, one must either call .get_automatic_updates() right after .get_output"
+                     " and pass these updates to a function, or use no_defalt_updates=True when compiling theano.function.")
+
 
         # reordering from [time,batch,...] to [batch,time,...]
         history = [(var.swapaxes(1, 0) if var.ndim > 1 else var) for var in history]
@@ -302,6 +332,36 @@ class Recurrence(DictLayer):
 
         return OrderedDict(zip(self.keys(),state_seqs + output_seqs))
 
+    def get_automatic_updates(self, recurrent=True):
+        """
+        Gets all random state updates that happened inside scan.
+        :param recurrent: if True, appends automatic updates from previous layers
+        :return: theano.OrderedUpdates with all automatic updates
+        """
+        updates = theano.OrderedUpdates(self.updates)
+        if recurrent:
+            #add previous layers if any
+            for layer in lasagne.layers.get_all_layers(self):
+                if layer is self: continue
+                if hasattr(layer,'get_automatic_updates'):
+                    layer_updates = layer.get_automatic_updates(recurrent=False)
+                    updates += theano.OrderedUpdates(layer_updates)
+
+        #assert there is no inner updates that we can't handle
+        inner_graph_outputs = list(self.state_variables.keys()) + self.tracked_outputs
+        for inner_layer in lasagne.layers.get_all_layers(inner_graph_outputs):
+            if hasattr(inner_layer, 'get_automatic_updates'):
+                inner_updates = inner_layer.get_automatic_updates(recurrent=False)
+                if len(inner_updates) != 0:
+                    raise ValueError(
+                        "Currently AgentNet only supports non-unrolled scan if there is no lower-level"
+                        "scan with automatic updates. In other words, if you are playing with hierarchical MDP, "
+                        " all recurrences must fall into four categories:\n"
+                        " - recurrence with unroll_scan - works anywhere\n"
+                        " - recurrence with theano.scan - on the bottom level\n"
+                        " - recurrence with theano.scan - if all lower levels are unrolled OR have no random state updates\n"
+                    )
+        return updates
 
     def get_one_step(self, prev_states={}, current_inputs={}, **get_output_kwargs):
         """

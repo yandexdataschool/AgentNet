@@ -1,6 +1,11 @@
 MIT License
 
-Copyright (c) 2016 Yandex School of Data Analysis
+AgentNet uses a shared copyright model: each contributor holds copyright over
+their contributions to AgentNet. The project versioning records all such
+contribution and copyright details.
+By contributing to the AgentNet repository through pull-request, comment,
+or otherwise, the contributor releases their content to the license and
+copyright terms herein.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

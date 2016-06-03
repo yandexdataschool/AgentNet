@@ -71,9 +71,7 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
                                  output_shape=(None,) + window.output_shape[2:])
 
     # a simple lasagne network (try replacing with any other lasagne network and see what works best)
-    nn = DenseLayer(window_max, num_units=500, name='dense0')
-    nn = DropoutLayer(nn, name="dropout", p=0.05)  # will get deterministic during evaluation
-    nn = DenseLayer(nn, num_units=300, name='dense1')
+    nn = DenseLayer(window_max, num_units=50, name='dense0')
 
     # Agent policy and action picking
     q_eval = DenseLayer(nn,

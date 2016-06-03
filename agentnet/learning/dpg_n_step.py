@@ -34,6 +34,7 @@ def get_elementwise_objective_components(policy,
                                          is_alive="always",
                                          n_steps=None,
                                          gamma_or_gammas=0.99,
+                                         crop_last = True,
                                          force_values_after_end=True,
                                          state_values_after_end="zeros",
                                          consider_value_reference_constant=True,
@@ -66,6 +67,8 @@ def get_elementwise_objective_components(policy,
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
         
         gamma_or_gammas - a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts 
+        
+        crop_last - if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
         
         force_values_after_end - if true, sets reference policy at session end to rewards[end] + qvalues_after_end
         
@@ -126,5 +129,9 @@ def get_elementwise_objective_components(policy,
     # critic loss
     reference_action_values = consider_constant(reference_action_values)
     V_err_elementwise = squared_error(reference_action_values, action_values)
+    
+    if crop_last:
+        V_err_elementwise = T.set_subtensor(V_err_elementwise[:,-1],0)
+
 
     return policy_loss_elwise * is_alive, V_err_elementwise * is_alive

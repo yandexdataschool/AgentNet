@@ -237,7 +237,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
 
         if prev_memory is not None:
             for prev_memory_var, prev_memory_value in zip(self.preceding_agent_memories, check_list(prev_memory)):
-                updates[prev_memory_var] = prev_memory
+                updates[prev_memory_var] = prev_memory_value
 
         if cast_dtypes:
             casted_updates = OrderedDict({})
