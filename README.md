@@ -10,6 +10,8 @@ A lightweight library to build and train deep reinforcement learning and custom 
 
 # What is AgentNet?
 
+![whatis_agentnet_png](http://s33.postimg.org/ytx63kwcv/whatis_agentnet_png.png)
+
 No time to play games? Let machines do this for you!
 
 AgentNet is a deep reinforcement learning framework, 
