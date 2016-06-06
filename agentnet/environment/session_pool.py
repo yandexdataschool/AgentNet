@@ -70,7 +70,9 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             self.observations = [
                 create_shared(
                     "sessions.observations_history." + str(i),
-                    np.zeros((10, 5) + tuple(obs.output_shape[1:]), dtype=get_layer_dtype(obs)))
+                    np.zeros((10, 5) + tuple(obs.output_shape[1:])),
+                    dtype=get_layer_dtype(obs)
+                )
                 for i, obs in enumerate(observations)
                 ]
 
@@ -117,9 +119,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             self.preceding_agent_memories = [
                 create_shared(
                     "session.prev_memory." + str(i),
-                    np.zeros((10,) + tuple(mem.output_shape[1:]),
-                             dtype=get_layer_dtype(mem)
-                             )
+                    np.zeros((10,) + tuple(mem.output_shape[1:])),
+                    dtype=get_layer_dtype(mem)
                 )
                 for i, mem in enumerate(agent_memories)
                 ]
