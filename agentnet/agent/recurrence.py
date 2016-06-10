@@ -1,3 +1,14 @@
+"""
+AgentNet core abstraction is Recurrence - a lasagne container-layer that can hold
+  arbitrary graph and roll it for specified number of steps.
+
+Apart from from MDP Agent, recurrence is also useful for arbitrary recurrent constructs
+e.g. convolutional RNN, attentive and/or augmented architectures etc. etc.
+
+As Recurrence is a lasagne layer, one recurrence can be used as a part of computational graph of another recurrence.
+
+"""
+
 from __future__ import division, print_function, absolute_import
 
 from collections import OrderedDict

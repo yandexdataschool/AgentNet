@@ -1,14 +1,11 @@
 """
 MDPAgent provides a high-level interface for quick implementation of classic MDP agents with continuous,
-discrete or mixed action space.
+discrete or mixed action space, arbitrary recurrent agent memory and decision making policy.
 
 If you are up to something more sophisticated, try agentnet.agent.recurrence.Recurrence,
  which is a lasagne layer for custom recurrent networks.
-If you wish to quickly get Recurrence class corresponding to MDPAgent,
- consider MDPAgent.as_recurrence(...).get_layers(0 or MDPAgent.as_replay_recurrence(...).get_layers(),
- which will both return lasagne layers for sequences of states, actions, etc.
 
-See agentnet.agent.recurrence.Recurrence.as_layers docs for detailed info.
+
 """
 from __future__ import division, print_function, absolute_import
 
