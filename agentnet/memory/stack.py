@@ -9,6 +9,33 @@ from ..utils import insert_dim
 
 
 class StackAugmentation(MergeLayer):
+    """
+    A special kind of memory augmentation that implements
+    end-to-end diferentiable stack in accordance to this paper: http://arxiv.org/abs/1503.01007
+
+    :param observation_input: an item that can be pushed into the stack (e.g. RNN state)
+    :type observation_input: lasagne.layers.Layer
+    :param prev_state_input: revious stack state of shape [batch,stack depth, stack item size]
+    :type prev_state_input: lasagne.layers.Layer (usually InputLayer)
+    :param controls_layer: a layer with 3 channels: PUSH_OP, POP_OP and NO_OP accordingly (must sum to 1)
+    :type controls_layer: lasagne.layers.layer (usually DenseLayer with softmax nonlinearity)
+
+    A simple snippet that runs that augmentation from the Stack RNN example
+    stack_width = 3
+    stack_depth = 50
+    # previous stack goes here
+    prev_stack_layer = InputLayer((None,stack_depth,stack_width))
+    # Stack controls - push, pop and no-op
+    stack_controls_layer = DenseLayer(<rnn>,3, nonlinearity=lasagne.nonlinearities.softmax,)
+    # stack input
+    stack_input_layer = DenseLayer(<rnn>,stack_width)
+    #new stack state
+    next_stack = StackAugmentation(stack_input_layer,
+                                  prev_stack_layer,
+                                  stack_controls_layer)
+
+
+    """
     def __init__(self,
                  observation_input,
                  prev_state_input,

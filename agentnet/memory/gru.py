@@ -7,6 +7,32 @@ from lasagne.layers import Gate, flatten
 
 
 class GRUMemoryLayer(lasagne.layers.MergeLayer):
+    """
+
+        A Gated Recurrent Unit implementation of a memory layer.
+
+        Mimics lasagne.layers.GRULayer api for simplicity.
+
+        If you prefer AgentNet way, try GRUCell that simplifies syntax in case of e.g. several input layers, etc.
+             GRUCell is also empirically a little bit (mean -5% per call) faster for small number of neurons on GPU
+
+        Unlike lasagne.layers.GRUlayer, this layer does not produce the whole time series at a time,
+        but yields it's next state given last state and observation one tick at a time.
+        This is done to simplify usage within external loops along with other MDP components.
+
+        :param num_units: amount of units in the hidden state.
+                - If you are using prev_state_input, put anything here.
+        :param observation_input: a lasagne layer that provides
+            -- float[batch_id, input_id]: input observation at this tick as an output.
+        :param prev_state_input: [optional] - a lasagne layer that generates the previous batch
+            of hidden states (in case you wish several layers to handle the same sequence)
+        :param concatenate_input: if true, appends observation_input of current tick to own activation at this tick
+
+        instance that
+        - generates first (a-priori) agent state
+        - determines new agent state given previous agent state and an observation|previous input
+
+    """
     def __init__(self,
                  num_units,
                  observation_input,
@@ -15,33 +41,9 @@ class GRUMemoryLayer(lasagne.layers.MergeLayer):
                  updategate=Gate(W_cell=None),
                  hidden_update=Gate(W_cell=None, nonlinearity=nonlinearities.tanh),
 
-                 bias_init=init.Constant(),
-                 weight_init=init.Normal(),
-
                  grad_clipping=5.,
                  **kwargs):
-        """
-        a Gated Recurrent Unit implementation of a memory layer.
 
-        Unlike lasagne.layers.GRUlayer, this layer does not produce the whole time series at a time, 
-        but yields it's next state given last state and observation one tick at a time.
-        This is done to simplify usage within external loops along with other MDP components.
-    
-        parameters: 
-            - num_units: amount of units in the hidden state. 
-                - If you are using prev_state_input, put anything here.
-            - observation_input - a lasagne layer that provides
-            float[batch_id, input_id]: input observation at this tick
-            -- as an output.
-            - prev_state_input [optional] - a lasagne layer that generates the previous batch
-            of hidden states (in case you wish several layers to handle the same sequence)
-            - concatenate_input: if true, appends observation_input of current tick to own activation at this tick
-
-        instance that
-        - generates first (a-priori) agent state
-        - determines new agent state given previous agent state and an observation|previous input
-
-        """
         assert len(prev_state_input.output_shape) == 2
 
         if len(observation_input.output_shape) != 2:

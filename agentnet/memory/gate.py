@@ -16,6 +16,27 @@ from ..utils.layers import DictLayer, get_layer_dtype
 
 
 class GateLayer(DictLayer):
+    """
+        An overly generic interface for one-step gate, stacked gates or gate applier.
+        If several channels are given, stacks them for quicker execution.
+
+        :param gate_controllers: - a single layer or a list/tuple of such
+            layers that gate depends on (for most RNNs, that's input and previous memory state)
+
+        :param channels: - a single layer or integer or a list/tuple of layers/integers
+            if a layer, that defines a layer that should be multiplied by the gate output
+            if an integer - that defines a number of units of a gate -- and these are the units to be returned
+
+        :param gate_nonlinearities: - a single function or a list of such(channel-wise),
+            - defining nonlinearities for gates on corresponding channels
+
+        :param bias_init: - an initializer or a list (channel-wise) of initializers for bias(b) parameters
+            - (None, lasagne.init, theano variable or numpy array)
+            - None means no bias
+        :param weight_init: - an initializer OR a list of initializers for  (channel-wise)
+            - OR a list of lists of initializers (channel, controller)
+            - (lasagne.init, theano variable or numpy array)
+        """
     def __init__(self,
                  gate_controllers,
                  channels,
@@ -23,27 +44,7 @@ class GateLayer(DictLayer):
                  bias_init=init.Constant(),
                  weight_init=init.Normal(),
                  **kwargs):
-        """
-        An overly generic interface for one-step gate, stacked gates or gate applier.
-        If several channels are given, stacks them for quicker execution. 
-        
-        gate_controllers - a single layer or a list/tuple of such
-            layers that gate depends on (for most RNNs, that's input and previous memory state)
-        
-        channels - a single layer or integer or a list/tuple of layers/integers
-            if a layer, that defines a layer that should be multiplied by the gate output
-            if an integer - that defines a number of units of a gate -- and these are the units to be returned
-            
-        gate_nonlinearities - a single function or a list of such(channel-wise), 
-            - defining nonlinearities for gates on corresponding channels
-        
-        bias_init - an initializer or a list (channel-wise) of initializers for bias(b) parameters 
-            - (None, lasagne.init, theano variable or numpy array) 
-            - None means no bias
-        weight init - an initializer OR a list of initializers for  (channel-wise) 
-            - OR a list of lists of initializers (channel, controller) 
-            - (lasagne.init, theano variable or numpy array) 
-        """
+
         
         self.channels = check_list(channels)
         self.gate_controllers = check_list(gate_controllers)

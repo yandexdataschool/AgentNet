@@ -3,14 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to AgentNet's documentation!
+AgentNet
 ====================================
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+  :maxdepth: 2
 
+  modules/agent
+  modules/environment
+  modules/memory
+  modules/resolver
+  modules/learning
+  modules/utils
 
 
 Indices and tables
@@ -19,4 +25,6 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
 

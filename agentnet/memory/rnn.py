@@ -24,13 +24,18 @@ def RNNCell(prev_state,
         
     Implements a one-step recurrent neural network (RNN) with arbitrary number of units.
     
-    parameters:
-        prev_state: input that denotes previous state (shape must be (None, n_units) )
-        input_or_inputs: a single layer or a list/tuple of layers that go as inputs
-        nonlinearity: which nonlinearity to use
-        num_units: how many recurrent cells to use. None means "as in prev_state"
-        grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
-    
+
+    :param prev_state: input that denotes previous state (shape must be (None, n_units) )
+    :param input_or_inputs: a single layer or a list/tuple of layers that go as inputs
+    :param nonlinearity: which nonlinearity to use
+    :param num_units: how many recurrent cells to use. None means "as in prev_state"
+    :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
+
+    :returns: updated memory layer
+    :rtype: lasagne.layers.Layer
+
+
+
     for developers:
         Works by stacking DenseLayers with ElemwiseSumLayer.
         is a function mock, not actual class.
@@ -120,7 +125,11 @@ def GRUCell(prev_state,
                                 list[i][0,1,2] = input[i] -> [forget gate, update gate, hidden update]
     :param *_nonlinearity: which nonlinearity to use for a particular gate
     
-    :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"    
+    :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
+
+    :returns: updated memory layer
+    :rtype: lasagne.layers.Layer
+
     
     for developers:
         Works by stacking other lasagne layers;
@@ -262,6 +271,7 @@ def LSTMCell(prev_cell,
 
 
     :returns: a tuple of (new_cell,new_output) layers
+    :rtype: (lasagne.layers.Layer,lasagne.layers.Layer)
 
 
     for developers:

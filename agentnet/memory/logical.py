@@ -7,7 +7,17 @@ from ..utils.layers import get_layer_dtype
 
 
 class CounterLayer(Layer):
-    """A simple counter Layer that increments it's state by 1 each turn and loops each k iterations"""
+    """
+    A simple counter Layer that increments it's state by 1 each turn and loops each k iterations
+
+    :param prev_counter: previous state of counter
+    :type prev_counter: lasagne.layers.Layer, normally InputLayer
+    :param k: if not None, resets counter to zero each k timesteps
+
+    :returns: incremented counter
+    :rtype: lasagne.layers.Layer
+
+    """
     def __init__(self,prev_counter,k=None,name=None):
         super(CounterLayer,self).__init__(prev_counter,name=name)
         self.k=k
@@ -20,7 +30,22 @@ class CounterLayer(Layer):
 #TODO(jheuristic) try ifelse?
         
 class SwitchLayer(MergeLayer):
-    """a simple layer that implements an 'if-than-else' logic"""
+    """a simple layer that implements an 'if-than-else' logic
+
+    :param condition: a layer with [batch_size] boolean conditions (dtype int*)
+    :type condition: lasagne.layers.Layer
+    :param than_branch: branch that happens if condition != 0 for particular element of a batch
+    :type condition: lasagne.layers.Layer
+    :param else_branch: branch that happens if condition == 0 for particular element of a batch
+    :type condition: lasagne.layers.Layer
+
+    Shapes and dtypes of the two branches must match.
+
+    :returns: a layer where i-th batch sample will take than_branch value if condition, else else_branch value
+    :rtype: lasagne.layers.Layer
+
+
+    """
     def __init__(self,condition,than_branch,else_branch,name=None):
         super(SwitchLayer,self).__init__(incomings=[condition,than_branch,else_branch], name=name)
         

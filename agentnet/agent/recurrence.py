@@ -18,6 +18,76 @@ from ..utils.layers import DictLayer, get_layer_dtype
 
 
 class Recurrence(DictLayer):
+    """
+    A generic recurrent unit that works with a custom graph.
+    Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
+
+    :param input_nonsequences: inputs that are same at each time tick.
+        Technically it's a dictionary that maps InputLayer from one-step graph
+        to layers from the outer graph.
+
+    :param input_sequences: layers that represent time sequences, fed into graph tick by tick.
+        This has to be a dict (one-step input -> sequence layer).
+        All such sequences are iterated over FIRST AXIS (axis=1),
+        since we consider their shape to be [batch, time, whatever_else...]
+
+    :param tracked_outputs: any layer from the one-state graph which outputs should be
+        recorded at every time tick.
+        Note that all state_variables are tracked separately, so their inclusion is not needed.
+
+
+    :param state_variables: a dictionary that maps next state variables to their respective previous state
+        keys (new states) must be lasagne layers and values (previous states) must be InputLayers
+
+        Note that state dtype is defined thus:
+         - if state key layer has output_dtype, than that type is used for the entire state
+         - otherwise, theano.config.floatX is used
+
+    :param state_init: what are the default values for state_variables. In other words, what is
+        prev_state for the first iteration. By default it's T.zeros of the appropriate shape.
+        Can be a dict mapping state OUTPUTS to their initialisations.
+            - if so, any states not mentioned in it will be considered zeros
+        Can be a list of initializer layers for states in the order of dict.items()
+            - if so, it's length must match len(state_variables)
+
+    :param unroll_scan: whether or not to use lasagne.utils.unroll_scan instead of theano.scan.
+        Note that if unroll_scan == False, one should use .get_rng_updates after .get_output to collect
+        automatic updates
+
+    :param n_steps: how many time steps will the recurrence roll for. If n_steps=None, tries to infer it.
+                    n_steps == None will only work when unroll_scan==False and there are at least some input sequences
+
+    :param batch_size: if the process has no inputs, this expression (int or theano scalar),
+        this variable defines the batch size
+
+    :param delayed_states: any states mentioned in this list will be shifted 1 turn backwards
+        - from init to n_steps -1. They will be padded with their initial values
+        This is intended to allow flipping the recurrence graph to synchronize corresponding values.
+        E.g. for MDP, if environment reaction follows agent action,  synchronize observations with actions
+        [at i-th turn agent sees i-th observation, than chooses i-th action and gets i-th reward]
+
+    :param verify_graph: whether to assert that all inner graph input layers are registered for the recurrence
+        as inputs or prev states and all inputs/prev states are actually needed to compute next states/outputs.
+        NOT the same as theano.scan(strict=True).
+
+    Outputs:
+        returns a tuple of sequences with shape [batch,tick, ...]
+            - state variable sequences in order of dict.items()
+            - tracked_outputs in given order
+
+        WARNING! can not be used further as an atomic lasagne layer.
+        Instead, consider calling .get_sequences() or unpacking it
+
+        state_sequence_layers, output_sequence_layers = Recurrence(...).get_sequences()
+        (see .get_sequences help for more info)
+
+        OR
+
+        state_seq_layer, ... , output1_seq_layer, output2_seq_layer, ... = Recurrence(...)
+
+
+    """
+
     def __init__(self,
                  input_nonsequences=OrderedDict(),
                  input_sequences=OrderedDict(),
@@ -31,75 +101,6 @@ class Recurrence(DictLayer):
                  verify_graph=True,
                  name="YetAnotherRecurrence",
                  ):
-        """
-        A generic recurrent unit that works with a custom graph.
-        Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
-
-        :param input_nonsequences: inputs that are same at each time tick.
-            Technically it's a dictionary that maps InputLayer from one-step graph
-            to layers from the outer graph.
-
-        :param input_sequences: layers that represent time sequences, fed into graph tick by tick.
-            This has to be a dict (one-step input -> sequence layer).
-            All such sequences are iterated over FIRST AXIS (axis=1),
-            since we consider their shape to be [batch, time, whatever_else...]
-            
-        :param tracked_outputs: any layer from the one-state graph which outputs should be
-            recorded at every time tick.
-            Note that all state_variables are tracked separately, so their inclusion is not needed.
-
-
-        :param state_variables: a dictionary that maps next state variables to their respective previous state
-            keys (new states) must be lasagne layers and values (previous states) must be InputLayers
-
-            Note that state dtype is defined thus:
-             - if state key layer has output_dtype, than that type is used for the entire state
-             - otherwise, theano.config.floatX is used
-            
-        :param state_init: what are the default values for state_variables. In other words, what is
-            prev_state for the first iteration. By default it's T.zeros of the appropriate shape.
-            Can be a dict mapping state OUTPUTS to their initialisations.
-                - if so, any states not mentioned in it will be considered zeros
-            Can be a list of initializer layers for states in the order of dict.items()
-                - if so, it's length must match len(state_variables)
-
-        :param unroll_scan: whether or not to use lasagne.utils.unroll_scan instead of theano.scan.
-            Note that if unroll_scan == False, one should use .get_rng_updates after .get_output to collect
-            automatic updates
-
-        :param n_steps: how many time steps will the recurrence roll for. If n_steps=None, tries to infer it.
-                        n_steps == None will only work when unroll_scan==False and there are at least some input sequences
-            
-        :param batch_size: if the process has no inputs, this expression (int or theano scalar),
-            this variable defines the batch size
-                
-        :param delayed_states: any states mentioned in this list will be shifted 1 turn backwards
-            - from init to n_steps -1. They will be padded with their initial values
-            This is intended to allow flipping the recurrence graph to synchronize corresponding values.
-            E.g. for MDP, if environment reaction follows agent action,  synchronize observations with actions
-            [at i-th turn agent sees i-th observation, than chooses i-th action and gets i-th reward]
-            
-        :param verify_graph : whether to assert that all inner graph input layers are registered for the recurrence
-            as inputs or prev states and all inputs/prev states are actually needed to compute next states/outputs.
-            NOT the same as theano.scan(strict=True).
-                
-        Outputs:
-            returns a tuple of sequences with shape [batch,tick, ...]
-                - state variable sequences in order of dict.items()
-                - tracked_outputs in given order
-            
-            WARNING! can not be used further as an atomic lasagne layer.
-            Instead, consider calling .get_sequences() or unpacking it
-            
-            state_sequence_layers, output_sequence_layers = Recurrence(...).get_sequences()
-            (see .get_sequences help for more info)
-            
-            OR
-            
-            state_seq_layer, ... , output1_seq_layer, output2_seq_layer, ... = Recurrence(...)
-                        
-            
-        """
         self.n_steps = n_steps
         self.unroll_scan = unroll_scan
         self.updates=theano.OrderedUpdates()
@@ -212,6 +213,124 @@ class Recurrence(DictLayer):
                 warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
                      "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
 
+    def get_sequence_layers(self):
+        """
+        returns history of agent interaction with environment for given number of turns.
+            [state_sequences] , [output sequences] - a list of all state sequences and  a list of all output sequences
+            Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
+        """
+        state_keys = list(self.state_variables.keys())
+        state_dict = OrderedDict(zip(state_keys, self[state_keys]))
+
+        output_dict = self[self.tracked_outputs]
+        return state_dict, output_dict
+
+    def get_one_step(self, prev_states={}, current_inputs={}, **get_output_kwargs):
+        """
+        Applies one-step recurrence.
+        parameters:
+            prev_states: a dict {memory output: prev state}
+                    or a list of theano expressions for each prev state
+
+            current_inputs: a dictionary of inputs that maps {input layers -> theano expressions for them},
+                        Alternatively, it can be a list where i-th input corresponds to
+                        i-th input slot from concatenated sequences and nonsequences
+                        self.input_nonsequences.keys() + self.input_sequences.keys()
+
+            get_output_kwargs: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
+
+            returns:
+                new_states: a list of all new_state values, where i-th element corresponds
+                        to i-th self.state_variables key
+                new_outputs: a list of all outputs  where i-th element corresponds
+                        to i-th self.tracked_outputs key
+
+        """
+
+        # standardize prev_states to a dictionary
+        if not isinstance(prev_states, dict):
+            # if only one layer given, make a single-element list of it
+            prev_states = check_list(prev_states)
+            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()), prev_states)))
+        else:
+            prev_states = check_ordered_dict(prev_states)
+
+        assert len(prev_states) == len(self.state_variables)
+
+        # input map
+        ## prev state input layer: prev state expression
+        prev_states_kv = [(self.state_variables[s], prev_states[s])
+                          for s in list(self.state_variables.keys())]  # prev states
+
+        # prepare both sequence and nonsequence inputs in one dict
+        input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
+
+        # standardize current_inputs to a dictionary
+
+        if not isinstance(current_inputs, dict):
+            # if only one layer given, make a single-element list of it
+            current_inputs = check_list(current_inputs)
+            current_inputs = OrderedDict(list(zip(input_layers, current_inputs)))
+        else:
+            current_inputs = check_ordered_dict(current_inputs)
+
+        assert len(current_inputs) == len(input_layers)
+
+        # second half of input map
+        ## external input layer: input expression
+        inputs_kv = list(current_inputs.items())
+
+        # compose input map
+        input_map = OrderedDict(prev_states_kv + inputs_kv)
+
+        # compose output_list
+        output_list = list(self.state_variables.keys()) + self.tracked_outputs
+
+        # call get output
+        results = lasagne.layers.get_output(
+            layer_or_layers=output_list,
+            inputs=input_map,
+            **get_output_kwargs
+        )
+
+        # parse output array
+        n_states = len(self.state_variables)
+        n_outputs = len(self.tracked_outputs)
+
+        new_states, new_outputs = unpack_list(results, [n_states, n_outputs])
+
+        return new_states, new_outputs
+
+    def get_automatic_updates(self, recurrent=True):
+        """
+        Gets all random state updates that happened inside scan.
+        :param recurrent: if True, appends automatic updates from previous layers
+        :return: theano.OrderedUpdates with all automatic updates
+        """
+        updates = theano.OrderedUpdates(self.updates)
+        if recurrent:
+            # add previous layers if any
+            for layer in lasagne.layers.get_all_layers(self):
+                if layer is self: continue
+                if hasattr(layer, 'get_automatic_updates'):
+                    layer_updates = layer.get_automatic_updates(recurrent=False)
+                    updates += theano.OrderedUpdates(layer_updates)
+
+        # assert there is no inner updates that we can't handle
+        inner_graph_outputs = list(self.state_variables.keys()) + self.tracked_outputs
+        for inner_layer in lasagne.layers.get_all_layers(inner_graph_outputs):
+            if hasattr(inner_layer, 'get_automatic_updates'):
+                inner_updates = inner_layer.get_automatic_updates(recurrent=False)
+                if len(inner_updates) != 0:
+                    raise ValueError(
+                        "Currently AgentNet only supports non-unrolled scan if there is no lower-level"
+                        "scan with automatic updates. In other words, if you are playing with hierarchical MDP, "
+                        " all recurrences must fall into four categories:\n"
+                        " - recurrence with unroll_scan - works anywhere\n"
+                        " - recurrence with theano.scan - on the bottom level\n"
+                        " - recurrence with theano.scan - if all lower levels are unrolled OR have no random state updates\n"
+                    )
+        return updates
 
     def get_params(self, **tags):
         """returns all params, including recurrent params from one-step network"""
@@ -332,121 +451,3 @@ class Recurrence(DictLayer):
 
         return OrderedDict(zip(self.keys(),state_seqs + output_seqs))
 
-    def get_automatic_updates(self, recurrent=True):
-        """
-        Gets all random state updates that happened inside scan.
-        :param recurrent: if True, appends automatic updates from previous layers
-        :return: theano.OrderedUpdates with all automatic updates
-        """
-        updates = theano.OrderedUpdates(self.updates)
-        if recurrent:
-            #add previous layers if any
-            for layer in lasagne.layers.get_all_layers(self):
-                if layer is self: continue
-                if hasattr(layer,'get_automatic_updates'):
-                    layer_updates = layer.get_automatic_updates(recurrent=False)
-                    updates += theano.OrderedUpdates(layer_updates)
-
-        #assert there is no inner updates that we can't handle
-        inner_graph_outputs = list(self.state_variables.keys()) + self.tracked_outputs
-        for inner_layer in lasagne.layers.get_all_layers(inner_graph_outputs):
-            if hasattr(inner_layer, 'get_automatic_updates'):
-                inner_updates = inner_layer.get_automatic_updates(recurrent=False)
-                if len(inner_updates) != 0:
-                    raise ValueError(
-                        "Currently AgentNet only supports non-unrolled scan if there is no lower-level"
-                        "scan with automatic updates. In other words, if you are playing with hierarchical MDP, "
-                        " all recurrences must fall into four categories:\n"
-                        " - recurrence with unroll_scan - works anywhere\n"
-                        " - recurrence with theano.scan - on the bottom level\n"
-                        " - recurrence with theano.scan - if all lower levels are unrolled OR have no random state updates\n"
-                    )
-        return updates
-
-    def get_one_step(self, prev_states={}, current_inputs={}, **get_output_kwargs):
-        """
-        Applies one-step recurrence.
-        parameters:
-            prev_states: a dict {memory output: prev state} 
-                    or a list of theano expressions for each prev state
-            
-            current_inputs: a dictionary of inputs that maps {input layers -> theano expressions for them},
-                        Alternatively, it can be a list where i-th input corresponds to 
-                        i-th input slot from concatenated sequences and nonsequences 
-                        self.input_nonsequences.keys() + self.input_sequences.keys()
-            
-            get_output_kwargs: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
-
-            returns:
-                new_states: a list of all new_state values, where i-th element corresponds
-                        to i-th self.state_variables key
-                new_outputs: a list of all outputs  where i-th element corresponds
-                        to i-th self.tracked_outputs key
-            
-        """
-
-        # standardize prev_states to a dictionary
-        if not isinstance(prev_states, dict):
-            # if only one layer given, make a single-element list of it
-            prev_states = check_list(prev_states)
-            prev_states = OrderedDict(list(zip(list(self.state_variables.keys()), prev_states)))
-        else:
-            prev_states = check_ordered_dict(prev_states)
-
-        assert len(prev_states) == len(self.state_variables)
-
-        # input map
-        ## prev state input layer: prev state expression
-        prev_states_kv = [(self.state_variables[s], prev_states[s])
-                          for s in list(self.state_variables.keys())]  # prev states
-
-        # prepare both sequence and nonsequence inputs in one dict
-        input_layers = list(self.input_nonsequences.keys()) + list(self.input_sequences.keys())
-
-        # standardize current_inputs to a dictionary
-
-        if not isinstance(current_inputs, dict):
-            # if only one layer given, make a single-element list of it
-            current_inputs = check_list(current_inputs)
-            current_inputs = OrderedDict(list(zip(input_layers, current_inputs)))
-        else:
-            current_inputs = check_ordered_dict(current_inputs)
-
-        assert len(current_inputs) == len(input_layers)
-
-        # second half of input map
-        ## external input layer: input expression
-        inputs_kv = list(current_inputs.items())
-
-        # compose input map
-        input_map = OrderedDict(prev_states_kv + inputs_kv)
-
-        # compose output_list
-        output_list = list(self.state_variables.keys()) + self.tracked_outputs
-
-        # call get output
-        results = lasagne.layers.get_output(
-            layer_or_layers=output_list,
-            inputs=input_map,
-            **get_output_kwargs
-        )
-
-        # parse output array
-        n_states = len(self.state_variables)
-        n_outputs = len(self.tracked_outputs)
-
-        new_states, new_outputs = unpack_list(results, [n_states, n_outputs])
-
-        return new_states, new_outputs
-
-    def get_sequence_layers(self):
-        """
-        returns history of agent interaction with environment for given number of turns.
-            [state_sequences] , [output sequences] - a list of all state sequences and  a list of all output sequences
-            Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
-        """
-        state_keys = list(self.state_variables.keys())
-        state_dict = OrderedDict(zip(state_keys, self[state_keys]))
-        
-        output_dict = self[self.tracked_outputs]
-        return state_dict, output_dict

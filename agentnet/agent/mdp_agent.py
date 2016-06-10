@@ -28,33 +28,34 @@ from ..deprecated import deprecated
 
 
 class MDPAgent(object):
-    def __init__(self,
-                 observation_layers,
-                 agent_states,
-                 policy_estimators,
-                 action_layers,
-                 ):
-        """
+    """
         A generic agent within MDP (markov decision process) abstraction.
 
         :param agent_states: OrderedDict{ memory_output: memory_input}, where
                 memory_output: lasagne layer
                     - generates first agent state (before any interaction)
                     - determines new agent state given previous agent state and an observation
-                    
+
                 memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
          :type agent_states: collections.OrderedDict or dict
-         
+
          :param policy_estimators: whatever determines agent policy
-         :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances 
+         :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances
                  (e.g. state value + action probabilities for a2c)
-         
+
          :param action_layers: agent's action(s), or whatever is fed into your environment as agent actions.
          :type action_layers: resolver.BaseResolver child instance or any appropriate layer
                  or a tuple of such, that can be fed into environment to get next state and observation.
-                 
-                 
+
+
         """
+    def __init__(self,
+                 observation_layers,
+                 agent_states,
+                 policy_estimators,
+                 action_layers,
+                 ):
+
 
         self.single_action = type(action_layers) not in supported_sequences
         self.single_policy = type(policy_estimators) not in supported_sequences
@@ -70,192 +71,6 @@ class MDPAgent(object):
     def state_variables(self):
         return self.agent_states
 
-    def as_recurrence(self,
-                      environment,
-                      session_length=10,
-                      batch_size=None,
-                      initial_env_states='zeros',
-                      initial_observations='zeros',
-                      initial_hidden='zeros',
-                      recurrence_name='AgentRecurrence',
-                      unroll_scan=True,
-                      ):
-        """
-        Returns a Recurrence lasagne layer that contains :
-
-        :param environment: an environment to interact with
-        :type environment: BaseEnvironment
-        :param session_length: how many turns of interaction shall there be for each batch
-        :type session_length: int
-        :param batch_size: amount of independent sessions [number or symbolic].
-            irrelevant if there's at least one input or if you manually set any initial_*.
-        :type batch_size: int or theano.tensor.TensorVariable
-
-            initial_<something> - layers providing initial values for all variables at 0-th time step
-                'zeros' default means filling variables with zeros
-            Initial values are NOT included in history sequences
-            flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
-
-        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
-
-        :returns: Recurrence instance that returns
-              [agent memory states] + [env states] + [env_observations] + [agent policy] + [action_layers outputs]
-              all concatenated into one list
-        :rtype: agentnet.agent.recurrence.Recurrence
-
-        """
-        env = environment
-
-        assert len(check_list(env.observation_shapes)) == len(self.observation_layers)
-
-        # initialize prev states
-        prev_env_states = [InputLayer((None,) + check_tuple(shape), name="env.prev_state[{i}]".format(i=i))
-                           for i, shape in enumerate(check_list(env.state_shapes))]
-
-        # apply environment changes after agent action
-        new_state_outputs, new_observation_outputs = env.as_layers(prev_env_states, self.action_layers)
-
-        # add state changes to memory dict
-        all_state_pairs = list(chain(self.agent_states.items(),
-                                     zip(new_state_outputs, prev_env_states),
-                                     zip(new_observation_outputs, self.observation_layers)))
-
-        # compose state initialization dict
-        state_init_pairs = []
-        for initialization, layers in zip(
-                [initial_env_states, initial_observations, initial_hidden],
-                [new_state_outputs, new_observation_outputs, list(self.agent_states.keys())]
-        ):
-            if initialization == "zeros":
-                continue
-            elif isinstance(initialization, dict):
-                state_init_pairs += list(initialization.items())
-            else:
-                initialization = check_list(initialization)
-                assert len(initialization) == len(layers)
-
-                for layer, init in zip(layers, initialization):
-                    if init is not None:
-                        state_init_pairs.append([layer, init])
-
-        # convert all initializations into layers:
-        for i in range(len(state_init_pairs)):
-            layer, init = state_init_pairs[i]
-
-            # replace theano variables with input layers for them
-            if not isinstance(init, lasagne.layers.Layer):
-                init_layer = InputLayer(layer.output_shape,
-                                        name="env.initial_values_for." + (layer.name or "state"),
-                                        input_var=init)
-                state_init_pairs[i][1] = init_layer
-
-        # create the recurrence
-        recurrence = Recurrence(
-            state_variables=OrderedDict(all_state_pairs),
-            state_init=OrderedDict(state_init_pairs),
-            tracked_outputs=self.policy + self.action_layers,
-            n_steps=session_length,
-            batch_size=batch_size,
-            delayed_states=new_state_outputs + new_observation_outputs,
-            name=recurrence_name,
-            unroll_scan=unroll_scan
-        )
-
-        return recurrence
-
-    def as_replay_recurrence(self,
-                             environment,
-                             session_length=10,
-                             initial_hidden='zeros',
-                             recurrence_name='AgentRecurrence',
-                             unroll_scan=True,
-                             ):
-        """
-        returns a Recurrence lasagne layer that contains.
-
-        :param environment: an environment to interact with
-        :type environment: BaseEnvironment
-        :param session_length: how many turns of interaction shall there be for each batch
-        :type session_length: int
-
-            batch_size - [required parameter] amount of independent sessions [number or symbolic].
-                rrelevant if there's at least one input or if you manually set any initial_*.
-            
-            initial_<something> - layers providing initial values for all variables at 0-th time step
-                'zeros' default means filling variables with zeros
-            Initial values are NOT included in history sequences
-            flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
-
-        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
-
-
-
-        returns:
-            
-            an agentnet.agent.recurrence.Recurrence instance that returns
-              [agent memory states] + [env states] + [env_observations] [agent policy] + [action_layers outputs]
-                  all concatenated into one list
-
-        """
-        env = environment
-
-        assert len(check_list(env.observation_shapes)) == len(self.observation_layers)
-
-        # state initialization dict item pairs
-        if initial_hidden == "zeros":
-            initial_hidden = {}
-        elif isinstance(initial_hidden, dict):
-            for layer in list(initial_hidden.keys()):
-                assert layer in list(self.agent_states.keys())
-            initial_hidden = check_ordered_dict(initial_hidden)
-
-        else:
-            initial_hidden = check_list(initial_hidden)
-            assert len(initial_hidden) == len(self.agent_states)
-
-            state_init_pairs = []
-            for layer, init in zip(list(self.agent_states.keys()), initial_hidden):
-                if init is not None:
-                    state_init_pairs.append([layer, init])
-            initial_hidden = OrderedDict(state_init_pairs)
-
-        for layer, init in list(initial_hidden.items()):
-            # replace theano variables with input layers for them
-            if not isinstance(init, lasagne.layers.Layer):
-                init_layer = InputLayer(layer.output_shape,
-                                        name="agent.initial_values_for." + (layer.name or "state"),
-                                        input_var=init)
-                initial_hidden[layer] = init_layer
-
-        # handle observation sequences
-        observation_sequences = check_list(env.observations)
-        for i, obs_seq in enumerate(observation_sequences):
-
-            # replace theano variables with input layers for them
-            if not isinstance(obs_seq, lasagne.layers.Layer):
-                layer = self.observation_layers[i]
-                obs_shape = tuple(layer.output_shape)
-                obs_seq_shape = obs_shape[:1] + (session_length,) + obs_shape[1:]
-
-                obs_seq = InputLayer(obs_seq_shape,
-                                     name="agent.initial_values_for." + (layer.name or "state"),
-                                     input_var=obs_seq)
-
-                observation_sequences[i] = obs_seq
-        observation_sequences = OrderedDict(list(zip(self.observation_layers, observation_sequences)))
-
-        # create the recurrence
-        recurrence = Recurrence(
-            state_variables=self.agent_states,
-            state_init=initial_hidden,
-            input_sequences=observation_sequences,
-            tracked_outputs=self.policy + self.action_layers,
-            n_steps=session_length,
-            name=recurrence_name,
-            unroll_scan=unroll_scan
-        )
-
-        return recurrence
 
     def get_sessions(self,
                      environment,
@@ -394,6 +209,195 @@ class MDPAgent(object):
         :return: theano.OrderedUpdates with all automatic updates
         """
         return self.recurrence.get_automatic_updates(recurrent=recurrent)
+
+    def as_recurrence(self,
+                      environment,
+                      session_length=10,
+                      batch_size=None,
+                      initial_env_states='zeros',
+                      initial_observations='zeros',
+                      initial_hidden='zeros',
+                      recurrence_name='AgentRecurrence',
+                      unroll_scan=True,
+                      ):
+
+        """
+        Returns a Recurrence lasagne layer that contains :
+
+        :param environment: an environment to interact with
+        :type environment: BaseEnvironment
+        :param session_length: how many turns of interaction shall there be for each batch
+        :type session_length: int
+        :param batch_size: amount of independent sessions [number or symbolic].
+            irrelevant if there's at least one input or if you manually set any initial_*.
+        :type batch_size: int or theano.tensor.TensorVariable
+
+            initial_<something> - layers providing initial values for all variables at 0-th time step
+                'zeros' default means filling variables with zeros
+            Initial values are NOT included in history sequences
+            flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+
+        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
+
+        :returns: Recurrence instance that returns
+              [agent memory states] + [env states] + [env_observations] + [agent policy] + [action_layers outputs]
+              all concatenated into one list
+        :rtype: agentnet.agent.recurrence.Recurrence
+
+        """
+        env = environment
+
+        assert len(check_list(env.observation_shapes)) == len(self.observation_layers)
+
+        # initialize prev states
+        prev_env_states = [InputLayer((None,) + check_tuple(shape), name="env.prev_state[{i}]".format(i=i))
+                           for i, shape in enumerate(check_list(env.state_shapes))]
+
+        # apply environment changes after agent action
+        new_state_outputs, new_observation_outputs = env.as_layers(prev_env_states, self.action_layers)
+
+        # add state changes to memory dict
+        all_state_pairs = list(chain(self.agent_states.items(),
+                                     zip(new_state_outputs, prev_env_states),
+                                     zip(new_observation_outputs, self.observation_layers)))
+
+        # compose state initialization dict
+        state_init_pairs = []
+        for initialization, layers in zip(
+                [initial_env_states, initial_observations, initial_hidden],
+                [new_state_outputs, new_observation_outputs, list(self.agent_states.keys())]
+        ):
+            if initialization == "zeros":
+                continue
+            elif isinstance(initialization, dict):
+                state_init_pairs += list(initialization.items())
+            else:
+                initialization = check_list(initialization)
+                assert len(initialization) == len(layers)
+
+                for layer, init in zip(layers, initialization):
+                    if init is not None:
+                        state_init_pairs.append([layer, init])
+
+        # convert all initializations into layers:
+        for i in range(len(state_init_pairs)):
+            layer, init = state_init_pairs[i]
+
+            # replace theano variables with input layers for them
+            if not isinstance(init, lasagne.layers.Layer):
+                init_layer = InputLayer(layer.output_shape,
+                                        name="env.initial_values_for." + (layer.name or "state"),
+                                        input_var=init)
+                state_init_pairs[i][1] = init_layer
+
+        # create the recurrence
+        recurrence = Recurrence(
+            state_variables=OrderedDict(all_state_pairs),
+            state_init=OrderedDict(state_init_pairs),
+            tracked_outputs=self.policy + self.action_layers,
+            n_steps=session_length,
+            batch_size=batch_size,
+            delayed_states=new_state_outputs + new_observation_outputs,
+            name=recurrence_name,
+            unroll_scan=unroll_scan
+        )
+
+        return recurrence
+
+
+    def as_replay_recurrence(self,
+                             environment,
+                             session_length=10,
+                             initial_hidden='zeros',
+                             recurrence_name='AgentRecurrence',
+                             unroll_scan=True,
+                             ):
+        """
+        returns a Recurrence lasagne layer that contains.
+
+        :param environment: an environment to interact with
+        :type environment: BaseEnvironment
+        :param session_length: how many turns of interaction shall there be for each batch
+        :type session_length: int
+
+            batch_size - [required parameter] amount of independent sessions [number or symbolic].
+                rrelevant if there's at least one input or if you manually set any initial_*.
+
+            initial_<something> - layers providing initial values for all variables at 0-th time step
+                'zeros' default means filling variables with zeros
+            Initial values are NOT included in history sequences
+            flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
+
+        :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
+
+
+
+        returns:
+
+            an agentnet.agent.recurrence.Recurrence instance that returns
+              [agent memory states] + [env states] + [env_observations] [agent policy] + [action_layers outputs]
+                  all concatenated into one list
+
+        """
+        env = environment
+
+        assert len(check_list(env.observation_shapes)) == len(self.observation_layers)
+
+        # state initialization dict item pairs
+        if initial_hidden == "zeros":
+            initial_hidden = {}
+        elif isinstance(initial_hidden, dict):
+            for layer in list(initial_hidden.keys()):
+                assert layer in list(self.agent_states.keys())
+            initial_hidden = check_ordered_dict(initial_hidden)
+
+        else:
+            initial_hidden = check_list(initial_hidden)
+            assert len(initial_hidden) == len(self.agent_states)
+
+            state_init_pairs = []
+            for layer, init in zip(list(self.agent_states.keys()), initial_hidden):
+                if init is not None:
+                    state_init_pairs.append([layer, init])
+            initial_hidden = OrderedDict(state_init_pairs)
+
+        for layer, init in list(initial_hidden.items()):
+            # replace theano variables with input layers for them
+            if not isinstance(init, lasagne.layers.Layer):
+                init_layer = InputLayer(layer.output_shape,
+                                        name="agent.initial_values_for." + (layer.name or "state"),
+                                        input_var=init)
+                initial_hidden[layer] = init_layer
+
+        # handle observation sequences
+        observation_sequences = check_list(env.observations)
+        for i, obs_seq in enumerate(observation_sequences):
+
+            # replace theano variables with input layers for them
+            if not isinstance(obs_seq, lasagne.layers.Layer):
+                layer = self.observation_layers[i]
+                obs_shape = tuple(layer.output_shape)
+                obs_seq_shape = obs_shape[:1] + (session_length,) + obs_shape[1:]
+
+                obs_seq = InputLayer(obs_seq_shape,
+                                     name="agent.initial_values_for." + (layer.name or "state"),
+                                     input_var=obs_seq)
+
+                observation_sequences[i] = obs_seq
+        observation_sequences = OrderedDict(list(zip(self.observation_layers, observation_sequences)))
+
+        # create the recurrence
+        recurrence = Recurrence(
+            state_variables=self.agent_states,
+            state_init=initial_hidden,
+            input_sequences=observation_sequences,
+            tracked_outputs=self.policy + self.action_layers,
+            n_steps=session_length,
+            name=recurrence_name,
+            unroll_scan=unroll_scan
+        )
+
+        return recurrence
 
     def get_agent_reaction(self,
                            prev_states={},
