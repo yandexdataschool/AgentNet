@@ -194,6 +194,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         assert len(observation_sequences) == len(self.observations)
         assert len(action_sequences) == len(self.actions)
         if prev_memories is not None:
+            prev_memories = check_list(prev_memories)
             assert len(prev_memories) == len(self.preceding_agent_memories)
 
         for observation_var, observation_seq in zip(self.observations, observation_sequences):
@@ -209,6 +210,61 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         if prev_memories is not None:
             for prev_memory_var, prev_memory_value in zip(self.preceding_agent_memories, prev_memories):
                 set_shared(prev_memory_var, prev_memory_value)
+                
+    def append_sessions(self,observation_sequences, action_sequences, reward_seq, is_alive=None, prev_memories=None,
+                        max_pool_size=None):
+        """
+        adds a batch of sessions to the existing sessions. The loaded sessions are that used during agent interactions
+        
+        if max_pool_size !=None, only last max_pool_size sessions are kept.
+        """
+        
+        observation_sequences = check_list(observation_sequences)
+        action_sequences = check_list(action_sequences)
+
+        assert len(observation_sequences) == len(self.observations)
+        assert len(action_sequences) == len(self.actions)
+        if prev_memories is not None:
+            prev_memories = check_list(prev_memories)
+            assert len(prev_memories) == len(self.preceding_agent_memories)
+
+                        
+        #observations
+        observation_tensors = [np.concatenate((obs.get_value(), new_obs), axis=0) 
+                              for obs,new_obs in zip(self.observations,observation_sequences)]
+    
+        #actions
+        action_tensors = [np.concatenate((act.get_value(), new_act), axis=0)
+                         for act,new_act in zip (self.actions, action_sequences)]
+    
+        #rewards
+        rwd = self.rewards.get_value()
+        reward_tensor = np.concatenate((rwd, reward_seq), axis=0)
+    
+        #is_alives
+        if is_alive is not None:
+            is_a = self.is_alive.get_value()
+            is_alive_tensor = np.concatenate((is_a, is_alive), axis=0)
+    
+        #prev memories
+        if prev_memories is not None:
+            preceding_memory_states = [np.concatenate((prev_mem.get_value(), new_prev_mem), axis=0)
+                                   for prev_mem,new_prev_mem in zip(self.preceding_agent_memories,prev_memories)]
+    
+        #crop to pool size
+        if max_pool_size is not None:
+            new_size = len(observation_tensors[0])
+            if new_size > max_pool_size:
+                observation_tensor = observation_tensor[-max_pool_size:]
+                action_tensor = action_tensor[-max_pool_size:]
+                reward_tensor = reward_tensor[-max_pool_size:]
+                is_alive_tensor = is_alive_tensor[-max_pool_size:]
+                preceding_memory_states = preceding_memory_states[-max_pool_size:]
+                
+        #load everything into the environmnet
+        self.load_sessions(observation_tensors,action_tensors,reward_tensor,is_alive_tensor,preceding_memory_states)
+        
+
 
     def get_session_updates(self, observation_sequences, action_sequences, reward_seq, is_alive=None, prev_memory=None,
                             cast_dtypes=True):
