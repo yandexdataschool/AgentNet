@@ -57,16 +57,16 @@ class Recurrence(DictLayer):
     :param state_init: what are the default values for state_variables. In other words, what is
         prev_state for the first iteration. By default it's T.zeros of the appropriate shape.
         Can be a dict mapping state OUTPUTS to their initialisations.
-            - if so, any states not mentioned in it will be considered zeros
+        if so, any states not mentioned in it will be considered zeros
         Can be a list of initializer layers for states in the order of dict.items()
-            - if so, it's length must match len(state_variables)
+        if so, it's length must match len(state_variables)
 
     :param unroll_scan: whether or not to use lasagne.utils.unroll_scan instead of theano.scan.
         Note that if unroll_scan == False, one should use .get_rng_updates after .get_output to collect
         automatic updates
 
     :param n_steps: how many time steps will the recurrence roll for. If n_steps=None, tries to infer it.
-                    n_steps == None will only work when unroll_scan==False and there are at least some input sequences
+       n_steps == None will only work when unroll_scan==False and there are at least some input sequences
 
     :param batch_size: if the process has no inputs, this expression (int or theano scalar),
         this variable defines the batch size
@@ -239,22 +239,20 @@ class Recurrence(DictLayer):
     def get_one_step(self, prev_states={}, current_inputs={}, **get_output_kwargs):
         """
         Applies one-step recurrence.
-        parameters:
-            prev_states: a dict {memory output: prev state}
-                    or a list of theano expressions for each prev state
+        :param prev_states: a dict {memory output: prev state} or a list of theano expressions for each prev state
 
-            current_inputs: a dictionary of inputs that maps {input layers -> theano expressions for them},
-                        Alternatively, it can be a list where i-th input corresponds to
-                        i-th input slot from concatenated sequences and nonsequences
-                        self.input_nonsequences.keys() + self.input_sequences.keys()
+        :param current_inputs: a dictionary of inputs that maps {input layers -> theano expressions for them},
+            Alternatively, it can be a list where i-th input corresponds to
+            i-th input slot from concatenated sequences and nonsequences
+            self.input_nonsequences.keys() + self.input_sequences.keys()
 
-            get_output_kwargs: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
+        :param get_output_kwargs: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
 
-            returns:
-                new_states: a list of all new_state values, where i-th element corresponds
-                        to i-th self.state_variables key
-                new_outputs: a list of all outputs  where i-th element corresponds
-                        to i-th self.tracked_outputs key
+        :returns:
+            new_states: a list of all new_state values, where i-th element corresponds
+            to i-th self.state_variables key
+            new_outputs: a list of all outputs  where i-th element corresponds
+            to i-th self.tracked_outputs key
 
         """
 

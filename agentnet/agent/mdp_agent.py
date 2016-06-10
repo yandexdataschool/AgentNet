@@ -26,26 +26,27 @@ from ..deprecated import deprecated
 
 class MDPAgent(object):
     """
-        A generic agent within MDP (markov decision process) abstraction.
+    A generic agent within MDP (markov decision process) abstraction.
 
-        :param agent_states: OrderedDict{ memory_output: memory_input}, where
-                memory_output: lasagne layer
-                    - generates first agent state (before any interaction)
-                    - determines new agent state given previous agent state and an observation
+    :param agent_states: OrderedDict{ memory_output: memory_input}, where
+            memory_output: lasagne layer
+                - generates first agent state (before any interaction)
+                - determines new agent state given previous agent state and an observation
 
-                memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
-         :type agent_states: collections.OrderedDict or dict
+            memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
 
-         :param policy_estimators: whatever determines agent policy
-         :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances
-                 (e.g. state value + action probabilities for a2c)
+     :type agent_states: collections.OrderedDict or dict
 
-         :param action_layers: agent's action(s), or whatever is fed into your environment as agent actions.
-         :type action_layers: resolver.BaseResolver child instance or any appropriate layer
-                 or a tuple of such, that can be fed into environment to get next state and observation.
+     :param policy_estimators: whatever determines agent policy
+     :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances
+             (e.g. state value + action probabilities for a2c)
+
+     :param action_layers: agent's action(s), or whatever is fed into your environment as agent actions.
+     :type action_layers: resolver.BaseResolver child instance or any appropriate layer
+             or a tuple of such, that can be fed into environment to get next state and observation.
 
 
-        """
+    """
     def __init__(self,
                  observation_layers,
                  agent_states,
@@ -90,19 +91,16 @@ class MDPAgent(object):
         :type session_length: int
         :param batch_size: amount of independent sessions [number or symbolic].
             irrelevant if there's at least one input or if you manually set any initial_*.
+
         :type batch_size: int or theano.tensor.TensorVariable
 
-        initial_<something> - layers providing initial values for all variables at 0-th time step
-                'zeros' default means filling variables with zeros
-        Initial values are NOT included in history sequences
-        
-        
         :param optimize_experience_replay: whether or not to optimize for experience replay
-           if True, assumes environment to have a pre-defined sequence of observations(as env.observations).
-                Saves some time by directly using environment.observations (list of sequences) instead of calling
-                    environment.get_action_results via environment.as_layers(...).
-                Note that this parameter is not required since experience replay environments have everythin required to
-                behave as regular environments
+            if True, assumes environment to have a pre-defined sequence of observations(as env.observations).
+            Saves some time by directly using environment.observations (list of sequences) instead of calling
+            environment.get_action_results via environment.as_layers(...).
+            Note that this parameter is not required since experience replay environments have everythin required to
+            behave as regular environments
+
         :type optimize_experience_replay: bool
 
         :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
@@ -112,12 +110,17 @@ class MDPAgent(object):
         :param kwargs: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
         :type kwargs: several kw flags (flag=value,flag2=value,...)
         
+        :param initial_something: layers providing initial values for all variables at 0-th time step
+            'zeros' default means filling variables with zeros
+            Initial values are NOT included in history sequences
+
         :returns: state_seq,observation_seq,hidden_seq,action_seq,policy_seq,
             for environment state, observation, hidden state, chosen actions and agent policy respectively
             each of them having dimensions of [batch_i,seq_i,...]
             time synchronization policy:
-                env_states[:,i] was observed as observation[:,i] BASED ON WHICH agent generated his
-                policy[:,i], resulting in action[:,i], and also updated his memory from hidden[:,i-1] to hiden[:,i]
+            env_states[:,i] was observed as observation[:,i] BASED ON WHICH agent generated his
+            policy[:,i], resulting in action[:,i], and also updated his memory from hidden[:,i-1] to hiden[:,i]
+
         :rtype: tuple of Theano tensors
 
         """
@@ -229,8 +232,8 @@ class MDPAgent(object):
             irrelevant if there's at least one input or if you manually set any initial_*.
         :type batch_size: int or theano.tensor.TensorVariable
 
-            initial_<something> - layers providing initial values for all variables at 0-th time step
-                'zeros' default means filling variables with zeros
+        :param initial_something: layers providing initial values for all variables at 0-th time step
+            'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
             flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
 
@@ -317,11 +320,11 @@ class MDPAgent(object):
         :param session_length: how many turns of interaction shall there be for each batch
         :type session_length: int
 
-            batch_size - [required parameter] amount of independent sessions [number or symbolic].
-                rrelevant if there's at least one input or if you manually set any initial_*.
+        :param batch_size: [required parameter] amount of independent sessions [number or symbolic].
+            irrelevant if there's at least one input or if you manually set any initial_*.
 
-            initial_<something> - layers providing initial values for all variables at 0-th time step
-                'zeros' default means filling variables with zeros
+        :param initial_something: layers providing initial values for all variables at 0-th time step
+            'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
             flags: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
 
@@ -408,14 +411,14 @@ class MDPAgent(object):
         
         :param current_observations: agent observations at this step
         :type current_observations: a list of inputs where i-th input corresponds to 
-                i-th input slot from self.observations
+            i-th input slot from self.observations
         
         :param flags: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
         
         :return: a tuple of [actions, new agent states]
             actions: a list of all action layer outputs
             new_states: a list of all new_state values, where i-th element corresponds
-                        to i-th self.state_variables key
+            to i-th self.state_variables key
         :rtype: the return type description
         
             

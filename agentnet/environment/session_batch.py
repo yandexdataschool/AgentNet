@@ -10,52 +10,52 @@ from ..utils.format import check_list
 
 class SessionBatchEnvironment(BaseEnvironment, BaseObjective):
     """
-        A generic pseudo-environment that replays sessions defined on creation by theano expressions
-        ignoring agent actions completely.
+    A generic pseudo-environment that replays sessions defined on creation by theano expressions
+    ignoring agent actions completely.
 
-        The environment takes symbolic expression for sessions represented as (.observations, .actions, .rewards)
-        Unlike SessionPoolEnvironment, this one does not store it's own pool of sessions.
+    The environment takes symbolic expression for sessions represented as (.observations, .actions, .rewards)
+    Unlike SessionPoolEnvironment, this one does not store it's own pool of sessions.
 
-        To create experience-replay sessions, call Agent.get_sessions with this as an environment.
+    To create experience-replay sessions, call Agent.get_sessions with this as an environment.
 
-        :param observations: a tensor or a list of tensors matching agent observation sequence [batch, tick, whatever]
-        :type observations: theano tensor or a list of such
-        :param single observation shapes: shapes of one-tick one-batch-item observations.
-                                E.g. if lasagne shape is [None, 25(ticks), 3,210,160],
-                                than single_observation_shapes must contain [3,210,160]
-        :type single_observation_shapes: a list of tuples of integers
-        :param actions: a tensor or a list of tensors matching agent actions sequence [batch, tick, whatever]
-        :type actions: theano tensor or a list of such
-        :param single action shapes: shapes of one-tick one-batch-item actions. Similar to observations.
-                                        All scalar means that each action has shape (,),
-                                        lasagne sequence layer being of shape (None, seq_length)
-        :type single_observation_shapes: a list of tuples of integers
-        :param rewards: a tensor matching agent rewards sequence [batch, tick]
-        :type rewards: theano tensor
+    :param observations: a tensor or a list of tensors matching agent observation sequence [batch, tick, whatever]
+    :type observations: theano tensor or a list of such
+    :param single observation shapes: shapes of one-tick one-batch-item observations.
+                            E.g. if lasagne shape is [None, 25(ticks), 3,210,160],
+                            than single_observation_shapes must contain [3,210,160]
+    :type single_observation_shapes: a list of tuples of integers
+    :param actions: a tensor or a list of tensors matching agent actions sequence [batch, tick, whatever]
+    :type actions: theano tensor or a list of such
+    :param single action shapes: shapes of one-tick one-batch-item actions. Similar to observations.
+                                    All scalar means that each action has shape (,),
+                                    lasagne sequence layer being of shape (None, seq_length)
+    :type single_observation_shapes: a list of tuples of integers
+    :param rewards: a tensor matching agent rewards sequence [batch, tick]
+    :type rewards: theano tensor
 
-        :param is_alive: whether or not session has still not finished by a particular tick. Always alive by default.
-        :type is_alive: theano tensor or None
-        :param preceding_agent_memory: a tensor or a list of such storing what was in agent's memory prior
-                                        to the first tick of the replay session.
-        :type actions: theano tensor or a list of such
-
-
+    :param is_alive: whether or not session has still not finished by a particular tick. Always alive by default.
+    :type is_alive: theano tensor or None
+    :param preceding_agent_memory: a tensor or a list of such storing what was in agent's memory prior
+                                    to the first tick of the replay session.
+    :type actions: theano tensor or a list of such
 
 
 
-        how does it tick:
-
-        During experience replay sessions,
-         - observations, actions and rewards match original ones
-         - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to what
-           agent thinks NOW about the replay (not what it thought when he commited actions)
-         - preceding_agent_memory [optional] - what was agent's memory state prior to the first tick of the replay session.
 
 
-        Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
-        with no additional computation.
+    how does it tick:
 
-        """
+    During experience replay sessions,
+     - observations, actions and rewards match original ones
+     - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to what
+       agent thinks NOW about the replay (not what it thought when he commited actions)
+     - preceding_agent_memory [optional] - what was agent's memory state prior to the first tick of the replay session.
+
+
+    Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
+    with no additional computation.
+
+    """
     def __init__(self, observations, single_observation_shapes,
                  actions=None, single_action_shapes="all_scalar",
                  rewards=None, is_alive=None, preceding_agent_memory=None):
