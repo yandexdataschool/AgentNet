@@ -1,10 +1,6 @@
 agent and recurrence
 ============
 
-
-An Agent (MDP Agent) is user-friendly interface that implements Markov Decision Process
-  kind of interaction via recurrence (environment->agent->environment->agent->...).
-
 .. automodule:: agentnet.agent
 
 .. currentmodule:: agentnet.agent
