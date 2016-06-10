@@ -18,43 +18,59 @@ from warnings import warn
 
 
 class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
+    """
+    A generic pseudo-environment that replays sessions loaded via .load_sessions(...),
+    ignoring agent actions completely.
+
+    It has a single scalar integer env_state, corresponding to time tick.
+
+    The environment maintains it's own pool of sessions represented as (.observations, .actions, .rewards)
+
+    To load sessions into pool, use
+        - .load_sessions - replace existing sessions with new ones
+        - .append_sessions - add new sessions to existing ones up to a limited size
+        - .get_session_updates - a symbolic update of experience replay pool via theano.updates.
+
+    To use SessionPoolEnvironment for experience replay, one can
+        - feed it into agent.get_sessions (with optimize_experience_replay=True recommended) to use all sessions
+        - subsample sessions via .select_session_batch or .sample_sessions_batch to use random session subsample
+                    [ this option creates SessionBatchEnvironment that can be used with agent.get_sessions ]
+
+
+    :param observations: number of floatX flat observations or a list of observation inputs to mimic
+    :type observations: int or lasagne.layers.Layer or list of lasagne.layers.Layer
+    :param actions: number of int32 scalar actions or a list of resolvers to mimic
+    :type actions: int or lasagne.layers.Layer or list of lasagne.layers.Layer
+    :param agent_memories: number of agent states [batch,tick,unit] each or a list of memory layers to minic
+    :type agent_memories: int or lasagne.layers.Layer or a list of lasagne.layers.Layer
+    :param default_action_dtype: if actions are given as lasagne layers with valid dtypes, this is a default dtype of action
+                            Otherwise agentnet.utils.layers.get_layer_dtype is used on a per-layer basis
+    :type default_action_dtype: string or dtype
+
+    To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
+
+    WARNING! this session pool is stored entirely as a set of theano shared variables.
+        GPU-users willing to store a __large__ pool of sessions to sample from are recommended to store them
+            somewhere outside (e.g. as numpy arrays) to avoid overloading GPU memory.
+
+    To create experience-replay sessions, call Agent.get_sessions with this as an environment.
+    During experience replay sessions,
+     - states are replaced with a fake one-unit state
+     - observations, actions and rewards match original ones
+     - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to what
+       agent thinks NOW about the replay.
+
+
+    Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
+    with no additional computation.
+
+    """
+
     def __init__(self, observations=1,
                  actions=1,
                  agent_memories=1,
                  default_action_dtype="int32",
                  rng_seed=1337):
-        """
-        A generic pseudo-environment that replays sessions loaded via .load_sessions(...),
-        ignoring agent actions completely.
-        
-        It has a single scalar integer env_state, corresponding to time tick.
-        
-        The environment maintains it's own pool of sessions represented as (.observations, .actions, .rewards)
-        
-        
-        parameters:
-         - observations - number of floatX flat observations or a list of observation inputs to mimic
-         - actions - number of int32 scalar actions or a list of resolvers to mimic
-         - agent memories - number of agent states [batch,tick,unit] each or a list of memory layers to minic
-         - default_action_dtype - what is the dtype of actions if number of actions is given
-             - if actual layers are given, defaults to layer.output_dtype or float.
-            
-        To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
-        
-        
-        To create experience-replay sessions, call Agent.get_sessions with this as an environment.
-        During experience replay sessions,
-         - states are replaced with a fake one-unit state
-         - observations, actions and rewards match original ones
-         - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to what
-           agent thinks NOW about the replay.
-        
-        
-        Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
-        with no additional computation.
-        
-        """
-        # setting environmental variables. Their shape is [batch_i,time_i,something]
 
         # observations
         if type(observations) is int:
