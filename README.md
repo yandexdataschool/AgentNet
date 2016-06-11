@@ -64,7 +64,9 @@ Otherwise:
 
 # Documentation and tutorials
 
-AgentNet is using embedded documentation, so calling `help(some_function_or_object)` or 
+One can find more-or-less structured documentation pages on AgentNet functionality here.
+
+AgentNet also has full embedded documentation, so calling `help(some_function_or_object)` or 
 pressing shift+tab in IPython yields a description of object/function.
 
 A standard pipeline of AgentNet experiment is shown in following examples:
