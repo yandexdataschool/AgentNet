@@ -17,8 +17,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import sys
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -39,6 +39,9 @@ extensions = [
     'numpydoc',
 #    'sphinx.ext.napoleon',  # alternative to numpydoc -- looks a bit worse.
 ]
+
+# see http://stackoverflow.com/q/12206334/562769
+numpydoc_show_class_members = False
 
 
 mathjax_path = ('https://cdn.mathjax.org/mathjax/latest/MathJax.js?'
@@ -130,7 +133,7 @@ def linkcode_resolve(domain, info):
         import inspect
         import os
         fn = inspect.getsourcefile(obj)
-        fn = os.path.relpath(fn, start=os.path.dirname(lasagne.__file__))
+        fn = os.path.relpath(fn, start=os.path.dirname(agentnet.__file__))
         source, lineno = inspect.getsourcelines(obj)
         return fn, lineno, lineno + len(source) - 1
 
