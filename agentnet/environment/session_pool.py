@@ -22,6 +22,9 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
     A generic pseudo-environment that replays sessions loaded via .load_sessions(...),
     ignoring agent actions completely.
 
+    This environment can be used either as a tool to run experiments with non-theano environments or to actually
+    train via experience replay [http://rll.berkeley.edu/deeprlworkshop/papers/database_composition.pdf]
+
     It has a single scalar integer env_state, corresponding to time tick.
 
     The environment maintains it's own pool of sessions represented as (.observations, .actions, .rewards)
@@ -271,11 +274,13 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         if max_pool_size is not None:
             new_size = len(observation_tensors[0])
             if new_size > max_pool_size:
-                observation_tensor = observation_tensor[-max_pool_size:]
-                action_tensor = action_tensor[-max_pool_size:]
+                observation_tensors = [obs[-max_pool_size:] for obs in observation_tensors]
+                action_tensors = [act[-max_pool_size:] for act in action_tensors]
                 reward_tensor = reward_tensor[-max_pool_size:]
-                is_alive_tensor = is_alive_tensor[-max_pool_size:]
-                preceding_memory_states = preceding_memory_states[-max_pool_size:]
+                if is_alive is not None:
+                    is_alive_tensor = is_alive_tensor[-max_pool_size:]
+                if prev_memories is not None:
+                    preceding_memory_states = preceding_memory_states[-max_pool_size:]
                 
         #load everything into the environmnet
         self.load_sessions(observation_tensors,action_tensors,reward_tensor,is_alive_tensor,preceding_memory_states)

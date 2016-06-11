@@ -1,5 +1,5 @@
 """
-AgentNet - a library for MDP agent design and research
+AgentNet - a library for deep reinforcement learning agent design and research
 """
 
 from __future__ import division, print_function, absolute_import

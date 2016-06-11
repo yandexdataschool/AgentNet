@@ -5,21 +5,22 @@ from collections import defaultdict
 
 
 class Metrics(defaultdict):
-    def __init__(self):
-        """
-        An auxiliary class used to store and plot several [time-related] metrics on a single plot
+    """
+      An auxiliary class used to store and plot several [time-related] metrics on a single plot
 
-        Example usage:
-        >>> mm = Metrics()
-        >>> mm["y"][0] = 1
-        >>> mm["y"][1] = 2
-        >>> mm["z"][0] = 2
-        >>> mm["z"][1] = 1.5
-        >>> mm["z"][2.5] = 1.4
-        >>> plt.figure(figsize=[10, 10])
-        >>> mm.plot()
-        >>> plt.show()
-        """
+      Example usage:
+      >>> mm = Metrics()
+      >>> mm["y"][0] = 1
+      >>> mm["y"][1] = 2
+      >>> mm["z"][0] = 2
+      >>> mm["z"][1] = 1.5
+      >>> mm["z"][2.5] = 1.4
+      >>> plt.figure(figsize=[10, 10])
+      >>> mm.plot()
+      >>> plt.show()
+    """
+    def __init__(self):
+
         defaultdict.__init__(self, dict)
 
     def plot(self,

@@ -1,11 +1,10 @@
 learning algorithms
 =====================
 
-
-
 .. automodule:: agentnet.learning
 
-
+algorithms
+---------------------
 
 .. automodule:: agentnet.learning.qlearning
 .. currentmodule:: agentnet.learning.qlearning
@@ -26,3 +25,14 @@ learning algorithms
 .. automodule:: agentnet.learning.dpg_n_step
 .. currentmodule:: agentnet.learning.dpg_n_step
 .. autofunction:: get_elementwise_objective_components
+
+helpers
+---------------------
+.. automodule:: agentnet.learning.helpers
+
+.. autofunction:: get_action_Qvalues
+
+.. autofunction:: get_end_indicator
+
+.. autofunction:: get_n_step_value_reference
+

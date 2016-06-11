@@ -1,21 +1,5 @@
 """
-N-step Deterministic Policy Gradient (A2c) implementation.
-
-Works with continuous action space (real value or vector of such)
-
-Requires action policy(mu) and state values.
-
-Based on
-http://arxiv.org/abs/1509.02971
-http://jmlr.org/proceedings/papers/v32/silver14.pdf
-
-This particular implementation is different:
- - Allows n-step reinforcement learning
- - Does not use old network snapshot for reference values, instead relies on parallel exploration as in
-   - http://arxiv.org/pdf/1602.01783v1.pdf
-   
-   
-The code mostly relies on the same architecture as advantage actor-critic a2c_n_step
+N-step deterministic policy gradient
 """
 from __future__ import division, print_function, absolute_import
 
@@ -43,6 +27,26 @@ def get_elementwise_objective_components(policy,
                                          scan_strict=True,
                                          ):
     """
+
+    N-step Deterministic Policy Gradient (A2c) implementation.
+
+    Works with continuous action space (real value or vector of such)
+
+    Requires action policy(mu) and state values.
+
+    Based on
+    http://arxiv.org/abs/1509.02971
+    http://jmlr.org/proceedings/papers/v32/silver14.pdf
+
+    This particular implementation is different:
+     - Allows n-step reinforcement learning
+     - Does not use old network snapshot for reference values, instead relies on parallel exploration as in
+       - http://arxiv.org/pdf/1602.01783v1.pdf
+
+
+    The code mostly relies on the same architecture as advantage actor-critic a2c_n_step
+
+
     returns deterministic policy gradient components for actor and critic
 
         L_policy = -critic(state,policy) = -action_values 

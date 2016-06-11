@@ -23,9 +23,9 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                               scan_dependencies=[],
                               scan_strict=True):
     """
-    Returns squared error between predicted and reference Q-values according to Q-learning algorithm
+    Returns squared error between predicted and reference Q-values according to n-step Q-learning algorithm
     
-        Qreference(state,action) = reward(state,action) + gamma * max[next_action]( Q(next_state,next_action)
+        Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * max[action_n]( Q(state_n,action_n)
         loss = mean over (Qvalues - Qreference)**2
         
     parameters:
