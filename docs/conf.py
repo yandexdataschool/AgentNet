@@ -36,8 +36,8 @@ extensions = [
     'sphinx.ext.mathjax',
 #    'sphinx.ext.viewcode',  # create HTML file of source code and link to it
     'sphinx.ext.linkcode',  # link to github, see linkcode_resolve() below
-    'numpydoc',
-#    'sphinx.ext.napoleon',  # alternative to numpydoc -- looks a bit worse.
+    #'numpydoc',
+    'sphinx.ext.napoleon',  # alternative to numpydoc -- looks a bit worse.
 ]
 
 # see http://stackoverflow.com/q/12206334/562769
