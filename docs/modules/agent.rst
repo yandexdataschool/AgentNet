@@ -8,6 +8,8 @@ agent and recurrence
 Agent
 -----------------
 
+.. automodule:: agentnet.agent.mdp_agent
+
 .. class:: Agent
    Alias for MDPAgent
 

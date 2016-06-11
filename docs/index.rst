@@ -26,5 +26,6 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. _GitHub: https://github.com/yandexdataschool/AgentNet
 
 
