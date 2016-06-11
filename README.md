@@ -3,6 +3,7 @@
 A lightweight library to build and train deep reinforcement learning and custom recurrent networks using Theano+Lasagne
 
 [![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
+[![Docs badge](https://readthedocs.org/projects/agentnet/badge)](http://agentnet.readthedocs.org/en/latest/)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
 
