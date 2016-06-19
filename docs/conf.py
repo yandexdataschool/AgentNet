@@ -54,7 +54,7 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.md','.rst']
 
 # The encoding of source files.
 #
@@ -162,6 +162,7 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 
+
 ## Read the docs style:
 if os.environ.get('READTHEDOCS') != 'True':
     try:
@@ -170,10 +171,11 @@ if os.environ.get('READTHEDOCS') != 'True':
         pass  # assume we have sphinx >= 1.3
     else:
         html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-    html_theme = 'sphinx_rtd_theme'
+    #html_theme = 'sphinx_rtd_theme' !!!DOTO UNCOMMENT
 
 def setup(app):
     app.add_stylesheet("fix_rtd.css")
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

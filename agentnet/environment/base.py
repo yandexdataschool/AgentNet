@@ -30,12 +30,10 @@ class BaseEnvironment(object):
     Finally, one has to implement get_action_results, which converts
     a tuple of (old environment state, agent action) -> (new state, new observation)
 
-
-
     Developer tips:
     [when playing with non-float observations and states]
-    if you implemented a new environment, but keep getting a *.grad illegally returned an
-    integer-valued variable exception. (Input index *, dtype *), please make sure that any non-float environment
+    if you implemented a new environment, but keep getting a _.grad illegally returned an
+    integer-valued variable exception. (Input index _, dtype _), please make sure that any non-float environment
     states are excluded from gradient computation or are cast to floatX.
 
     To find out which variable causes the problem, find all expressions of the dtype mentioned in

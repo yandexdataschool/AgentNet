@@ -39,6 +39,15 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         - subsample sessions via .select_session_batch or .sample_sessions_batch to use random session subsample
                     [ this option creates SessionBatchEnvironment that can be used with agent.get_sessions ]
 
+    During experience replay sessions
+        - states are replaced with a fake one-unit state
+        - observations, actions and rewards match original ones
+        - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to
+            what agent thinks NOW about the replay.
+
+    Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
+    with no additional computation.
+
 
     :param observations: number of floatX flat observations or a list of observation inputs to mimic
     :type observations: int or lasagne.layers.Layer or list of lasagne.layers.Layer
@@ -53,20 +62,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
     To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
 
     WARNING! this session pool is stored entirely as a set of theano shared variables.
-        GPU-users willing to store a __large__ pool of sessions to sample from are recommended to store them
-            somewhere outside (e.g. as numpy arrays) to avoid overloading GPU memory.
-
-    To create experience-replay sessions, call Agent.get_sessions with this as an environment.
-    During experience replay sessions,
-     - states are replaced with a fake one-unit state
-     - observations, actions and rewards match original ones
-     - agent memory states, Q-values and all in-agent expressions (but for actions) will correspond to what
-       agent thinks NOW about the replay.
-
-
-    Although it is possible to get rewards via the regular functions, it is usually faster to take self.rewards as rewards
-    with no additional computation.
-
+    GPU-users willing to store a __large__ pool of sessions to sample from are recommended to store them
+    somewhere outside (e.g. as numpy arrays) to avoid overloading GPU memory.
     """
 
     def __init__(self, observations=1,
@@ -74,6 +71,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                  agent_memories=1,
                  default_action_dtype="int32",
                  rng_seed=1337):
+
+
 
         # observations
         if type(observations) is int:
@@ -157,9 +156,6 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         # rng used to .sample_session_batch
         self.rng = T.shared_randomstreams.RandomStreams(rng_seed)
         
-        
-        
-        
         BaseEnvironment.__init__(self,
                                  state_shapes = [tuple()],
                                  observation_shapes = [obs.get_value().shape[2:] for obs in self.observations],
@@ -237,7 +233,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         
         if max_pool_size !=None, only last max_pool_size sessions are kept.
         """
-        
+
+
         observation_sequences = check_list(observation_sequences)
         action_sequences = check_list(action_sequences)
 
@@ -247,44 +244,56 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             prev_memories = check_list(prev_memories)
             assert len(prev_memories) == len(self.preceding_agent_memories)
 
-                        
-        #observations
-        observation_tensors = [np.concatenate((obs.get_value(), new_obs), axis=0) 
-                              for obs,new_obs in zip(self.observations,observation_sequences)]
-    
-        #actions
-        action_tensors = [np.concatenate((act.get_value(), new_act), axis=0)
-                         for act,new_act in zip (self.actions, action_sequences)]
-    
-        #rewards
-        rwd = self.rewards.get_value()
-        reward_tensor = np.concatenate((rwd, reward_seq), axis=0)
-    
-        #is_alives
-        if is_alive is not None:
-            is_a = self.is_alive.get_value()
-            is_alive_tensor = np.concatenate((is_a, is_alive), axis=0)
-    
-        #prev memories
-        if prev_memories is not None:
-            preceding_memory_states = [np.concatenate((prev_mem.get_value(), new_prev_mem), axis=0)
-                                   for prev_mem,new_prev_mem in zip(self.preceding_agent_memories,prev_memories)]
-    
-        #crop to pool size
-        if max_pool_size is not None:
-            new_size = len(observation_tensors[0])
-            if new_size > max_pool_size:
-                observation_tensors = [obs[-max_pool_size:] for obs in observation_tensors]
-                action_tensors = [act[-max_pool_size:] for act in action_tensors]
-                reward_tensor = reward_tensor[-max_pool_size:]
-                if is_alive is not None:
-                    is_alive_tensor = is_alive_tensor[-max_pool_size:]
-                if prev_memories is not None:
-                    preceding_memory_states = preceding_memory_states[-max_pool_size:]
-                
+        try:
+            #in case numpy concatenate throws ValueError
+            #meaning "can't concatenate dummy shared values with acutal new memory"
+            #call load_sessions instead
+
+            #observations
+            observation_tensors = [np.concatenate((obs.get_value(), new_obs), axis=0)
+                                  for obs,new_obs in zip(self.observations,observation_sequences)]
+
+            #actions
+            action_tensors = [np.concatenate((act.get_value(), new_act), axis=0)
+                             for act,new_act in zip (self.actions, action_sequences)]
+
+            #rewards
+            rwd = self.rewards.get_value()
+            reward_tensor = np.concatenate((rwd, reward_seq), axis=0)
+
+            #is_alives
+            if is_alive is not None:
+                is_a = self.is_alive.get_value()
+                is_alive_tensor = np.concatenate((is_a, is_alive), axis=0)
+
+            #prev memories
+            if prev_memories is not None:
+                preceding_memory_states = [np.concatenate((prev_mem.get_value(), new_prev_mem), axis=0)
+                                       for prev_mem,new_prev_mem in zip(self.preceding_agent_memories,prev_memories)]
+
+            #crop to pool size
+            if max_pool_size is not None:
+                new_size = len(observation_tensors[0])
+                if new_size > max_pool_size:
+                    observation_tensors = [obs[-max_pool_size:] for obs in observation_tensors]
+                    action_tensors = [act[-max_pool_size:] for act in action_tensors]
+                    reward_tensor = reward_tensor[-max_pool_size:]
+                    if is_alive is not None:
+                        is_alive_tensor = is_alive_tensor[-max_pool_size:]
+                    if prev_memories is not None:
+                        preceding_memory_states = preceding_memory_states[-max_pool_size:]
+        except ValueError:
+            warn("Warning! Appending sessions to empty or broken pool. Old pool sessions, if any, are disposed.")
+            observation_tensors = observation_sequences
+            action_tensors = action_sequences
+            reward_tensor = reward_seq
+            is_alive_tensor = is_alive
+            preceding_memory_states = prev_memories
+
+
         #load everything into the environmnet
         self.load_sessions(observation_tensors,action_tensors,reward_tensor,is_alive_tensor,preceding_memory_states)
-        
+
 
 
     def get_session_updates(self, observation_sequences, action_sequences, reward_seq, is_alive=None, prev_memory=None,

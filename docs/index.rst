@@ -6,7 +6,20 @@
 AgentNet
 ====================================
 
-Contents:
+AgentNet is a library designed to create and evaluate deep reinforcement learning agents.
+The library is optimized for ease of prototyping and
+
+User:
+
+.. toctree::
+  :maxdepth: 2
+
+
+  user/install
+  user/intro
+
+
+Modules:
 
 .. toctree::
   :maxdepth: 2
