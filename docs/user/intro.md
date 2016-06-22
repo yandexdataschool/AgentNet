@@ -1,4 +1,5 @@
-# AgentNet
+AgentNet
+----------------------
 
 A lightweight library to build and train deep reinforcement learning and custom recurrent networks using Theano+Lasagne
 
@@ -64,11 +65,11 @@ AgentNet also has full embedded documentation, so calling `help(some_function_or
 pressing shift+tab in IPython yields a description of object/function.
 
 A standard pipeline of AgentNet experiment is shown in following examples:
-* [Simple Deep Recurrent Reinforcement Learning setup](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Basic%20tutorial%20on%20Boolearn%20Reasoning%20problem.ipynb)
-  * Most basic demo, if a bit boring. Covers the problem of learning "If X1 than Y1 Else Y2".
-  * Uses a single RNN memory and Q-learning algorithm
+* [Simple Deep Recurrent Reinforcement Learning setup](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Basic%20tutorial%20on%20Boolearn%20Reasoning%20problem.ipynb) .
+    * Most basic demo, if a bit boring. Covers the problem of learning "If X1 than Y1 Else Y2".
+    * Uses a single RNN memory and Q-learning algorithm
 
-* [Playing Atari SpaceInvaders with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb)
+* [Playing Atari SpaceInvaders with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb) .
   * Step-by-step explanation of what you need to do to recreate DeepMind Atari DQN
   * Written in a generic way, so that adding recurrent memory or changing learning algorithm could be done in a couple of lines
 

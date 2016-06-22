@@ -55,6 +55,7 @@ templates_path = ['_templates']
 #
 # source_suffix = ['.rst', '.md']
 source_suffix = ['.md','.rst']
+markdown_title = "AgentNet docs"
 
 # The encoding of source files.
 #
