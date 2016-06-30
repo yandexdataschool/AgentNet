@@ -1,61 +1,3 @@
-AgentNet
-----------------------
-
-A lightweight library to build and train deep reinforcement learning and custom recurrent networks using Theano+Lasagne
-
-# What is AgentNet?
-
-![whatis_agentnet_png](http://s33.postimg.org/ytx63kwcv/whatis_agentnet_png.png)
-
-No time to play games? Let machines do this for you!
-
-AgentNet is a deep reinforcement learning framework,
-which is designed for ease of research and prototyping of Deep Learning models for Markov Decision Processes.
-
-All techno-babble set aside, you can use it to __train your pet neural network to play games!__ [e.g. OpenAI Gym]
-
-We have a full in-and-out support for __Lasagne__ deep learning library, granting you access to all convolutions, maxouts, poolings, dropouts, etc. etc. etc.
-
-__AgentNet__  handles both discrete and continuous control problems and supports hierarchical reinforcement learning [experimental].
-
-List of already implemented reinforcement techniques:
-- Q-learning (or deep Q-learning, since we support arbitrary complexity of network)
-- N-step Q-learning
-- SARSA
-- N-step Advantage Actor-Critic (A2c)
-- N-step Deterministic Policy Gradient (DPG)
-
-As a side-quest, we also provide a boilerplate to custom long-term memory network architectures (see examples).
-
-## Installation
-
-[Detailed installation guide](https://github.com/yandexdataschool/AgentNet/wiki/Installing-AgentNet)
-
-### Quick install
-* install [bleeding edge lasagne](http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version)
-* [sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip
-
-
-### Full install (with examples)
-
-1. Clone this repository: `git clone https://github.com/yandexdataschool/AgentNet.git && cd AgentNet`
-2. Install dependencies: `pip install -r requirements.txt`
-3. Install library itself: `pip install -e .`
-
-### Docker container
-
-On Windows/OSX install Docker [Kitematic](https://kitematic.com/),
-then simply run `justheuristic/agentnet` container and click on 'web preview'.
-
-Otherwise:
-
-1. install [Docker](http://docs.docker.com/installation/),
-2. make sure `docker` daemon is running (`sudo service docker start`)
-3. make sure no application is using port 1234 (this is the default port that can be changed)
-4. `[sudo] docker run -d -p 1234:8888 justheuristic/agentnet`
-5. Access from browser via localhost:1234
-
-
 
 # Documentation and tutorials
 
@@ -77,7 +19,7 @@ A standard pipeline of AgentNet experiment is shown in following examples:
 
 # Demos
 
-##### If you wish to get acquainted with the current library state, view some of the ./examples
+__If you wish to get acquainted with the current library state, view some of the ./examples__
 * [Playing Atari with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb)
   * Can switch to any visual game thanks to awesome Gym interface
   * Very simplistic, non-recurrent suffering from atari flickering, etc.
