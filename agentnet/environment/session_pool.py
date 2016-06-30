@@ -280,7 +280,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                 if is_alive is not None:
                     is_alive_tensor = is_alive_tensor[-max_pool_size:]
                 if prev_memories is not None:
-                    preceding_memory_states = preceding_memory_states[-max_pool_size:]
+                    preceding_memory_states = [mem[-max_pool_size:] for mem in preceding_memory_states]
                 
         #load everything into the environmnet
         self.load_sessions(observation_tensors,action_tensors,reward_tensor,is_alive_tensor,preceding_memory_states)
