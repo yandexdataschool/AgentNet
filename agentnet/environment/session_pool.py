@@ -291,6 +291,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             preceding_memory_states = prev_memories
 
 
+
         #load everything into the environmnet
         self.load_sessions(observation_tensors,action_tensors,reward_tensor,is_alive_tensor,preceding_memory_states)
 

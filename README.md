@@ -3,6 +3,7 @@
 A lightweight library to build and train deep reinforcement learning and custom recurrent networks using Theano+Lasagne
 
 [![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
+[![Docs badge](https://readthedocs.org/projects/agentnet/badge)](http://agentnet.readthedocs.org/en/latest/)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
 
@@ -64,7 +65,9 @@ Otherwise:
 
 # Documentation and tutorials
 
-AgentNet is using embedded documentation, so calling `help(some_function_or_object)` or 
+One can find more-or-less structured documentation pages on AgentNet functionality here.
+
+AgentNet also has full embedded documentation, so calling `help(some_function_or_object)` or 
 pressing shift+tab in IPython yields a description of object/function.
 
 A standard pipeline of AgentNet experiment is shown in following examples:
