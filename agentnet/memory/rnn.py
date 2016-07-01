@@ -116,14 +116,14 @@ def GRUCell(prev_state,
     :type num_units: int
     
     :param weight_init: either a lasagne initializer to use for every gate weights
-                        or a list of two initializers, 
-                            - first used for all weights from hidden -> *_gate and hidden update
-                            - second used for all weights from input(s) -> *_gate weights and hidden update
-                        or a list of two objects elements,
-                            - second list is hidden -> forget gate, update gate, hidden update
-                            - second list of lists where 
-                                list[i][0,1,2] = input[i] -> [forget gate, update gate, hidden update]
-    :param *_nonlinearity: which nonlinearity to use for a particular gate
+        or a list of two initializers:
+        - first used for all weights from hidden -> <any>_gate and hidden update
+        - second used for all weights from input(s) -> <any>_gate weights and hidden update
+        or a list of two objects elements:
+        - second list is hidden -> forget gate, update gate, hidden update
+        - second list of lists where
+        list[i][0,1,2] = input[i] -> [forget gate, update gate, hidden update]
+    :param <any>_nonlinearity: which nonlinearity to use for a particular gate
     
     :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
 
@@ -253,19 +253,18 @@ def LSTMCell(prev_cell,
     :param bias_init: either a lasagne initializer to use for every gate weights
                         or a list of 4 initializers for  [input gate, forget gate, cell, output gate]
 
-    :param weight_init: either a lasagne initializer to use for every gate weights
-                        or a list of two initializers,
-                            - first used for all weights from hidden -> *_gate and cell
-                            - second used for all weights from input(s) -> *_gate weights and cell
-                        or a list of two objects elements,
-                            - second list is hidden -> input gate, forget gate, cell, output gate,
-                            - second list of lists where
-                                list[i][0,1,2] = input[i] -> [input_gate, forget gate, cell,output gate ]
+    :param weight_init: either a lasagne initializer to use for every gate weights:
+        or a list of two initializers,
+        - first used for all weights from hidden -> <all>_gate and cell
+        - second used for all weights from input(s) -> <all>_gate weights and cell
+        or a list of two objects elements,
+        - second list is hidden -> input gate, forget gate, cell, output gate,
+        - second list of lists where list[i][0,1,2] = input[i] -> [input_gate, forget gate, cell,output gate ]
 
     :param peepholes_W_init: either a lasagne initializer or a list of 3 initializers for
                         [input_gate, forget gate,output gate ] weights. If peepholes=False, this is ignored.
                         
-    :param *_nonlinearity: which nonlinearity to use for a particular gate
+    :param <any>_nonlinearity: which nonlinearity to use for a particular gate
 
     :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
 

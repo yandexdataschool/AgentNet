@@ -22,11 +22,11 @@ new_rnn = RNNCell(prev_rnn, rnn_input)
 When using inside Agent (MDPAgent) or Recurrence, one must register them as
 agent_states (for agent) or state_variables (for recurrence), e.g.
 
+
 from agentnet.agent import Agent
-agent = Agent(observations,
-              {new_rnn : prev_rnn},
-              ...)
+agent = Agent(observations,{new_rnn : prev_rnn},...)
 """
+
 from __future__ import division, print_function, absolute_import
 from .stack import StackAugmentation
 from .window import WindowAugmentation

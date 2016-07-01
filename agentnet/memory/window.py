@@ -19,7 +19,7 @@ class WindowAugmentation(MergeLayer):
 
     :param new_value_input: a newest item to be stored in the window
     :type new_value_input: lasagne.layers.Layer, shape must be compatible with prev_state_input (see next)
-    :param prev_state_input: previous window state of shape [batch, window_length, *item_size]
+    :param prev_state_input: previous window state of shape [batch, window_length, item_size]
     :type prev_state_input: lasagne.layers.Layer, normally InputLayer
 
 

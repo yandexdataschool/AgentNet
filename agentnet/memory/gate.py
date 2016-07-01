@@ -20,14 +20,14 @@ class GateLayer(DictLayer):
         An overly generic interface for one-step gate, stacked gates or gate applier.
         If several channels are given, stacks them for quicker execution.
 
-        :param gate_controllers: - a single layer or a list/tuple of such
+        :param gate_controllers: a single layer or a list/tuple of such
             layers that gate depends on (for most RNNs, that's input and previous memory state)
 
-        :param channels: - a single layer or integer or a list/tuple of layers/integers
+        :param channels: a single layer or integer or a list/tuple of layers/integers
             if a layer, that defines a layer that should be multiplied by the gate output
-            if an integer - that defines a number of units of a gate -- and these are the units to be returned
+            if an integer that defines a number of units of a gate -- and these are the units to be returned
 
-        :param gate_nonlinearities: - a single function or a list of such(channel-wise),
+        :param gate_nonlinearities: a single function or a list of such(channel-wise),
             - defining nonlinearities for gates on corresponding channels
 
         :param bias_init: - an initializer or a list (channel-wise) of initializers for bias(b) parameters

@@ -30,10 +30,7 @@ class StackAugmentation(MergeLayer):
     # stack input
     stack_input_layer = DenseLayer(<rnn>,stack_width)
     #new stack state
-    next_stack = StackAugmentation(stack_input_layer,
-                                  prev_stack_layer,
-                                  stack_controls_layer)
-
+    next_stack = StackAugmentation(stack_input_layer,prev_stack_layer,stack_controls_layer)
 
     """
     def __init__(self,
