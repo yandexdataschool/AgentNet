@@ -1,7 +1,5 @@
 
 #TODO(jheuristic) write __doc__
-from duplicity.pexpect import searcher_re
-
 __doc__="""
 This is a sketch of PBCSEQ-based automated treatment experiment
 """
