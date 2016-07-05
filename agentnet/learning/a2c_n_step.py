@@ -29,7 +29,7 @@ def get_elementwise_objective(policy,
                               state_values_after_end="zeros",
                               consider_value_reference_constant=True,
                               consider_predicted_value_constant=True,
-                              scan_dependencies=[],
+                              scan_dependencies=(),
                               scan_strict=True,
                               min_log_proba=-1e50):
     """
@@ -105,12 +105,9 @@ def get_elementwise_objective(policy,
     if consider_value_reference_constant:
         reference_state_values = consider_constant(reference_state_values)
 
-
     log_probas = T.maximum(T.log(action_probas), min_log_proba)
-
-
     observed_state_values = consider_constant(state_values) if consider_predicted_value_constant else state_values
-    
+
     policy_loss_elwise = - log_probas * (reference_state_values - observed_state_values)
 
     # critic loss

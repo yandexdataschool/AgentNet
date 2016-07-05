@@ -42,13 +42,19 @@ class TargetNetwork(object):
         self.bottom_layers = bottom_layers
 
         #get all weights that are not shared between networks
-        all_clone_params = lasagne.layers.get_all_params(original_network_outputs)
-        all_original_params = lasagne.layers.get_all_params(original_network_outputs)
+        all_clone_params = lasagne.layers.get_all_params(self.output_layers)
+        all_original_params = lasagne.layers.get_all_params(self.original_network_outputs)
 
         #a dictionary {clone param -> original param}
         self.param_dict = {clone_param : original_param
                            for clone_param, original_param in zip(all_clone_params,all_original_params)
                            if clone_param != original_param}
+
+        if len(self.param_dict) ==0:
+            raise ValueError("Target network has no loadable. "
+                             "Either it consists of non-trainable layers or you messed something up "
+                             "(e.g. hand-crafted layers with no automatic params)."
+                             "In case you simply want to clone network, use agentnet.utils.clone.clone_network")
 
         self.load_weights_hard = theano.function([],updates=self.param_dict)
 
