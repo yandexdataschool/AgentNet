@@ -281,7 +281,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                     if is_alive is not None:
                         is_alive_tensor = is_alive_tensor[-max_pool_size:]
                     if prev_memories is not None:
-                        preceding_memory_states = preceding_memory_states[-max_pool_size:]
+                         preceding_memory_states = [mem[-max_pool_size:] for mem in preceding_memory_states]
         except ValueError:
             warn("Warning! Appending sessions to empty or broken pool. Old pool sessions, if any, are disposed.")
             observation_tensors = observation_sequences
