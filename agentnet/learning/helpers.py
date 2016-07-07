@@ -97,7 +97,7 @@ def get_n_step_value_reference(state_values,
     # initialize each reference with ZEROS after the end (won't be in output tensor)
     outputs_info = [T.zeros_like(rewards[:, 0]), ]
 
-    non_seqs = [gamma_or_gammas] + dependencies
+    non_seqs = (gamma_or_gammas) + tuple(dependencies)
 
     time_ticks = T.arange(rewards.shape[1])
 

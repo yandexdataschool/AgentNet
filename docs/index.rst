@@ -53,6 +53,7 @@ Modules:
   modules/memory
   modules/resolver
   modules/learning
+  modules/target_network
   modules/utils
 
 

@@ -14,6 +14,14 @@ persistence
 
 .. autofunction:: load
 
+clone network
+------------------
+.. automodule:: agentnet.utils.clone
+
+.. currentmodule:: agentnet.utils.clone
+
+.. autofunction:: clone_network
+
 layers
 ------------------
 

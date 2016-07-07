@@ -1,16 +1,17 @@
 """
 Utility functions that can clone lasagne network layers in a custom way.
 [Will be] used for:
- - target networks, e.g. older copies of NN used for reference Qvalues.
- - DPG-like methods where critic has to process both optimal and actual actions
+- target networks, e.g. older copies of NN used for reference Qvalues.
+- DPG-like methods where critic has to process both optimal and actual actions
+
 """
 import lasagne
-from .format import check_list,check_ordered_dict,supported_sequences
+from .format import check_list,check_ordered_dict
 from copy import deepcopy
 from warnings import warn
 
 def clone_network(original_network, bottom_layers=None,
-                  share_params=False, share_inputs=True):
+                  share_params=False, share_inputs=True,name_prefix = None):
     """
     Creates a copy of lasagne network layer(s) provided as original_network.
 
@@ -45,6 +46,8 @@ def clone_network(original_network, bottom_layers=None,
         If you want custom other parameters to be shared, use bottom_layers
     :param share_inputs: if True, all InputLayers will still be shared even if not mentioned in bottom_layers
     :type share_inputs: bool
+    :param name_prefix: if not None, adds this prefix to all the layers and params of the cloned network
+    :type name_prefix: string or None
     :return: a clone of original_network (whether layer, list, dict, tuple or whatever
     """
 
@@ -79,16 +82,12 @@ def clone_network(original_network, bottom_layers=None,
                 #variable is shared if replacement id matches memo key id. Otherwise it's "replaced"
                 existing_item = memo[id(weight_var)]
                 status = "shared" if id(existing_item) == id(weight_var) else "replaced with {}".format(existing_item)
-                warn("Param {} was already {} manually. Default sharing because of share_params has no effect.".format(
+                warn("Param {} was already {} manually. Default sharing because of share_params was redundant.".format(
                     weight_var, status
                 ))
             else:
                 #no collisions in memo. Simply add new unit
                 memo[id(weight_var)] = weight_var
-
-
-
-
 
     #add shared InputLayers
     if share_inputs:
@@ -101,10 +100,41 @@ def clone_network(original_network, bottom_layers=None,
                 # layer is shared if replacement id matches memo key id. Otherwise it's "replaced"
                 existing_item = memo[id(l_inp)]
                 status = "shared" if id(existing_item) == id(l_inp) else "replaced with {}".format(existing_item)
-                warn("Param {} was already {} manually. Default sharing because of share_inputs has no effect.".format(
+                warn("Layer {} was already {} manually. Default sharing because of share_inputs was redundant.".format(
                     l_inp, status))
             else:
                 # no collisions in memo. Simply add new unit
                 memo[id(l_inp)] = l_inp
 
-    return deepcopy(original_network,memo=memo)
+    network_clone = deepcopy(original_network,memo=memo)
+
+    #substitute names, if asked
+    if name_prefix is not None:
+        #get list of clone output layers
+        if isinstance(network_clone, dict):
+            clone_layers = check_ordered_dict(network_clone).values()
+        else:  # original_layers is a layer or a list/tuple of such
+            clone_layers = check_list(network_clone)
+
+        #substitute layer names
+        all_original_layers = set(lasagne.layers.get_all_layers(original_layers))
+        all_clone_layers = lasagne.layers.get_all_layers(clone_layers)
+
+        for layer in all_clone_layers:
+            if layer not in all_original_layers:
+                #substitute cloned layer name
+                layer.name = name_prefix + (layer.name or '')
+            #otherwise it's a shared layer
+
+        #substitute param names
+        all_original_params = set(lasagne.layers.get_all_params(original_layers))
+        all_clone_params = lasagne.layers.get_all_params(clone_layers)
+
+        for param in all_clone_params:
+            if param not in all_original_params:
+                # substitute cloned param name
+                param.name = name_prefix + (param.name or '')
+            # otherwise it's a shared param
+
+
+    return network_clone

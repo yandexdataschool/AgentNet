@@ -59,7 +59,6 @@ def get_elementwise_objective(Qvalues, actions, rewards,
     :return: mean squared error over Q-values (using formula above for loss)
 
     """
-
     if Qvalues_target is None:
         Qvalues_target = Qvalues
 
