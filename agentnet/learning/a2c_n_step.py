@@ -21,6 +21,7 @@ def get_elementwise_objective(policy,
                               actions,
                               rewards,
                               is_alive="always",
+                              state_values_target=None,
                               n_steps=None,
                               gamma_or_gammas=0.99,
                               crop_last=True,
@@ -28,7 +29,7 @@ def get_elementwise_objective(policy,
                               state_values_after_end="zeros",
                               consider_value_reference_constant=True,
                               consider_predicted_value_constant=True,
-                              scan_dependencies=[],
+                              scan_dependencies=(),
                               scan_strict=True,
                               min_log_proba=-1e50):
     """
@@ -36,40 +37,32 @@ def get_elementwise_objective(policy,
 
         L_policy = - log(policy) * (V_reference - const(V))
         L_V = (V - Vreference)^2
-            
-    parameters:
-    
-        policy [batch,tick,action_id] - predicted action probabilities
-        state_values [batch,tick] - predicted state values
-        actions [batch,tick] - committed actions
-        rewards [batch,tick] - immediate rewards for taking actions at given time ticks
-        
-        is_alive [batch,tick] - whether given session is still active at given tick. Defaults to always active.
+
+    :param policy: [batch,tick,action_id] - predicted action probabilities
+    :param state_values: [batch,tick] - predicted state values
+    :param actions: [batch,tick] - committed actions
+    :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
+    :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
                             Default value of is_alive implies a simplified computation algorithm for Qlearning loss
-        
-        n_steps: if an integer is given, the references are computed in loops of 3 states.
+    :param state_values_target: there should be state values used to compute reference (e.g. older network snapshot)
+                If None (defualt), uses current Qvalues to compute reference
+    :param n_steps: if an integer is given, the references are computed in loops of 3 states.
             Defaults to None: propagating rewards throughout the whole session.
             If n_steps equals 1, this works exactly as Q-learning (though less efficient one)
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
-        
-        gamma_or_gammas - a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts 
-        
-        crop_last - if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
-        
-        force_values_after_end - if true, sets reference policy at session end to rewards[end] + qvalues_after_end
-        
-        state_values_after_end[batch,1,n_actions] - "next state values" for last tick used for reference only. 
+    :param gamma_or_gammas: a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
+    :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
+    :param force_values_after_end: if true, sets reference policy at session end to rewards[end] + qvalues_after_end
+    :param state_values_after_end: [batch,1,n_actions] - "next state values" for last tick used for reference only.
                             Defaults at  T.zeros_like(state_values[:,0,None,:])
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
 
-        
-        
-        scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-        scan_strict: whether to evaluate values using strict theano scan or non-strict one
-        
-    Returns:
-                
-        elementwise sum of policy_loss + state_value_loss
+    :param consider_value_reference_constant: whether or not to zero-out gradients through the "reference state values" term
+    :param consider_predicted_value_constant: whether or not to consider predicted state value constant in the POLICY  LOSS COMPONENT
+    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
+    :param scan_strict: whether to evaluate values using strict theano scan or non-strict one
+    :param min_log_proba: minimum value for log(policy) term. Used to prevent -inf when policy(action) ~ 0.
+    :return: elementwise sum of policy_loss + state_value_loss [batch,tick]
 
     """
 
@@ -106,16 +99,16 @@ def get_elementwise_objective(policy,
     # actor loss
     action_probas = get_action_Qvalues(policy, actions)
 
-    reference_state_values = consider_constant(reference_state_values)
     if crop_last:
         reference_state_values = T.set_subtensor(reference_state_values[:,-1],
-                                                 consider_constant(state_values[:,-1]))
-
-    
+                                                 state_values[:,-1])
+    if consider_value_reference_constant:
+        reference_state_values = consider_constant(reference_state_values)
 
     log_probas = T.maximum(T.log(action_probas), min_log_proba)
+    observed_state_values = consider_constant(state_values) if consider_predicted_value_constant else state_values
 
-    policy_loss_elwise = - log_probas * (reference_state_values - consider_constant(state_values))
+    policy_loss_elwise = - log_probas * (reference_state_values - observed_state_values)
 
     # critic loss
     V_err_elwise = squared_error(reference_state_values, state_values)

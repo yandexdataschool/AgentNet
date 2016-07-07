@@ -17,32 +17,26 @@ def get_reference_Qvalues(Qvalues, actions, rewards,
                           ):
     """
     Returns reference Q-values according to Q-learning algorithm
-    
-        Qreference(state,action) = reward(state,action) + gamma* max[next_action]( Q(next_state,next_action)  
-    
-    parameters:
-    
-        Qvalues [batch,tick,action_id] - predicted qvalues
-        actions [batch,tick] - commited actions
-        rewards [batch,tick] - immediate rewards for taking actions at given time ticks
-        
-        gamma_or_gammas - a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts 
-        qvalues_after_end [batch,n_actions] - symbolic expression for "next state q-values" for last tick used for reference only. 
+
+        Qreference(state,action) = reward(state,action) + gamma* max[next_action]( Q(next_state,next_action)
+
+    :param Qvalues: [batch,tick,action_id] - predicted qvalues
+    :param actions: [batch,tick] - commited actions
+    :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
+    :param gamma_or_gammas:  a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
+    :param qvalues_after_end: [batch,n_actions] - symbolic expression for "next state q-values" for last tick used for reference only.
                             Defaults at  T.zeros_like(Qvalues[:,0,None,:])
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
-
-        aggregation_function - a function that takes all Q-values for "next state qvalues" term and returns what
+    :param aggregation_function: a function that takes all Q-values for "next state qvalues" term and returns what
                                 is the "best next Qvalue". Normally you should not touch it. Defaults to max over actions.
                                 Normaly you shouldn't touch this.
                                 Takes input of [batch,tick,n_actions] Q-values
+    :return: Qreference - reference qvalues at [batch,tick] using formula above
 
-    Returns:
-        Qreference - reference qvalues at [batch,tick] using formula above
-
-            Q reference [batch,action_at_tick_t] = rewards[t] + gamma_or_gammas* Qs(t+1, best_action_at(t+1))
+    Q reference [batch,action_at_tick_t] = rewards[t] + gamma_or_gammas* Qs(t+1, best_action_at(t+1))
 
                 where  Qs(t+1, best_action_at(t+1)) is computed as aggregation_function(next_Qvalues)
-    
+
     """
     if qvalues_after_end == "zeros":
         qvalues_after_end = T.zeros_like(Qvalues[:, 0, None, :])
@@ -67,6 +61,7 @@ def get_reference_Qvalues(Qvalues, actions, rewards,
 
 def get_elementwise_objective(Qvalues, actions, rewards,
                               is_alive="always",
+                              Qvalues_target=None,
                               gamma_or_gammas=0.95,
                               crop_last = True,
                               force_qvalues_after_end=True,
@@ -75,42 +70,39 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                               aggregation_function=lambda qv: T.max(qv, axis=2)):
     """
     Returns squared error between predicted and reference Qvalues according to Q-learning algorithm
-    
-        Qreference(state,action) = reward(state,action) + gamma* max[next_action]( Q(next_state,next_action)  
+
+        Qreference(state,action) = reward(state,action) + gamma* max[next_action]( Q(next_state,next_action)
         loss = mean over (Qvalues - Qreference)**2
-        
-    parameters:
-    
-        Qvalues [batch,tick,action_id] - predicted qvalues
-        actions [batch,tick] - commited actions
-        rewards [batch,tick] - immediate rewards for taking actions at given time ticks
-        
-        is_alive [batch,tick] - whether given session is still active at given tick. Defaults to always active.
+
+    :param Qvalues: [batch,tick,action_id] - predicted qvalues
+    :param actions: [batch,tick] - commited actions
+    :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
+    :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
                             Default value of is_alive implies a simplified computation algorithm for Qlearning loss
-        
-        gamma_or_gammas - a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts 
-        
-        crop_last - if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
-        
-        force_qvalues_after_end - if true, sets reference Qvalues at session end to rewards[end] + qvalues_after_end
-        
-        qvalues_after_end [batch,1,n_actions] - symbolic expression for "next state q-values" for last tick used for reference only. 
+    :param Qvalues_target: Older snapshot Qvalues (e.g. from a target network). If None, uses current Qvalues
+    :param gamma_or_gammas:  a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
+    :param qvalues_after_end: [batch,n_actions] - symbolic expression for "next state q-values" for last tick used for reference only.
                             Defaults at  T.zeros_like(Qvalues[:,0,None,:])
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
-        consider_reference_constant - whether or not zero-out gradient flow through reference_Qvalues (True highly recommended)
-
-        aggregation_function - a function that takes all Qvalues for "next state qvalues" term and returns what 
+    :param aggregation_function: a function that takes all Q-values for "next state qvalues" term and returns what
                                 is the "best next Qvalue". Normally you should not touch it. Defaults to max over actions.
                                 Normaly you shouldn't touch this.
-                                Takes input of [batch,tick,n_actions] Qvalues
+                                Takes input of [batch,tick,n_actions] Q-values
 
-    Returns:
-                
-        tensor [batch, tick] of squared errors over Q-values (using formua above for loss)
+    :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
+    :param force_qvalues_after_end:  if true, sets reference Qvalues at session end to rewards[end] + qvalues_after_end
+    :param qvalues_after_end:
+    :param consider_reference_constant: whether or not zero-out gradient flow through reference_Qvalues (True highly recommended)
+    :param aggregation_function:
+    :return: tensor [batch, tick] of squared errors over Q-values (using formua above for loss)
+                    If Qvalues_target are provided, they are used for reference computation instead of original Qvalues
 
     """
+    if Qvalues_target is None:
+        Qvalues_target = Qvalues
+
     # get reference Q-values via Q-learning algorithm
-    reference_Qvalues = get_reference_Qvalues(Qvalues, actions, rewards,
+    reference_Qvalues = get_reference_Qvalues(Qvalues_target, actions, rewards,
                                               gamma_or_gammas=gamma_or_gammas,
                                               qvalues_after_end=qvalues_after_end,
                                               aggregation_function=aggregation_function

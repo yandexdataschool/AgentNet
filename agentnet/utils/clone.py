@@ -43,7 +43,8 @@ def clone_network(original_network, bottom_layers=None,
         Otherwise new shared variables will be created and set to original NN values.
         WARNING! shared weights must be accessible via lasagne.layers.get_all_params with no flags
         If you want custom other parameters to be shared, use bottom_layers
-    :param share_inputs: is True, all InputLayers not mentioned in bottom_layers will still be shared
+    :param share_inputs: if True, all InputLayers will still be shared even if not mentioned in bottom_layers
+    :type share_inputs: bool
     :return: a clone of original_network (whether layer, list, dict, tuple or whatever
     """
 
