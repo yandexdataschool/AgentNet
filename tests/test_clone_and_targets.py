@@ -17,10 +17,10 @@ def test_targetnet():
     param_names = [p.name for p in lasagne.layers.get_all_params(full_clone.output_layers)]
 
     assert len(param_names) == 8
-    assert len(filter(lambda name: name.startswith('target_nn'), param_names)) == 8
+    assert len(list(filter(lambda name: name.startswith('target_nn'), param_names))) == 8
 
     assert len(layer_names) == 5
-    assert len(filter(lambda name: (name or '').startswith('target_nn'), layer_names)) == 4
+    assert len(list(filter(lambda name: (name or '').startswith('target_nn'), layer_names))) == 4
 
     # test partial clone
     full_clone = TargetNetwork([l_d2, other_l_d2], l_d1, name='target_nn')
@@ -29,10 +29,10 @@ def test_targetnet():
     param_names = [p.name for p in lasagne.layers.get_all_params(full_clone.output_layers)]
 
     assert len(param_names) == 8
-    assert len(filter(lambda name: name.startswith('target_nn'), param_names)) == 4
+    assert len(list(filter(lambda name: name.startswith('target_nn'), param_names))) == 4
 
     assert len(layer_names) == 5
-    assert len(filter(lambda name: (name or '').startswith('target_nn'), layer_names)) == 2
+    assert len(list(filter(lambda name: (name or '').startswith('target_nn'), layer_names))) == 2
 
     full_clone.load_weights()
     full_clone.load_weights(0.33)
