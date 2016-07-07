@@ -368,10 +368,12 @@ class Recurrence(DictLayer):
             Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
         """
         # set batch size
-        if len(inputs) != 0:
+        if self.batch_size is not None:
+            batch_size = self.batch_size
+        elif len(inputs) != 0:
             batch_size = inputs[0].shape[0]
         else:
-            batch_size = self.batch_size
+            raise ValueError("Need to set batch_size explicitly for recurrence")
 
         n_states = len(self.state_variables)
         n_state_inits = len(self.state_init)
