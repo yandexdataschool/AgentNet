@@ -22,7 +22,7 @@ def test_targetnet():
     assert len(layer_names) == 5
     assert len(filter(lambda name: (name or '').startswith('target_nn'), layer_names)) == 4
 
-    # test partial clone clone
+    # test partial clone
     full_clone = TargetNetwork([l_d2, other_l_d2], l_d1, name='target_nn')
 
     layer_names = [l.name for l in lasagne.layers.get_all_layers(full_clone.output_layers)]
