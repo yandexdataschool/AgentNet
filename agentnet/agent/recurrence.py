@@ -370,7 +370,7 @@ class Recurrence(DictLayer):
         # set batch size
         if self.batch_size is not None:
             batch_size = self.batch_size
-        if len(inputs) != 0:
+        elif len(inputs) != 0:
             batch_size = inputs[0].shape[0]
         else:
             raise ValueError("Need to set batch_size explicitly for recurrence")
