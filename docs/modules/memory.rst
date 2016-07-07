@@ -1,4 +1,4 @@
-memory layers
+Memory layers
 ==========================
 
 .. automodule:: agentnet.memory

@@ -1,4 +1,4 @@
-agent and recurrence
+Agent and Recurrence
 =====================
 
 .. automodule:: agentnet.agent

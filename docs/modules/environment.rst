@@ -1,4 +1,4 @@
-environment
+Environment
 ============
 
 .. automodule:: agentnet.environment

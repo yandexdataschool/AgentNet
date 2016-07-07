@@ -1,4 +1,4 @@
-utilities
+Utilities
 ===================
 
 .. automodule:: agentnet.utils

@@ -1,4 +1,4 @@
-resolvers
+Resolvers
 ===================
 
 .. automodule:: agentnet.resolver

@@ -1,4 +1,4 @@
-utilities
+Target Network
 ===================
 
 .. automodule:: agentnet.target_network

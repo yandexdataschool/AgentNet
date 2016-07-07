@@ -1,4 +1,4 @@
-learning algorithms
+Learning Algorithms
 =====================
 
 .. automodule:: agentnet.learning
