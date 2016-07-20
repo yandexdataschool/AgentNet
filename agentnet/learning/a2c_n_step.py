@@ -31,7 +31,7 @@ def get_elementwise_objective(policy,
                               consider_predicted_value_constant=True,
                               scan_dependencies=(),
                               scan_strict=True,
-                              min_log_proba=-1e50):
+                              min_proba=1e-30):
     """
     returns cross-entropy-like objective function for Actor-Critic method
 
@@ -61,13 +61,16 @@ def get_elementwise_objective(policy,
     :param consider_predicted_value_constant: whether or not to consider predicted state value constant in the POLICY  LOSS COMPONENT
     :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
     :param scan_strict: whether to evaluate values using strict theano scan or non-strict one
-    :param min_log_proba: minimum value for log(policy) term. Used to prevent -inf when policy(action) ~ 0.
+    :param min_proba: minimum value for policy term. Used to prevent -inf when policy(action) ~ 0.
     :return: elementwise sum of policy_loss + state_value_loss [batch,tick]
 
     """
 
+    if state_values_target is None:
+        state_values_target = state_values
+
     # get reference values via Q-learning algorithm
-    reference_state_values = get_n_step_value_reference(state_values, rewards, is_alive,
+    reference_state_values = get_n_step_value_reference(state_values_target, rewards, is_alive,
                                                         n_steps=n_steps,
                                                         optimal_state_values_after_end=state_values_after_end,
                                                         gamma_or_gammas=gamma_or_gammas,
@@ -105,7 +108,17 @@ def get_elementwise_objective(policy,
     if consider_value_reference_constant:
         reference_state_values = consider_constant(reference_state_values)
 
-    log_probas = T.maximum(T.log(action_probas), min_log_proba)
+    log_probas = T.log(action_probas)
+
+    #set min proba in a way that does not zero-out the derivatives
+    # idea:
+    # log(p) = log(p) if p != 0 else log(p+min_proba)
+    if min_proba != 0:
+        log_probas = T.switch(T.eq(action_probas,0),
+                                T.log(action_probas+min_proba),
+                                log_probas
+                              )
+
     observed_state_values = consider_constant(state_values) if consider_predicted_value_constant else state_values
 
     policy_loss_elwise = - log_probas * (reference_state_values - observed_state_values)

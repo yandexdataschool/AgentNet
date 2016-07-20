@@ -38,11 +38,7 @@ def get_elementwise_objective_components(policy,
     http://arxiv.org/abs/1509.02971
     http://jmlr.org/proceedings/papers/v32/silver14.pdf
 
-    This particular implementation is different:
-     - Allows n-step reinforcement learning
-     - Does not use old network snapshot for reference values, instead relies on parallel exploration as in
-       - http://arxiv.org/pdf/1602.01783v1.pdf
-
+    This particular implementation also allows N-step reinforcement learning
 
     The code mostly relies on the same architecture as advantage actor-critic a2c_n_step
 

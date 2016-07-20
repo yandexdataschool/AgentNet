@@ -7,8 +7,10 @@ and increase stability of learning algorithm.
 Some notable alterations of this technique:
 - Standard approach with older NN snapshot
 -- https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
+
 - Moving average of weights
 -- http://arxiv.org/abs/1509.02971
+
 - Double Q-learning and other clever ways of training with target network
 -- http://arxiv.org/pdf/1509.06461.pdf
 

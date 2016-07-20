@@ -40,8 +40,9 @@ User:
 .. toctree::
   :maxdepth: 2
 
-  user/demos
   user/install
+  user/whats_what
+  user/demos
 
 Modules:
 
