@@ -51,10 +51,10 @@ class MDPAgent(object):
 
     """
     def __init__(self,
-                 observation_layers,
-                 action_layers,
+                 observation_layers=(),
                  agent_states={},
                  policy_estimators=(),
+                 action_layers=(),
                  ):
 
 
