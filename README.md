@@ -11,7 +11,9 @@ A lightweight library to build and train deep reinforcement learning and custom 
 
 # What is AgentNet?
 
-![whatis_agentnet_png](http://s33.postimg.org/ytx63kwcv/whatis_agentnet_png.png)
+<img src='http://s33.postimg.org/ytx63kwcv/whatis_agentnet_png.png' 
+     alt='agentnet structure' 
+     title='agentnet structure' width=600 />
 
 No time to play games? Let machines do this for you!
 
@@ -53,7 +55,7 @@ As a side-quest, we also provide a boilerplate to custom long-term memory networ
 On Windows/OSX install Docker [Kitematic](https://kitematic.com/), 
 then simply run `justheuristic/agentnet` container and click on 'web preview'.
 
-Otherwise: 
+On other linux/unix systems: 
 
 1. install [Docker](http://docs.docker.com/installation/),
 2. make sure `docker` daemon is running (`sudo service docker start`)
@@ -65,7 +67,7 @@ Otherwise:
 
 # Documentation and tutorials
 
-One can find more-or-less structured documentation pages on AgentNet functionality here.
+(incomplete) Documentation pages can be found [here](http://agentnet.readthedocs.io/en/latest/).
 
 AgentNet also has full embedded documentation, so calling `help(some_function_or_object)` or 
 pressing shift+tab in IPython yields a description of object/function.
