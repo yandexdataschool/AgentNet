@@ -1,6 +1,8 @@
 from ..environment import BaseEnvironment
 
+from . import deprecated
 
+@deprecated("agentnet.agent.recurrence","0.1.0")
 class FeedbackEnvironment(BaseEnvironment):
     def __init__(self):
         """
@@ -10,16 +12,16 @@ class FeedbackEnvironment(BaseEnvironment):
         """
         
     @property 
-    def state_size(self):
+    def state_shapes(self):
         """Environment state size"""
         return []
 
     @property 
-    def observation_size(self):
+    def observation_shapes(self):
         """Single observation size"""
-        raise NotImplemented("FeedbackEnvironment does not have a pre-defined observation size.")
+        return [tuple()]
     
-    def get_action_results(self,last_states,actions,time_i):
+    def get_action_results(self,last_states,actions):#,time_i):
         """
         computes environment state after processing agent's action
         arguments:

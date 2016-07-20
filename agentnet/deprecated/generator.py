@@ -1,18 +1,21 @@
 import lasagne                 
-from lasagne.utils import unroll_scan
 from theano import tensor as T
 from ..utils import insert_dim
 
 from .base import BaseAgent
 from ..environment.session_batch import SessionBatchEnvironment
-from ..environment.feedback import  FeedbackEnvironment
+from .feedback import  FeedbackEnvironment
 
 
 from ..utils.format import supported_sequences,check_list
 
 
 
+from warnings import warn
+from . import deprecated
 
+
+@deprecated("agentnet.agent.Recurrence","0.1.0")
 class Generator(BaseAgent):
     def __init__(self,
                  observation_layers,
@@ -34,6 +37,7 @@ class Generator(BaseAgent):
             resolver - resolver.BaseResolver child instance that
                 - determines agent's action given Q-values for all actions
         """        
+
         
         self.single_resolver = type(resolver) not in supported_sequences
         self.single_policy = type(policy) not in supported_sequences
@@ -81,7 +85,8 @@ class Generator(BaseAgent):
             environment = FeedbackEnvironment()
         else:
             recorded_sequences = check_list(recorded_sequences)
-            environment = SessionBatchEnvironment(recorded_sequences)
+            obs_shapes = [obs.output_shape[1:] for obs in self.observation_layers]
+            environment = SessionBatchEnvironment(recorded_sequences,obs_shapes)
             
             
         if initial_actions == "zeros":

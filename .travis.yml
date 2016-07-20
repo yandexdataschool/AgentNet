@@ -1,13 +1,45 @@
+language: python
 sudo: required
+dist: trusty
 
-services:
-  - docker
+python:
+  - "2.7"
+  - "3.4"
 
-before_install:
-  - docker build -t agentnet .
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports
+    packages:
+      - libblas-dev
+      - liblapack-dev
+      - cmake
+      - cmake-data
+      - swig
+      - libav-tools
+      - libboost-all-dev
+      - libjpeg-dev
+      - zlib1g-dev
+      - gfortran
 
 install:
-  - docker run -d -p 1234:8888 --name agentnet agentnet
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b -p $HOME/miniconda
+  - export PATH=$HOME/miniconda/bin:$PATH
+  - conda update --yes conda
+  - travis_retry conda install --yes python=$TRAVIS_PYTHON_VERSION
+  - travis_retry conda install --yes pip numpy scipy six pandas nomkl
+  - travis_retry conda install --yes theano scikit-learn nose matplotlib
+  - travis_retry pip install nose-parameterized
+  - pip install -r requirements.txt
+  # intalling AgentNet
+  - pip install .
+  # installing Gym
+  - git clone https://github.com/openai/gym.git
+  - cd gym && pip install -e . && cd ..
+  - cd gym && pip install -e '.[atari]' && cd ..
+  - cd gym && pip install -e '.[classic_control]' && cd ..
 
 script:
-  - echo "Yuppi!"
+  - nosetests tests --verbose --nocapture  --failure-detail

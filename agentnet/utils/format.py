@@ -1,62 +1,111 @@
-__doc__="""a few auxilary methods that work with supported collection formats"""
+"""
+A few auxiliary methods that work with supported collection formats.
+Used widely within AgentNet.
+"""
 
-import numpy as np
 from collections import OrderedDict
 from warnings import warn
 
+import lasagne
+import numpy as np
 
-supported_sequences = (tuple,list)
 
-def check_list(variables,target_length=None):
-    """ensure that variables is a sequence of a supported type"""
-    if type(variables) in supported_sequences:
+def is_layer(var):
+    """checks if var is lasagne layer"""
+    return isinstance(var, lasagne.layers.Layer)
+
+
+def is_theano_object(var):
+    """checks if var is a theano input, transformation, constant or shared variable"""
+    return type(var).__module__.startswith("theano")
+
+
+def is_numpy_object(var):
+    """checks if var is a theano input, transformation, constant or shared variable"""
+    return type(var).__module__.startswith("numpy")
+
+
+supported_sequences = (tuple, list)
+
+
+def check_sequence(variables):
+    """
+    Ensure that variables is one of supported_sequences or converts to one.
+    If naive conversion fails, throws an error.
+    """
+    if any(isinstance(variables, seq) for seq in supported_sequences):
         return variables
     else:
-        #if it is a numpy or theano array, excluding numpy array of objects
-        if hasattr(variables,'shape'):
-            if hasattr(variables,'dtype'):
-                if variables.dtype != np.object:
-                    return [variables]
-                
-                
-        #elif it is a different kind of sequence
-        if hasattr(variables,'__iter__'):
-            #try casting to tuple. If cannot, treat that it will be treated as an atomic object
-            try:
-                if target_length is not None and len(variables) != target_length:
-                    raise Exception("shapes do not match")
+        # if it is a numpy or theano array, excluding numpy array of objects, return a list with single element
+        # yes, i know it's messy. Better options are welcome for pull requests :)
+        if is_theano_object(variables) or is_numpy_object(variables):
+            if variables.dtype != np.object:
+                return [variables]
 
-                casted_variables = tuple(variables)
-                
-                warn(str(variables)+ " of type "+type(variables)+ " will be treated as a sequence of "+\
-                     len(casted_variables) +"elements, not a single element. If you want otherwise, please"\
-                     " pass it as a single-element list/tuple")
-                return casted_variables
+        # elif it is a different kind of sequence
+        if hasattr(variables, '__iter__'):
+            # try casting to tuple. If cannot, treat that it will be treated as an atomic object
+            try:
+                tupled_variables = tuple(variables)
+                message = """{variables} of type {var_type} will be treated as a sequence of {len_casted} elements,
+                not a single element.
+                If you want otherwise, please pass it as a single-element list/tuple.
+                """
+                warn(message.format(variables=variables, var_type=type(variables), len_casted=len(tupled_variables)))
+                return tupled_variables
             except:
-                warn(str(variables)+ " of type "+type(variables)+ " will be treated as a single input/output tensor,"\
-                    "and not a collection of such. If you want otherwise, please cast it to list/tuple")
-                
-        return [variables] 
-    
-    
-def check_ordict(variables):
-    """ensure that variables is an OrderedDict"""
-    assert hasattr(variables,"items") 
+                message = """
+                {variables} of type {var_type} will be treated as a single input/output tensor,
+                and not a collection of such.
+                If you want otherwise, If you want otherwise, please cast it to list/tuple.
+                """
+                warn(message.format(variables=variables, var_type=type(variables)))
+                return [variables]
+        else:
+            # otherwise it's a one-element list
+            return [variables]
+
+
+def check_list(variables):
+    """Ensure that variables is a list or converts to one.
+    If naive conversion fails, throws an error
+    :param variables: sequence expected
+    """
+    return list(check_sequence(variables))
+
+
+def check_tuple(variables):
+    """Ensure that variables is a list or converts to one.
+    If naive conversion fails, throws an error
+    :param variables: sequence expected
+    """
+    return tuple(check_sequence(variables))
+
+
+def check_ordered_dict(variables):
+    """Ensure that variables is an OrderedDict
+    :param variables: dictionary expected
+    """
+    assert isinstance(variables, dict)
     try:
         return OrderedDict(list(variables.items()))
     except:
-        raise ValueError("Could not convert "+variables+"to an ordered dictionary")
+        raise ValueError("Could not convert {variables} to an ordered dictionary".format(variables=variables))
 
-def unpack_list(a, *lengths):
+
+def unpack_list(array, parts_lengths):
     """
     Returns slices of the input list a.
-    
-    unpack_list(a,2,3,5) -> a[:2], a[2:2+3], a[2+3:2+3+5]
+    unpack_list(a, [2,3,5]) -> a[:2], a[2:2+3], a[2+3:2+3+5]
+
+    :param array: array-like or tensor variable
+    :param parts_lengths: lengths of subparts
+
     """
-    borders = np.concatenate([[0],np.cumsum(lengths)])
-    
+    borders = np.concatenate([[0], np.cumsum(parts_lengths)])
+
     groups = []
-    for low,high in zip(borders[:-1],borders[1:]):
-        groups.append(a[low:high])
-    
+    for low, high in zip(borders[:-1], borders[1:]):
+        groups.append(array[low:high])
+
     return groups

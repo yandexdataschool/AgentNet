@@ -1,11 +1,15 @@
-__doc__ = """AgentNet - a library for MDP agent design and research"""
+"""
+AgentNet - a library for deep reinforcement learning agent design and research
+"""
 
+from __future__ import division, print_function, absolute_import
 
-from . import utils
-
+from . import agent
 from . import environment
 from . import objective
-
 from . import memory
 from . import resolver
-from . import agent
+from . import utils
+
+__version__ = '0.9.0'
+__author__ = 'YandexDataSchool and contributors.'

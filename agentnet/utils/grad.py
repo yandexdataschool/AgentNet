@@ -1,26 +1,29 @@
-__doc__="""symbolic gradient-related operations such as "consider constant", "reverse gradient", etc"""
+"""
+Symbolic gradient-related operations such as "consider constant", "reverse gradient", etc
+"""
 
-from theano import tensor as T
 import theano
-import numpy as np
 
-
-
-#Specify default consider_constant op.
-#Changing it here will change behaviour throughout entire library (except examples)
+# Specify default consider_constant op.
+# Changing it here will change behaviour throughout entire library (except examples)
 from theano.gradient import disconnected_grad
+
 consider_constant = disconnected_grad
 
-#gradient reversal layer by Daniel Renshaw 
-#http://stackoverflow.com/users/127480/daniel-renshaw
-#thanks to him, but idk if it works :P
+
 class MultiplyGradient(theano.gof.Op):
     view_map = {0: [0]}
 
     __props__ = ('hp_lambda',)
 
     def __init__(self, hp_lambda=1):
-        """this operation multiplies the gradient by hp_lambda when computing grads"""
+        """this operation multiplies the gradient by hp_lambda when computing grads
+        
+        Code by Daniel Renshaw 
+         - http://stackoverflow.com/users/127480/daniel-renshaw
+     
+        All thanks to him.
+        """
         super(MultiplyGradient, self).__init__()
         self.hp_lambda = hp_lambda
 
@@ -35,6 +38,5 @@ class MultiplyGradient(theano.gof.Op):
     def grad(self, input, output_gradients):
         return [self.hp_lambda * output_gradients[0]]
 
-    
-    
+
 reverse_gradient = MultiplyGradient(-1)
