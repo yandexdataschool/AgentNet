@@ -131,7 +131,7 @@ def get_elementwise_objective_components(policy,
     v_err_elementwise = squared_error(reference_action_values, action_values)
     
     if crop_last:
-        v_err_elementwise = T.set_subtensor(V_err_elementwise[:,-1],0)
+        v_err_elementwise = T.set_subtensor(v_err_elementwise[:,-1],0)
 
 
     return policy_loss_elwise * is_alive, v_err_elementwise * is_alive
