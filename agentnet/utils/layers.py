@@ -60,6 +60,16 @@ class DictLayer(MergeLayer):
 
     warning: this layer is needed for the purpose of graph optimization,
         it slightly breaks Lasagne conventions, so it is hacky.
+
+    :param incomings: incoming layers
+    :type incomings: lasagne.layers.Layer or a list of such
+    :param output_shapes: shapes of key-value outputs from the DictLayer
+    :type output_shapes: dict of { output_key: tuple of shape dimensions (like input layer shape) }
+        or a list of shapes, in which case keys are integers from 0 to len(output_shapes)
+    :param output_dtypes: if provided, defines the dtypes of all key-value outputs. None means all float32
+    :type output_dtypes: None, dict of {key:dtype of output} or a list of dtypes.
+        Key names must match those in output_shapes
+
     """
     
     
@@ -106,7 +116,7 @@ class DictLayer(MergeLayer):
         
         super(DictLayer,self).__init__(check_list(incomings),**kwargs)
                      
-    def get_output_for(self):
+    def get_output_for(self,**kwargs):
         raise NotImplementedError("One must implement get_output_for logic for DictLayer")
         
     def get_output_shape_for(self, input_shape):
