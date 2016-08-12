@@ -23,7 +23,7 @@ from theano import tensor as T
 
 
 from ..utils import insert_dim
-from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences
+from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences,is_theano_object
 from ..utils.layers import DictLayer, get_layer_dtype
 
 
@@ -106,7 +106,7 @@ class Recurrence(DictLayer):
                  state_variables=OrderedDict(),
                  state_init='zeros',
                  unroll_scan=True,
-                 n_steps=10,
+                 n_steps=None,
                  batch_size=None,
                  delayed_states=tuple(),
                  verify_graph=True,
@@ -119,6 +119,9 @@ class Recurrence(DictLayer):
         self.input_nonsequences = check_ordered_dict(input_nonsequences)
         self.input_sequences = check_ordered_dict(input_sequences)
 
+
+        if is_theano_object(self.n_steps) and self.unroll_scan:
+            raise ValueError("Symbolic n_steps is only available when unroll_scan = False.")
 
         if self.n_steps is None and (self.unroll_scan or len(self.input_sequences) ==0):
             raise ValueError("Inferring n_steps is only possible when scan is not unrolled and"
@@ -219,10 +222,10 @@ class Recurrence(DictLayer):
             assert tuple(seq_onestep.output_shape) == step_shape
 
             seq_len = seq_shape[1]
-            assert seq_len is None or seq_len >= n_steps
+            assert seq_len is None or n_steps is None or seq_len >= n_steps
             if seq_len is None:
                 warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
-                     "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps))
+                     "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps or "<unspecified>"))
 
     def get_sequence_layers(self):
         """
