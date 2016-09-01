@@ -405,8 +405,15 @@ class Recurrence(DictLayer):
 
         initial_state_variables = list(map(get_initial_state, self.state_variables))
 
-        outputs_info = initial_state_variables + [None] * len(self.tracked_outputs)
-
+        #dummy values for initial outputs. They have no role in computation, but if nonsequences are present,
+        # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
+        # if unroll_scan, these parameters are present. we forcibly initialize outputs to prevent
+        # complications during parameter parsing in step function below.
+        initial_output_fillers = list(map(get_initial_state, self.tracked_outputs))
+        
+        
+        outputs_info = initial_state_variables + initial_output_fillers 
+        
         # recurrent step function
         def step(*args):
 
