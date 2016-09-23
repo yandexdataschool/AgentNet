@@ -43,21 +43,32 @@ class GateLayer(DictLayer):
                  gate_nonlinearities=nonlinearities.sigmoid,
                  bias_init=init.Constant(),
                  weight_init=init.Normal(),
+                 channel_names=None,
                  **kwargs):
 
-        
         self.channels = check_list(channels)
         self.gate_controllers = check_list(gate_controllers)
-
-        # check channel types
-        for chl in self.channels:
-            assert is_layer(chl) or (type(chl) == int)
 
         # separate layers from non-layers
         self.channel_layers = list(filter(is_layer, self.channels))
         self.channel_ints = [v for v in self.channels if not is_layer(v)]
 
-        # flatten layers to 2 dimensions
+
+        # check channel types
+        for chl in self.channels:
+            assert is_layer(chl) or (type(chl) == int)
+
+        # check channel names or auto-assign them
+        if channel_names is None:
+            channel_names = [None] * len(channels)
+        assert len(channel_names) == len(channels)
+
+        for i, chl in enumerate(channels):
+            if is_layer(chl):
+                channel_names[i] = channel_names[i] or chl.name
+            channel_names[i] = channel_names[i] or "gate%i" % i
+
+        # flatten gate layers to 2 dimensions
         for i in range(len(self.channel_layers)):
             layer = self.channel_layers[i]
             if type(layer) == int:
@@ -72,7 +83,7 @@ class GateLayer(DictLayer):
                                                  name=lname)
                 assert len(self.channel_layers[i].output_shape) == 2
 
-        # flatten layers to 2 dimensions
+        # flatten controller layers to 2 dimensions
         for i in range(len(self.gate_controllers)):
             layer = self.gate_controllers[i]
             lname = layer.name or ""
@@ -88,11 +99,8 @@ class GateLayer(DictLayer):
         incomings = self.channel_layers + self.gate_controllers
 
         # default name
-        kwargs["name"] = kwargs.get("name", "YetAnother" + self.__class__.__name__)
-        
-        output_names = ["%s.channel.%i"%(kwargs["name"],i) for i in range(len(self.channels))]
+        output_names = [(kwargs["name"] or "") + channel_name for channel_name in channel_names]
 
-        
         # determine whether or not user defined a fixed batch size
         batch_sizes = [chl.output_shape[0] for chl in filter(is_layer, self.channels)]
         batch_size = reduce(lambda a,b: a or b, batch_sizes,None)
@@ -140,17 +148,16 @@ class GateLayer(DictLayer):
 
         self.gate_b = []  # a list of biases for channels
         self.gate_W = [list() for _ in self.gate_controllers]  # a list of lists of weights [controller][channel]
-        
-        for chl_i, (channel, b_init, channel_w_inits) in enumerate(zip(self.channels,
-                                                                       bias_init,
-                                                                       weight_init
-                                                                       )):
+
+        for channel,channel_name,b_init,channel_w_inits in zip(self.channels,
+                                                               channel_names,
+                                                               bias_init,
+                                                               weight_init
+                                                               ):
 
             if is_layer(channel):
-                channel_name = channel.name or "chl" + str(chl_i)
                 channel_n_units = channel.output_shape[1]
             else:
-                channel_name = "chl" + str(chl_i)
                 channel_n_units = channel
 
             # add bias
@@ -220,7 +227,7 @@ class GateLayer(DictLayer):
         channel_gates = [nonlinearity(gate_sum) for nonlinearity, gate_sum in zip(self.gate_nonlinearities,
                                                                                   channel_gate_sums)]
 
-        # align channels channels back into the original order (undo sorting them into ints and layers)
+        # align channels back into the original order (undo sorting them into ints and layers)
         # and also compute gated outputs on the fly
         gated_channels = []
         next_layer_id = 0  # the index of first unused layer

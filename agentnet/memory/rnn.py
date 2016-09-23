@@ -156,9 +156,10 @@ def GRUCell(prev_state,
     # hidden to gates
     hid_to_gates = GateLayer(prev_state, [num_units] * 3,
                              gate_nonlinearities=None,
+                             channel_names=["to_resetgate","to_updategate", "to_hidden_update"],
                              bias_init=None,
                              weight_init=hidden_W_init,
-                             name=name + ".hidden_to_gates_stacked")
+                             name=name or "")
     
     hid_forget, hid_update, hidden_update_hid = hid_to_gates.values()
 
@@ -171,9 +172,10 @@ def GRUCell(prev_state,
     # input to gates
     inp_to_gates = GateLayer(inputs, [num_units] * 3,
                              gate_nonlinearities=None,
+                             channel_names=["to_resetgate", "to_updategate", "to_hidden_update"],
                              bias_init = bias_init,
                              weight_init = input_W_init,
-                             name=name + ".input_to_gates_stacked")
+                             name=name or "")
     inp_forget, inp_update, hidden_update_in = inp_to_gates.values()
 
     # compute forget and update gates
@@ -216,6 +218,7 @@ def GRUCell(prev_state,
 
     return new_hid
 
+
 def LSTMCell(prev_cell,
              prev_out,
              input_or_inputs=tuple(),
@@ -228,7 +231,8 @@ def LSTMCell(prev_cell,
              inputgate_nonlinearity=lasagne.nonlinearities.sigmoid,
              outputgate_nonlinearity=lasagne.nonlinearities.sigmoid,
              cell_nonlinearity=lasagne.nonlinearities.tanh,
-             name="YetAnotherLSTMLayer",
+             output_nonlinearity=lasagne.nonlinearities.tanh,
+             name=None,
              grad_clipping=5.,
              ):
 
@@ -291,12 +295,15 @@ def LSTMCell(prev_cell,
 
     gates = GateLayer([prev_out] + check_list(input_or_inputs),
                       [num_units] * 4,
+                      channel_names=["to_ingate", "to_forgetgate", "to_cell", "to_outgate"],
                       gate_nonlinearities=None,
                       bias_init=bias_init,
                       weight_init=weight_init,
-                      name=name + ".hidden_to_gates_stacked")
+                      name=name or "")
 
     ingate, forgetgate, cell_input, outputgate = gates.values()
+
+
 
 
     # clip grads #1
@@ -305,27 +312,28 @@ def LSTMCell(prev_cell,
                                                      [ingate, forgetgate, cell_input, outputgate]]
 
     if peepholes:
+        # cast bias init to a list
+        peepholes_W_init = check_list(peepholes_W_init)
+        assert len(peepholes_W_init) in (1, 3)
+        if len(peepholes_W_init) == 1:
+            peepholes_W_init *= 3
+        W_cell_to_ingate_init,W_cell_to_forgetgate_init= peepholes_W_init[:2]
 
-        peeps= GateLayer([prev_cell],
-                              [num_units] * 3,
-                              gate_nonlinearities=None,
-                              bias_init=None,
-                              weight_init=peepholes_W_init,
-                              name=name + ".cell_to_gates_stacked")
-        peep_ingate, peep_forgetgate, peep_outputgate = peeps.values()
+        peep_ingate = lasagne.layers.ScaleLayer(prev_cell,W_cell_to_ingate_init,shared_axes=[0,],
+                                  name= (name or "") + ".W_cell_to_ingate_peephole")
+
+        peep_forgetgate = lasagne.layers.ScaleLayer(prev_cell,W_cell_to_forgetgate_init,shared_axes=[0,],
+                                  name= (name or "") + ".W_cell_to_forgetgate_peephole")
+
 
         ingate = add(ingate,peep_ingate)
         forgetgate = add(forgetgate,peep_forgetgate)
-        outputgate = add(outputgate, peep_outputgate)
-
-
-
 
 
 
 
     # nonlinearities
-    inputgate = NonlinearityLayer(
+    ingate = NonlinearityLayer(
         ingate,
         inputgate_nonlinearity,
         name=name+".inputgate"
@@ -335,30 +343,44 @@ def LSTMCell(prev_cell,
         forgetgate_nonlinearity,
         name=name+".forgetgate"
     )
-    outputgate = NonlinearityLayer(
-        outputgate,
-        outputgate_nonlinearity,
-        name=name+".outputgate"
-    )
 
-    # input * ingate + prev_cell * forgetgate
+    cell_input = NonlinearityLayer(cell_input,
+                          nonlinearity=cell_nonlinearity,
+                          name=name+'.cell_nonlinearity')
+
+
+    # cell = input * ingate + prev_cell * forgetgate
     new_cell= add(mul(cell_input,ingate),
                   mul(prev_cell, forgetgate))
 
+    # output gate
+    if peepholes:
+        W_cell_to_outgate_init = peepholes_W_init[2]
+
+        peep_outgate = lasagne.layers.ScaleLayer(new_cell,W_cell_to_outgate_init,shared_axes=[0,],
+                                  name= (name or "") + ".W_cell_to_outgate_peephole")
+
+        outputgate = add(outputgate, peep_outgate)
+
+    outputgate = NonlinearityLayer(
+        outputgate,
+        outputgate_nonlinearity,
+        name=name+".outgate"
+    )
+
+    #cell output
+
+    new_output= NonlinearityLayer(new_cell,
+                                   output_nonlinearity,
+                                   name=name+'.outgate_nonlinearity')
 
 
-    cell_nonlin = NonlinearityLayer(new_cell,
-                          nonlinearity=cell_nonlinearity,
-                          name=name+'.cell_nonlinearity')
     new_output = mul(
         outputgate,
-        cell_nonlin,
+        new_output,
         name=name+'.outgate'
     )
 
-    new_output = NonlinearityLayer(new_output,
-                                   outputgate_nonlinearity,
-                                   name='.outgate_nonlinearity')
 
 
     return new_cell, new_output

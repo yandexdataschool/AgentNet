@@ -124,8 +124,8 @@ class Recurrence(DictLayer):
             raise ValueError("Symbolic n_steps is only available when unroll_scan = False.")
 
         if self.n_steps is None and (self.unroll_scan or len(self.input_sequences) ==0):
-            raise ValueError("Inferring n_steps is only possible when scan is not unrolled and"
-                             "there is at least one sequence in input_sequences")
+            raise ValueError("Please provide n_steps param. Inferring n_steps is only possible when scan "
+                             "is not unrolled and there is at least one sequence in input_sequences")
 
 
         self.tracked_outputs = check_list(tracked_outputs)
