@@ -1,6 +1,6 @@
 import numpy as np
 import theano.tensor as T
-from lasagne.layers import InputLayer,DenseLayer,GaussianNoiseLayer,ElemwiseSumLayer
+from lasagne.layers import InputLayer,DenseLayer,GaussianNoiseLayer,ElemwiseSumLayer,ExpressionLayer
 from agentnet.utils.layers import DictLayer
 
 from warnings import warn
@@ -118,7 +118,7 @@ class NAFLayer(MergeLayer):
         return input_shapes[0]
 
 
-class NAFControllerLayerWriteMeSomeBetterNamePlease(DictLayer):
+class QLearningNAFController(DictLayer):
     def __init__(self,
                  input_layer = None,
                  action_dimensions=1,
@@ -126,11 +126,11 @@ class NAFControllerLayerWriteMeSomeBetterNamePlease(DictLayer):
                  additive_exploration=True,
                  mean_layer = None,
                  V_layer = None,
-                 P_layer = None,
+                 L_layer = None,
                  ):
         '''
 
-        <writeme>
+        #TODO<writeme>
 
         ALL ACTIONS ARE (-inf,inf) by default!
 
@@ -147,12 +147,12 @@ class NAFControllerLayerWriteMeSomeBetterNamePlease(DictLayer):
         :param mean_layer: layer which returns optimal actions (Mu).
             If not given, uses DenseLayer(input_layer)
         :param V_layer: layer which returns state value baseline (V(state))
-        :param P_layer: a layer which is used to compute the advantage term
+        :param L_layer: a layer which is used to compute the advantage term
             A(u) =  -1/2 * (u - mu)^T * P_layer * (u - mu)
 
         '''
         if input_layer is None:
-            assert (mean_layer is not None) and (V_layer is not None) and (P_layer is not None)
+            assert (mean_layer is not None) and (V_layer is not None) and (L_layer is not None)
 
         if mean_layer is None:
             mean_layer = DenseLayer(input_layer,num_units=action_dimensions,
@@ -162,10 +162,12 @@ class NAFControllerLayerWriteMeSomeBetterNamePlease(DictLayer):
         if V_layer is None:
             V_layer = DenseLayer(input_layer,num_units=action_dimensions)
 
-        if P_layer is None:
-            raise NotImplementedError("still writing the code")
+        if L_layer is None:
+            L_layer = LowerTriangularLayer(input_layer,matrix_diag=action_dimensions)
 
-        assert P_layer.output_shape.is_okay()
+        #shape must be [batch,action,aciton]
+        assert len(L_layer.output_shape)==3
+        assert L_layer.output_shape[1] == L_layer.output_shape[2] == action_dimensions
 
 
         if not isinstance(exploration,InputLayer):
@@ -179,7 +181,7 @@ class NAFControllerLayerWriteMeSomeBetterNamePlease(DictLayer):
             else:
                 action_layer = exploration
 
-        incomings = [mean_layer, action_layer, V_layer, P_layer]
+        incomings = [mean_layer, action_layer, V_layer, L_layer]
 
         batch_size = mean_layer.output_shape[0]
 
@@ -198,4 +200,4 @@ class NAFControllerLayerWriteMeSomeBetterNamePlease(DictLayer):
 
                        }
 
-        super(NAFLayer, self).__init__(incomings,shapes_dict)
+        super(QLearningNAFController, self).__init__(incomings,shapes_dict)
