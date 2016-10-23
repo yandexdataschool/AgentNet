@@ -5,7 +5,7 @@ A lightweight library to build and train deep reinforcement learning and custom 
 [![Docs badge](https://readthedocs.org/projects/agentnet/badge)](http://agentnet.readthedocs.org/en/latest/)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
-Press [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dive_to_dqn) for instant dive-in.
+Press [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dqn_binder) for instant dive-in.
 
 ![img](https://cs.hse.ru/mirror/pubs/share/thumb/150729584:c570x570+185+148:r150x150!)
 
@@ -72,7 +72,7 @@ On other linux/unix systems:
 # Documentation and tutorials
 
 A quick dive-in can be found here:
-* Click [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dive_to_dqn)
+* Click [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dqn_binder)
 * classwork.ipynb = your tutorial
 * classwork_solution.ipynb = a fully implemented version with simple CNN for reference
 
