@@ -119,13 +119,32 @@ class Recurrence(DictLayer):
         self.input_nonsequences = check_ordered_dict(input_nonsequences)
         self.input_sequences = check_ordered_dict(input_sequences)
 
-
         if is_theano_object(self.n_steps) and self.unroll_scan:
             raise ValueError("Symbolic n_steps is only available when unroll_scan = False.")
 
+        #check consistency of sequences (if any), possibly infer n_steps
+        for seq_layer in self.input_sequences.values():
+            inp_seq_shape = seq_layer.output_shape
+            if len(inp_seq_shape) <2:
+                raise ValueError("All input sequences must have at least 2 dimensions: (batch, tick, *whatevet)")
+            inp_seq_length = inp_seq_shape[1]
+
+            if inp_seq_length is None:
+                continue
+            elif self.n_steps is None:  # infer n_ticks
+                self.n_steps = inp_seq_length
+            else:   # verify n_steps
+                if inp_seq_length != self.n_steps:
+                    warn("number of steps is inconsistent. Either n_steps != input_sequence.output_shape[1] or "
+                         "several input sequences have different lengths. "
+                         "The Recurrence will roll for {} steps".format(self.n_steps))
+
+
         if self.n_steps is None and (self.unroll_scan or len(self.input_sequences) ==0):
-            raise ValueError("Please provide n_steps param. Inferring n_steps is only possible when scan "
-                             "is not unrolled and there is at least one sequence in input_sequences")
+            raise ValueError("Please provide n_steps param or meet conditions of inferring it. "
+                             "Inferring n_steps is only possible when there is at least one sequence in input_sequences and"
+                             "when scan is not unrolled (unroll_scan=False) OR some input_sequences have constant time axis "
+                             "(output_shape[1] is not None). n_steps can be symbolic if unroll_scan=False.")
 
 
         self.tracked_outputs = check_list(tracked_outputs)
@@ -161,9 +180,25 @@ class Recurrence(DictLayer):
                                self.input_nonsequences.values(),
                                self.input_sequences.values()))
 
-        # if we have no inputs or initialisations, make sure batch_size is specified
+        #try to infer batch_size
+        rec_inputs = list(chain(self.state_init.keys(),
+                               self.input_nonsequences.keys(),
+                               self.input_sequences.keys(),
+                               self.state_variables.values(),))
+        for layer in incomings+rec_inputs:
+            layer_bsize = layer.output_shape[0]
+            if layer_bsize is not None:
+                batch_size = batch_size or layer_bsize
+                if batch_size != layer_bsize:
+                    warn("Batch size is inconsistent within recurrence. Either batch_size doesn't match output_shape[0]"
+                         "of some of the layers OR several incoming or internal layers have different values for "
+                         "output_shape[0] (excluding None")
+
+        # if we have no inputs or initialisations, make sure batch_size is specified or infered from layers
         if len(incomings) == 0:
-            assert batch_size is not None
+            if batch_size is None:
+                raise ValueError("Please specify batch size (int/symbolic). if no inputs (seq/nonseq) are used,"
+                                 "agentnet can't infer the batch size. ")
         self.batch_size = batch_size
         
         
@@ -337,7 +372,7 @@ class Recurrence(DictLayer):
                     raise ValueError(
                         "Currently AgentNet only supports non-unrolled scan if there is no lower-level"
                         "scan with automatic updates. In other words, if you are playing with hierarchical MDP, "
-                        " all recurrences must fall into four categories:\n"
+                        " all recurrences must fall into three categories:\n"
                         " - recurrence with unroll_scan - works anywhere\n"
                         " - recurrence with theano.scan - on the bottom level\n"
                         " - recurrence with theano.scan - if all lower levels are unrolled OR have no random state updates\n"
@@ -431,6 +466,7 @@ class Recurrence(DictLayer):
             # call one step recurrence
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
             return new_states + new_outputs
+
 
         if self.unroll_scan:
             # call scan itself
