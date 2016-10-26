@@ -14,7 +14,7 @@ def RNNCell(prev_state,
             input_or_inputs=tuple(),
             nonlinearity=lasagne.nonlinearities.sigmoid,
             num_units=None,
-            name="YetAnotherRNNLayer",
+            name=None,
             grad_clipping=5.,
             Whid = init.GlorotUniform(),
             Winp = init.GlorotUniform(),
@@ -60,7 +60,7 @@ def RNNCell(prev_state,
     hid_to_hid = DenseLayer(prev_state,
                             num_units=num_units,
                             nonlinearity=None,
-                            name=name + ".hid_to_hid",
+                            name=(name or "") + ".hid_to_hid",
                             W= Whid,
                             b= b)
 
@@ -74,17 +74,17 @@ def RNNCell(prev_state,
                                 nonlinearity=None,
                                 W=Winp[i],
                                 b=None,  #This disables additional bias layers
-                                name=name + ".input%i_to_hid" % (i))
+                                name=(name or "") + ".input%i_to_hid" % (i))
                      for i, input_layer in enumerate(inputs)]
 
     # stack them
-    elwise_sum = add(*([hid_to_hid] + inputs_to_hid), name=name + ".sum")
+    elwise_sum = add(*([hid_to_hid] + inputs_to_hid), name=(name or "") + ".sum")
 
     # finally, apply nonlinearity
 
     new_hid = NonlinearityLayer(elwise_sum,
                                 nonlinearity,
-                                name=name + ".new_state")
+                                name=(name or "") + ".new_state")
 
     return new_hid
 
@@ -182,23 +182,23 @@ def GRUCell(prev_state,
     forgetgate = NonlinearityLayer(
         add(inp_forget, hid_forget),
         forgetgate_nonlinearity,
-        name=name+".forgetgate"
+        name=(name or "")+".forgetgate"
     )
     updategate = NonlinearityLayer(
         add(inp_update, hid_update),
         updategate_nonlinearity,
-        name=name+".updategate"
+        name=(name or "")+".updategate"
     )
 
     inv_updategate = NonlinearityLayer(updategate,
                                lambda x: 1 - x,
-                               name=name+".[1 - updategate]")
+                               name=(name or "")+".[1 - updategate]")
 
     # compute hidden update
     hidden_update = add(
         hidden_update_in,
         mul(forgetgate, hidden_update_hid),
-        name=name+".hid_update"
+        name=(name or "")+".hid_update"
     )
 
     # clip grads #2
@@ -331,22 +331,21 @@ def LSTMCell(prev_cell,
 
 
 
-
     # nonlinearities
     ingate = NonlinearityLayer(
         ingate,
         inputgate_nonlinearity,
-        name=name+".inputgate"
+        name=(name or "")+".inputgate"
     )
     forgetgate = NonlinearityLayer(
         forgetgate,
         forgetgate_nonlinearity,
-        name=name+".forgetgate"
+        name=(name or "")+".forgetgate"
     )
 
     cell_input = NonlinearityLayer(cell_input,
                           nonlinearity=cell_nonlinearity,
-                          name=name+'.cell_nonlinearity')
+                          name=(name or "")+'.cell_nonlinearity')
 
 
     # cell = input * ingate + prev_cell * forgetgate
@@ -365,20 +364,20 @@ def LSTMCell(prev_cell,
     outputgate = NonlinearityLayer(
         outputgate,
         outputgate_nonlinearity,
-        name=name+".outgate"
+        name=(name or "")+".outgate"
     )
 
     #cell output
 
     new_output= NonlinearityLayer(new_cell,
                                    output_nonlinearity,
-                                   name=name+'.outgate_nonlinearity')
+                                   name=(name or "")+'.outgate_nonlinearity')
 
 
     new_output = mul(
         outputgate,
         new_output,
-        name=name+'.outgate'
+        name=(name or "")+'.outgate'
     )
 
 
