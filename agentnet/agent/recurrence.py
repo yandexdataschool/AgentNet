@@ -34,27 +34,8 @@ class Recurrence(DictLayer):
     Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
     Conversely, it can be used as any other lasagne layer, even as a part of another recurrence.
 
-    ----example----
-    >>>import numpy as np
-    >>>import theano
-    >>>import agentnet
-    >>>from agentnet.memory import RNNCell
-    >>>from lasagne.layers import *
-    >>> sequence = InputLayer((None,None,3),name='input sequence')
-    >>>#one step
-    >>>inp = InputLayer((None,3))
-    >>>prev_rnn = InputLayer((None,10))
-    >>>rnn = RNNCell(prev_rnn,inp,name='rnn')
-    >>>#recurrence roll of the one-step graph above.
-    >>>rec = agentnet.Recurrence(input_sequences={inp:sequence},\
-                              state_variables={rnn:prev_rnn},\
-                              unroll_scan=False)
-    >>>weights = get_all_params(rec) #get weights
-    >>>print(weights)
-    >>>rnn_states = rec[rnn] #get rnn state sequence
-    >>>run = theano.function([sequence.input_var], get_output(rnn_states)) #compile applier function as any lasagne network
-    >>>run(np.random.randn(5,25,3)) #demo run
-
+    Parameters
+    --------
 
     :param input_nonsequences: inputs that are same at each time tick.
         Technically it's a dictionary that maps InputLayer from one-step graph
@@ -104,8 +85,7 @@ class Recurrence(DictLayer):
         as inputs or prev states and all inputs/prev states are actually needed to compute next states/outputs.
         NOT the same as theano.scan(strict=True).
 
-    Outputs:
-        returns a tuple of sequences with shape [batch,tick, ...]
+    :returns: a tuple of sequences with shape [batch,tick, ...]
             - state variable sequences in order of dict.items()
             - tracked_outputs in given order
 
@@ -118,6 +98,28 @@ class Recurrence(DictLayer):
         OR
 
         state_seq_layer, ... , output1_seq_layer, output2_seq_layer, ... = Recurrence(...)
+
+    Examples
+    --------
+    >>>import numpy as np
+    >>>import theano
+    >>>import agentnet
+    >>>from agentnet.memory import RNNCell
+    >>>from lasagne.layers import *
+    >>> sequence = InputLayer((None,None,3),name='input sequence')
+    >>>#one step
+    >>>inp = InputLayer((None,3))
+    >>>prev_rnn = InputLayer((None,10))
+    >>>rnn = RNNCell(prev_rnn,inp,name='rnn')
+    >>>#recurrence roll of the one-step graph above.
+    >>>rec = agentnet.Recurrence(input_sequences={inp:sequence},
+    ...                          state_variables={rnn:prev_rnn},
+    ...                          unroll_scan=False)
+    >>>weights = get_all_params(rec) #get weights
+    >>>print(weights)
+    >>>rnn_states = rec[rnn] #get rnn state sequence
+    >>>run = theano.function([sequence.input_var], get_output(rnn_states)) #compile applier function as any lasagne network
+    >>>run(np.random.randn(5,25,3)) #demo run
 
 
     """

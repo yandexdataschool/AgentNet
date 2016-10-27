@@ -55,7 +55,7 @@ def test_recurrence_weird():
     rec = agentnet.Recurrence(input_sequences={inp: sequence},
                               state_variables=OrderedDict({rnn: prev_rnn,
                                                lstm_hid:prev_lstm_hid,
-                                               lstm_cell:prev_lstm_cell
+                                                lstm_cell:prev_lstm_cell
                                                }),
                               state_init={lstm_cell: initial_cell},  # defaults to zeros
                               unroll_scan=False)

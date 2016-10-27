@@ -24,8 +24,9 @@ addons:
 
 install:
   #dependeicies via pip
-  - travis_retry pip install scipy six pandas
-  - travis_retry pip install scikit-learn nose nose-parameterized matplotlib
+  - travis_retry pip install six cython numpy scipy
+  - travis_retry pip install pandas scikit-learn matplotlib
+  - travis_retry pip install nose nose-parameterized
   - pip install -r requirements.txt
   # intalling AgentNet
   - pip install .
