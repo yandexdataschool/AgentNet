@@ -4,37 +4,38 @@ tests for recurrence class
 import numpy as np
 import theano
 import agentnet
-from agentnet.memory import RNNCell,LSTMCell
+from agentnet.memory import RNNCell,GRUCell, LSTMCell
 import lasagne
 from lasagne.layers import *
 
 
 def test_recurrence():
+    """minimalstic test"""
     sequence = InputLayer((None, None, 3), name='input sequence')
-    initial = InputLayer((None, 10), name='rnn zero tick')
+    initial = InputLayer((None, 10), name='gru zero tick')
 
     # step
     inp = InputLayer((None, 3))
-    prev_rnn = InputLayer((None, 10))
-    rnn = RNNCell(prev_rnn, inp, name='rnn')
+    prev_gru = InputLayer((None, 10))
+    gru = GRUCell(prev_gru, inp, name='rnn')
 
 
     rec = agentnet.Recurrence(input_sequences={inp: sequence},
-                              state_variables={rnn: prev_rnn},
-                              state_init={rnn: initial},  # defaults to zeros
+                              state_variables={gru: prev_gru},
+                              state_init={gru: initial},  # defaults to zeros
                               unroll_scan=False)
 
     weights = get_all_params(rec)
-    print(weights)
 
-    rnn_states = rec[rnn]
+    gru_states = rec[gru]
 
-    run = theano.function([sequence.input_var, initial.input_var], get_output(rnn_states), )
+    run = theano.function([sequence.input_var, initial.input_var], get_output(gru_states), )
 
     assert tuple(run(np.random.randn(5, 25, 3), np.random.randn(5, 10)).shape) == (5, 25, 10)
 
 
 def test_recurrence_weird():
+    """larger recurrence"""
     sequence = InputLayer((None, None, 3), name='input sequence')
     initial_cell = InputLayer((None, 20), name='lstm cell zero tick')
 
@@ -49,16 +50,17 @@ def test_recurrence_weird():
 
     lstm_hid = DropoutLayer(lstm_hid,p=0.5) #dropout hid, but not cell. Just to check it works
 
+    from collections import OrderedDict #one can use regular dict but that causes a warning
+
     rec = agentnet.Recurrence(input_sequences={inp: sequence},
-                              state_variables={rnn: prev_rnn,
+                              state_variables=OrderedDict({rnn: prev_rnn,
                                                lstm_hid:prev_lstm_hid,
                                                lstm_cell:prev_lstm_cell
-                                               },
+                                               }),
                               state_init={lstm_cell: initial_cell},  # defaults to zeros
                               unroll_scan=False)
 
     weights = get_all_params(rec)
-    print(weights)
 
     rnn_states = rec[rnn]
     lstm_cell_states = rec[lstm_cell]
@@ -70,7 +72,7 @@ def test_recurrence_weird():
                                                                 # one has to pass automatic updates
                           )
 
-    out = run(np.random.randn(5, 25, 3), np.random.randn(5, 10))
+    out = run(np.random.randn(5, 25, 3), np.random.randn(5, 20))
 
     assert tuple(out[0].shape) == (5, 25, 10) #rnn
     assert tuple(out[1].shape) == (5, 25, 20) #lstm cell
@@ -78,6 +80,7 @@ def test_recurrence_weird():
 
 
 def test_recurrence_mask():
+    """test mask_input"""
     np.random.seed(1337)
 
     sequence = InputLayer((None, None, 2), name='input sequence')
@@ -107,10 +110,10 @@ def test_recurrence_mask():
     assert tuple(out.shape) == (4, 5, 3)
 
     diff_out = np.diff(out, axis=1)
-    assert (np.diff(out, axis=1)[:2, 2:] == 0).all()
-    assert (np.diff(out, axis=1)[:2, :2] != 0).all()
-    assert (np.diff(out, axis=1)[2:, 1:] != 0).all()
-    assert (np.diff(out, axis=1)[2:, :1] == 0).all()
+    assert np.all(np.diff(out, axis=1)[:2, 2:] == 0)
+    assert np.all(np.diff(out, axis=1)[:2, :2] != 0)
+    assert np.all(np.diff(out, axis=1)[2:, 1:] != 0)
+    assert np.all(np.diff(out, axis=1)[2:, :1] == 0)
 
 
 

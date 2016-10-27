@@ -1,5 +1,5 @@
 language: python
-sudo: required
+sudo: false
 dist: trusty
 
 python:
@@ -23,15 +23,8 @@ addons:
       - gfortran
 
 install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b -p $HOME/miniconda
-  - export PATH=$HOME/miniconda/bin:$PATH
-  - conda update --yes conda
-  - travis_retry conda install --yes python=$TRAVIS_PYTHON_VERSION
-  - travis_retry conda install --yes pip numpy scipy six pandas nomkl
-  - travis_retry conda install --yes theano scikit-learn nose matplotlib
-  - travis_retry pip install nose-parameterized
+  #dependeicies via pip
+  - travis_retry pip install scipy six pandas scikit-learn nose nose-parameterized matplotlib
   - pip install -r requirements.txt
   # intalling AgentNet
   - pip install .
