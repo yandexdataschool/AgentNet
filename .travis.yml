@@ -24,10 +24,10 @@ addons:
 
 install:
   #dependeicies via pip
-  - travis_retry pip install six cython numpy scipy
-  - travis_retry pip install pandas scikit-learn matplotlib
-  - travis_retry pip install nose nose-parameterized
-  - pip install -r requirements.txt
+  - travis_wait pip install six cython numpy
+  - travis_wait pip install pandas scikit-learn matplotlib
+  - travis_wait pip install nose nose-parameterized
+  - travis_wait pip install -r requirements.txt
   # intalling AgentNet
   - pip install .
   # installing Gym
