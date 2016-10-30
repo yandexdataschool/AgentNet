@@ -30,8 +30,12 @@ from ..utils.layers import DictLayer, get_layer_dtype
 
 class Recurrence(DictLayer):
     """
-    A generic recurrent unit that works with a custom graph.
+    A generic recurrent layer that works with a custom graph.
     Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
+    Conversely, it can be used as any other lasagne layer, even as a part of another recurrence.
+
+    Parameters
+    --------
 
     :param input_nonsequences: inputs that are same at each time tick.
         Technically it's a dictionary that maps InputLayer from one-step graph
@@ -81,8 +85,7 @@ class Recurrence(DictLayer):
         as inputs or prev states and all inputs/prev states are actually needed to compute next states/outputs.
         NOT the same as theano.scan(strict=True).
 
-    Outputs:
-        returns a tuple of sequences with shape [batch,tick, ...]
+    :returns: a tuple of sequences with shape [batch,tick, ...]
             - state variable sequences in order of dict.items()
             - tracked_outputs in given order
 
@@ -96,7 +99,28 @@ class Recurrence(DictLayer):
 
         state_seq_layer, ... , output1_seq_layer, output2_seq_layer, ... = Recurrence(...)
 
+    Examples
+    --------
 
+    >>> import numpy as np
+    >>> import theano
+    >>> import agentnet
+    >>> from agentnet.memory import RNNCell
+    >>> from lasagne.layers import *
+    >>> sequence = InputLayer((None,None,3),name='input sequence')
+    >>> #one step
+    >>> inp = InputLayer((None,3))
+    >>> prev_rnn = InputLayer((None,10))
+    >>> rnn = RNNCell(prev_rnn,inp,name='rnn')
+    >>> #recurrence roll of the one-step graph above.
+    >>> rec = agentnet.Recurrence(input_sequences={inp:sequence},
+    ...                          state_variables={rnn:prev_rnn},
+    ...                          unroll_scan=False)
+    >>> weights = get_all_params(rec) #get weights
+    >>> print(weights)
+    >>> rnn_states = rec[rnn] #get rnn state sequence
+    >>> run = theano.function([sequence.input_var], get_output(rnn_states)) #compile applier function as any lasagne network
+    >>> run(np.random.randn(5,25,3)) #demo run
     """
 
     def __init__(self,
@@ -108,6 +132,7 @@ class Recurrence(DictLayer):
                  unroll_scan=True,
                  n_steps=None,
                  batch_size=None,
+                 mask_input=None,
                  delayed_states=tuple(),
                  verify_graph=True,
                  name="YetAnotherRecurrence",
@@ -115,17 +140,38 @@ class Recurrence(DictLayer):
         self.n_steps = n_steps
         self.unroll_scan = unroll_scan
         self.updates=theano.OrderedUpdates()
+        self.mask_input = mask_input
+        assert mask_input is None or isinstance(self.mask_input,lasagne.layers.Layer)
 
         self.input_nonsequences = check_ordered_dict(input_nonsequences)
         self.input_sequences = check_ordered_dict(input_sequences)
 
-
         if is_theano_object(self.n_steps) and self.unroll_scan:
             raise ValueError("Symbolic n_steps is only available when unroll_scan = False.")
 
+        #check consistency of sequences (if any), possibly infer n_steps
+        for seq_layer in self.input_sequences.values():
+            inp_seq_shape = seq_layer.output_shape
+            if len(inp_seq_shape) <2:
+                raise ValueError("All input sequences must have at least 2 dimensions: (batch, tick, *whatevet)")
+            inp_seq_length = inp_seq_shape[1]
+
+            if inp_seq_length is None:
+                continue
+            elif self.n_steps is None:  # infer n_ticks
+                self.n_steps = inp_seq_length
+            else:   # verify n_steps
+                if inp_seq_length != self.n_steps:
+                    warn("number of steps is inconsistent. Either n_steps != input_sequence.output_shape[1] or "
+                         "several input sequences have different lengths. "
+                         "The Recurrence will roll for {} steps".format(self.n_steps))
+
+
         if self.n_steps is None and (self.unroll_scan or len(self.input_sequences) ==0):
-            raise ValueError("Please provide n_steps param. Inferring n_steps is only possible when scan "
-                             "is not unrolled and there is at least one sequence in input_sequences")
+            raise ValueError("Please provide n_steps param or meet conditions of inferring it. "
+                             "Inferring n_steps is only possible when there is at least one sequence in input_sequences and"
+                             "when scan is not unrolled (unroll_scan=False) OR some input_sequences have constant time axis "
+                             "(output_shape[1] is not None). n_steps can be symbolic if unroll_scan=False.")
 
 
         self.tracked_outputs = check_list(tracked_outputs)
@@ -161,9 +207,28 @@ class Recurrence(DictLayer):
                                self.input_nonsequences.values(),
                                self.input_sequences.values()))
 
-        # if we have no inputs or initialisations, make sure batch_size is specified
+        if self.mask_input is not None:
+            incomings = [self.mask_input]+incomings
+
+        #try to infer batch_size
+        rec_inputs = list(chain(self.state_init.keys(),
+                               self.input_nonsequences.keys(),
+                               self.input_sequences.keys(),
+                               self.state_variables.values(),))
+        for layer in incomings+rec_inputs:
+            layer_bsize = layer.output_shape[0]
+            if layer_bsize is not None:
+                batch_size = batch_size or layer_bsize
+                if batch_size != layer_bsize:
+                    warn("Batch size is inconsistent within recurrence. Either batch_size doesn't match output_shape[0]"
+                         "of some of the layers OR several incoming or internal layers have different values for "
+                         "output_shape[0] (excluding None")
+
+        # if we have no inputs or initialisations, make sure batch_size is specified or infered from layers
         if len(incomings) == 0:
-            assert batch_size is not None
+            if batch_size is None:
+                raise ValueError("Please specify batch size (int/symbolic). if no inputs (seq/nonseq) are used,"
+                                 "agentnet can't infer the batch size. ")
         self.batch_size = batch_size
         
         
@@ -208,24 +273,24 @@ class Recurrence(DictLayer):
                         message = "One of your network dependencies ({layer_name}) isn't mentioned in Recurrence inputs"
                         raise ValueError(message.format(layer_name=layer.name))
 
-        # verifying shapes (assertions)
-        nonseq_pairs = list(chain(self.state_variables.items(),
-                                  self.state_init.items(),
-                                  self.input_nonsequences.items()))
+            # verifying shapes (assertions)
+            nonseq_pairs = list(chain(self.state_variables.items(),
+                                      self.state_init.items(),
+                                      self.input_nonsequences.items()))
 
-        for layer_out, layer_in in nonseq_pairs:
-            assert tuple(layer_in.output_shape) == tuple(layer_out.output_shape)
+            for layer_out, layer_in in nonseq_pairs:
+                assert tuple(layer_in.output_shape) == tuple(layer_out.output_shape)
 
-        for seq_onestep, seq_input in list(self.input_sequences.items()):
-            seq_shape = tuple(seq_input.output_shape)
-            step_shape = seq_shape[:1] + seq_shape[2:]
-            assert tuple(seq_onestep.output_shape) == step_shape
+            for seq_onestep, seq_input in list(self.input_sequences.items()):
+                seq_shape = tuple(seq_input.output_shape)
+                step_shape = seq_shape[:1] + seq_shape[2:]
+                assert tuple(seq_onestep.output_shape) == step_shape
 
-            seq_len = seq_shape[1]
-            assert seq_len is None or n_steps is None or seq_len >= n_steps
-            if seq_len is None:
-                warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
-                     "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps or "<unspecified>"))
+                seq_len = seq_shape[1]
+                assert seq_len is None or n_steps is None or seq_len >= n_steps
+                if seq_len is None:
+                    warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
+                         "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps or "<unspecified>"))
 
     def get_sequence_layers(self):
         """
@@ -337,7 +402,7 @@ class Recurrence(DictLayer):
                     raise ValueError(
                         "Currently AgentNet only supports non-unrolled scan if there is no lower-level"
                         "scan with automatic updates. In other words, if you are playing with hierarchical MDP, "
-                        " all recurrences must fall into four categories:\n"
+                        " all recurrences must fall into three categories:\n"
                         " - recurrence with unroll_scan - works anywhere\n"
                         " - recurrence with theano.scan - on the bottom level\n"
                         " - recurrence with theano.scan - if all lower levels are unrolled OR have no random state updates\n"
@@ -370,7 +435,21 @@ class Recurrence(DictLayer):
             [state_sequences] + [output sequences] - a list of all states and all outputs sequences
             Shape of each such sequence is [batch, tick, shape_of_one_state_or_output...]
         """
-        # set batch size
+        #aliases
+        n_states = len(self.state_variables)
+        n_state_inits = len(self.state_init)
+        n_input_nonseq = len(self.input_nonsequences)
+        n_input_seq = len(self.input_sequences)
+        n_outputs = len(self.tracked_outputs)
+
+        #slice inputs
+
+        if self.mask_input is not None:
+            mask,inputs = inputs[0],inputs[1:]
+
+        initial_states, nonsequences, sequences = unpack_list(inputs, [n_state_inits, n_input_nonseq, n_input_seq])
+
+        # infer batch size
         if self.batch_size is not None:
             batch_size = self.batch_size
         elif len(inputs) != 0:
@@ -378,13 +457,6 @@ class Recurrence(DictLayer):
         else:
             raise ValueError("Need to set batch_size explicitly for recurrence")
 
-        n_states = len(self.state_variables)
-        n_state_inits = len(self.state_init)
-        n_input_nonseq = len(self.input_nonsequences)
-        n_input_seq = len(self.input_sequences)
-        n_outputs = len(self.tracked_outputs)
-
-        initial_states, nonsequences, sequences = unpack_list(inputs, [n_state_inits, n_input_nonseq, n_input_seq])
 
         # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
         sequences = [seq.swapaxes(1, 0) for seq in sequences]
@@ -432,9 +504,47 @@ class Recurrence(DictLayer):
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
             return new_states + new_outputs
 
+        ###handling mask_input###
+
+        #a step function that utilizes a mask
+        def step_masked(mask_t,*args):
+            #unpack arrays
+            sequence_slices, prev_states, prev_outputs, nonsequences = \
+                unpack_list(args, [n_input_seq, n_states, n_outputs, n_input_nonseq])
+
+            #get regular step
+            new_states_and_outputs = step(*args)
+            old_states_and_outputs = prev_states+prev_outputs
+
+            #if mask_t, return new ones, else return old ones
+            def apply_mask(mask_t,new_state,old_state):
+                assert new_state.ndim == old_state.ndim
+                ndim = new_state.ndim
+                #append dims to mask
+                pattern = list(range(mask_t.ndim)) + ['x'] * (ndim - mask_t.ndim)
+
+                return T.switch(mask_t.dimshuffle(pattern),
+                                new_state, old_state)
+
+
+            next_states_and_outputs = [apply_mask(mask_t,new_state,old_state)
+                                       for new_state,old_state in zip(new_states_and_outputs,
+                                                                      old_states_and_outputs)]
+
+            return next_states_and_outputs
+
+
+        if self.mask_input is not None:
+            sequences = [mask.swapaxes(1, 0)]+sequences
+            step_function = step_masked
+        else:
+            step_function = step
+
+
+        #scan itself
         if self.unroll_scan:
             # call scan itself
-            history = unroll_scan(step,
+            history = unroll_scan(step_function,
                                   sequences=sequences,
                                   outputs_info=outputs_info,
                                   non_sequences=nonsequences,
@@ -442,7 +552,7 @@ class Recurrence(DictLayer):
                                   )
             self.updates=OrderedDict()
         else:
-            history,updates = theano.scan(step,
+            history,updates = theano.scan(step_function,
                                   sequences=sequences,
                                   outputs_info=outputs_info,
                                   non_sequences=nonsequences,
@@ -457,7 +567,7 @@ class Recurrence(DictLayer):
 
 
         # reordering from [time,batch,...] to [batch,time,...]
-        history = [(var.swapaxes(1, 0) if var.ndim > 1 else var) for var in history]
+        history = [(var.swapaxes(1, 0) if var.ndim > 1 else var) for var in check_list(history)]
 
         state_seqs, output_seqs = unpack_list(history, [n_states, n_outputs])
 

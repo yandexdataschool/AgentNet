@@ -70,6 +70,7 @@ class MDPAgent(object):
     @property
     @deprecated(".agent_states")
     def state_variables(self):
+        raise ValueError("Please use .agent_states instead")
         return self.agent_states
 
 

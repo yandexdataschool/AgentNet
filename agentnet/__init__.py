@@ -10,6 +10,7 @@ from . import objective
 from . import memory
 from . import resolver
 from . import utils
+from .agent import Agent,Recurrence
 
-__version__ = '0.9.0'
+__version__ = '0.9.1'
 __author__ = 'YandexDataSchool and contributors.'
