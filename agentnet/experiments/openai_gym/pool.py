@@ -10,7 +10,7 @@ from ...environment import SessionPoolEnvironment
 function = type(lambda:0)
 
 def GamePool(*args,**kwargs):
-    raise ValueError("Use EnvPool(agent,env_title,n_parallel_agents) instead")
+    raise ValueError("Deprecated. Use EnvPool(agent,env_title,n_parallel_agents) instead")
 
 # A whole lot of space invaders
 class EnvPool(object):

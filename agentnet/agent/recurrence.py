@@ -447,7 +447,7 @@ class Recurrence(DictLayer):
         if self.mask_input is not None:
             mask,inputs = inputs[0],inputs[1:]
 
-        initial_states, nonsequences, sequences = unpack_list(inputs, [n_state_inits, n_input_nonseq, n_input_seq])
+        initial_states_provided, nonsequences, sequences = unpack_list(inputs, [n_state_inits, n_input_nonseq, n_input_seq])
 
         # infer batch size
         if self.batch_size is not None:
@@ -461,21 +461,29 @@ class Recurrence(DictLayer):
         # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
         sequences = [seq.swapaxes(1, 0) for seq in sequences]
 
-        # create outputs_info for scan
-        initial_states = OrderedDict(list(zip(self.state_init, initial_states)))
+        #here we create outputs_info for scan
+        ## initial states that are given as input
+        initial_states_provided = OrderedDict(list(zip(self.state_init, initial_states_provided)))
 
-        def get_initial_state(state_out_layer):
+        def get_initial_state(state_out_layer,batch_size=batch_size):
             """Pick dedicated initial state or create zeros of appropriate shape and dtype"""
             # if we have a dedicated init, use it
-            if state_out_layer in initial_states:
-                initial_state = initial_states[state_out_layer]
+            if state_out_layer in initial_states_provided:
+                initial_state = initial_states_provided[state_out_layer]
             # otherwise initialize with zeros
             else:
+                #constant batch_size==1 causes T.zeros to get broadcastable, which results in an error
+                #TODO(jheuristic) investigate a better way to do so.
+                if (type(batch_size) is int) and (batch_size == 1):
+                    batch_size = theano.shared(batch_size)
+
                 initial_state = T.zeros((batch_size,) + tuple(state_out_layer.output_shape[1:]),
-                                        dtype=get_layer_dtype(state_out_layer))
+                                    dtype=get_layer_dtype(state_out_layer))
+
             return initial_state
 
-        initial_state_variables = list(map(get_initial_state, self.state_variables))
+        initial_states = list(map(get_initial_state, self.state_variables))
+
 
         #dummy values for initial outputs. They have no role in computation, but if nonsequences are present,
         # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
@@ -484,7 +492,7 @@ class Recurrence(DictLayer):
         initial_output_fillers = list(map(get_initial_state, self.tracked_outputs))
         
         
-        outputs_info = initial_state_variables + initial_output_fillers 
+        outputs_info = initial_states + initial_output_fillers
         
         # recurrent step function
         def step(*args):
@@ -576,7 +584,7 @@ class Recurrence(DictLayer):
         for i in range(len(state_seqs)):
             if list(self.state_variables.keys())[i] in self.delayed_states:
                 state_seq = state_seqs[i]
-                state_init = initial_state_variables[i]
+                state_init = initial_states[i]
                 state_seq = T.concatenate([insert_dim(state_init, 1), state_seq[:, :-1]], axis=1)
                 state_seqs[i] = state_seq
 
