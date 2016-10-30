@@ -1,11 +1,11 @@
 # AgentNet
 
 A lightweight library to build and train deep reinforcement learning and custom recurrent networks using Theano+Lasagne
-
 [![Build Status](https://travis-ci.org/yandexdataschool/AgentNet.svg?branch=master)](https://travis-ci.org/yandexdataschool/AgentNet)
 [![Docs badge](https://readthedocs.org/projects/agentnet/badge)](http://agentnet.readthedocs.org/en/latest/)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
+Press [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dqn_binder) for instant dive-in.
 
 ![img](https://cs.hse.ru/mirror/pubs/share/thumb/150729584:c570x570+185+148:r150x150!)
 
@@ -39,6 +39,10 @@ As a side-quest, we also provide a boilerplate to custom long-term memory networ
 
 [Detailed installation guide](https://github.com/yandexdataschool/AgentNet/wiki/Installing-AgentNet)
 
+### Try without installing
+* [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dive_to_dqn)
+* If you use other similar tools, see [Repo with a dockerfile](https://github.com/yandexdataschool/dive_to_dqn)
+
 ### Quick install
 * install [bleeding edge lasagne](http://lasagne.readthedocs.io/en/latest/user/installation.html#bleeding-edge-version)
 * [sudo] pip install --upgrade https://github.com/yandexdataschool/AgentNet/archive/master.zip
@@ -67,6 +71,12 @@ On other linux/unix systems:
 
 # Documentation and tutorials
 
+A quick dive-in can be found here:
+* Click [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dqn_binder)
+* classwork.ipynb = your tutorial
+* classwork_solution.ipynb = a fully implemented version with simple CNN for reference
+
+
 (incomplete) Documentation pages can be found [here](http://agentnet.readthedocs.io/en/latest/).
 
 AgentNet also has full embedded documentation, so calling `help(some_function_or_object)` or 
@@ -83,7 +93,7 @@ A standard pipeline of AgentNet experiment is shown in following examples:
 
 
 
-# Demos
+# Advanced examples
 
 ##### If you wish to get acquainted with the current library state, view some of the ./examples
 * [Playing Atari with Convolutional NN via OpenAI Gym](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Playing%20Atari%20with%20Deep%20Reinforcement%20Learning%20%28OpenAI%20Gym%29.ipynb)
@@ -104,6 +114,4 @@ A standard pipeline of AgentNet experiment is shown in following examples:
 
 AgentNet is under active construction, so expect things to change.
 If you wish to join the development, we'd be happy to accept your help. 
-
-
 
