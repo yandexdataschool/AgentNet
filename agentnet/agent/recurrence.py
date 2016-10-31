@@ -153,7 +153,7 @@ class Recurrence(DictLayer):
         for seq_layer in self.input_sequences.values():
             inp_seq_shape = seq_layer.output_shape
             if len(inp_seq_shape) <2:
-                raise ValueError("All input sequences must have at least 2 dimensions: (batch, tick, *whatevet)")
+                raise ValueError("All input sequences must have at least 2 dimensions: (batch, tick, *whatever)")
             inp_seq_length = inp_seq_shape[1]
 
             if inp_seq_length is None:
@@ -186,6 +186,7 @@ class Recurrence(DictLayer):
                 Current order is: {state_variables}
                 You may find OrderedDict in standard collections module: from collections import OrderedDict
                 """.format(state_variables=list(self.state_variables.keys())))
+
 
         self.delayed_states = delayed_states
 
@@ -265,6 +266,7 @@ class Recurrence(DictLayer):
 
             # all new_state+output dependencies (input layers) lie inside one-step recurrence
             all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
+
             all_inputs = set(all_inputs)
 
             for layer in lasagne.layers.get_all_layers(all_outputs):
@@ -577,6 +579,8 @@ class Recurrence(DictLayer):
         # reordering from [time,batch,...] to [batch,time,...]
         history = [(var.swapaxes(1, 0) if var.ndim > 1 else var) for var in check_list(history)]
 
+        assert len(history) == n_states+n_outputs
+
         state_seqs, output_seqs = unpack_list(history, [n_states, n_outputs])
 
         # handle delayed_states
@@ -588,5 +592,11 @@ class Recurrence(DictLayer):
                 state_seq = T.concatenate([insert_dim(state_init, 1), state_seq[:, :-1]], axis=1)
                 state_seqs[i] = state_seq
 
-        return OrderedDict(zip(self.keys(),state_seqs + output_seqs))
+
+        #keys corresponding to output sequences. Note that we do not use self.keys() to correctly
+        # handle cases where some variable is present in both state_variables and tracked_outputs
+        output_keys = list(self.state_variables.keys()) + list(self.tracked_outputs)
+        output_values = state_seqs + output_seqs
+        assert len(output_keys) == len(output_values)
+        return OrderedDict(zip(output_keys,output_values))
 
