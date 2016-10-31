@@ -10,12 +10,11 @@ import lasagne
 from lasagne.layers import InputLayer, DimshuffleLayer
 from agentnet.memory import WindowAugmentation
 from agentnet.resolver import EpsilonGreedyResolver
-from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer
+from lasagne.layers import DenseLayer, ExpressionLayer
 from agentnet.learning import qlearning
 import theano
-from agentnet.display import Metrics
 from lasagne.regularization import regularize_network_params, l2
-from agentnet.experiments.openai_gym.pool import GamePool
+from agentnet.experiments.openai_gym.pool import EnvPool
 from agentnet.agent import Agent
 from agentnet.environment import SessionPoolEnvironment
 
@@ -90,29 +89,11 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
     # Since it's a single lasagne network, one can get it's weights, output, etc
     weights = lasagne.layers.get_all_params(resolver, trainable=True)
 
-    # Agent step function
-    print('compiling react')
-    applier_fun = agent.get_react_function()
-
-    # a nice pythonic interface
-    def step(observation, prev_memories='zeros', batch_size=n_parallel_games):
-        """ returns actions and new states given observation and prev state
-        Prev state in default setup should be [prev window,]"""
-        # default to zeros
-        if prev_memories == 'zeros':
-            prev_memories = [np.zeros((batch_size,) + tuple(mem.output_shape[1:]),
-                                      dtype='float32')
-                             for mem in agent.agent_states]
-        res = applier_fun(np.array(observation), *prev_memories)
-        action = res[0]
-        memories = res[1:]
-        return action, memories
-
     # # Create and manage a pool of atari sessions to play with
 
-    pool = GamePool(game_title, n_parallel_games)
+    pool = EnvPool(agent,game_title, n_parallel_games)
 
-    observation_log, action_log, reward_log, _, _, _ = pool.interact(step, 50)
+    observation_log, action_log, reward_log, _, _, _ = pool.interact(50)
 
     print(np.array(action_names)[np.array(action_log)[:3, :5]])
 
@@ -129,7 +110,7 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
         preceding_memory_states = list(pool.prev_memory_states)
 
         # get interaction sessions
-        observation_tensor, action_tensor, reward_tensor, _, is_alive_tensor, _ = pool.interact(step, n_steps=n_steps)
+        observation_tensor, action_tensor, reward_tensor, _, is_alive_tensor, _ = pool.interact(n_steps=n_steps)
 
         # load them into experience replay environment
         env.load_sessions(observation_tensor, action_tensor, reward_tensor, is_alive_tensor, preceding_memory_states)

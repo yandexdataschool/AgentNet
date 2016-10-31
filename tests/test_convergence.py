@@ -69,8 +69,7 @@ def test_reasoning_value_based(n_parallel_games=25,
     
     # Since it's a lasagne network, one can get it's weights, output, etc
     weights = lasagne.layers.get_all_params(resolver,trainable=True)
-    weights
-    
+
     
     # produce interaction sequences of length <= 10
     (state_seq,), observation_seq, agent_state, action_seq, qvalues_seq = agent.get_sessions(
