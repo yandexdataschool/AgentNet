@@ -1,6 +1,7 @@
 """
 This test tries to make sure that LSTM and GRU implementations can indeed be easily transferred between lasagne and agentnet.
 """
+from __future__ import print_function
 from lasagne.layers import InputLayer, GRULayer, LSTMLayer, get_output, get_all_params
 from agentnet.memory import LSTMCell, GRUCell
 from agentnet.agent import Recurrence
@@ -51,7 +52,7 @@ def test_memory_cells(batch_size=3, seq_len=50, input_dim=8, n_hidden=16):
     new_params = sorted(get_all_params(s_lstm_hid, trainable=True), key=lambda p: p.name)
 
     for old, new in zip(old_params, new_params):
-        print old.name, '<-', new.name
+        print (old.name, '<-', new.name)
         assert tuple(old.shape.eval()) == tuple(new.shape.eval())
         old.set_value(new.get_value())
 
@@ -60,7 +61,7 @@ def test_memory_cells(batch_size=3, seq_len=50, input_dim=8, n_hidden=16):
     new_params = sorted(get_all_params(s_gru, trainable=True), key=lambda p: p.name)
 
     for old, new in zip(old_params, new_params):
-        print old.name, '<-', new.name
+        print (old.name, '<-', new.name)
         assert tuple(old.shape.eval()) == tuple(new.shape.eval())
         old.set_value(new.get_value())
 
