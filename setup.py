@@ -23,7 +23,7 @@ setup(
     long_description=long_description,
 
     # Author details
-    author_email="justheuristic@gmail.com",
+    author_email="jheuristic@yandex-tead.ru",
     url="https://github.com/yandexdataschool/AgentNet",
 
     # Choose your license
@@ -44,6 +44,7 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 2.7 ',
         'Programming Language :: Python :: 3.4 ',
+        'Programming Language :: Python :: 3.5 ',
     ],
 
     # What does your project relate to?
@@ -55,7 +56,6 @@ setup(
         'six',
         'lasagne',
         'theano >= 0.8.2',
-        'pandas>=0.14',
         'numpy>=1.9',
         #'matplotlib >= 1.4'
     ],
