@@ -1,5 +1,5 @@
 language: python
-sudo: false
+sudo: required #temporary
 dist: trusty
 
 python:
@@ -11,9 +11,9 @@ addons:
     sources:
       - george-edison55-precise-backports
     packages:
-      - libblas-dev
-      - liblapack-dev
       - libopenblas-dev
+      - liblapack-dev
+      - gfortran
       - cmake
       - cmake-data
       - swig
@@ -21,17 +21,12 @@ addons:
       - libboost-all-dev
       - libjpeg-dev
       - zlib1g-dev
-      - gfortran
       - python-dev
-      - python-numpy
-      - python-scipy
 
 install:
   #dependeicies via pip
-  - travis_wait pip install six cython
-  - travis_wait pip install pandas scikit-learn matplotlib
-  - travis_wait pip install nose nose-parameterized
   - travis_wait pip install -r requirements.txt
+  - travis_wait pip install nose nose-parameterized
   # intalling AgentNet
   - pip install .
   # installing Gym
