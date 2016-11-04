@@ -22,11 +22,13 @@ addons:
       - libjpeg-dev
       - zlib1g-dev
       - gfortran
+      - python-dev
+      - python-numpy
+      - python-scipy
 
 install:
   #dependeicies via pip
-  - travis_wait pip install six cython numpy
-  - travis_wait pip install scipy
+  - travis_wait pip install six cython
   - travis_wait pip install pandas scikit-learn matplotlib
   - travis_wait pip install nose nose-parameterized
   - travis_wait pip install -r requirements.txt
