@@ -104,7 +104,7 @@ class EnvPool(object):
             self.prev_memory_states = new_memory_states
 
         if add_last_observation:
-            history_log.append((self.prev_observations,-1,0,self.prev_memory_states))
+            history_log.append((self.prev_observations,-1,0,self.prev_memory_states,1,None))
 
         # cast to numpy arrays
         observation_log, action_log, reward_log, memories_log, is_done_log, info_log = zip(*history_log)
@@ -130,8 +130,17 @@ class EnvPool(object):
 
 
     def update(self,n_steps=100,append=False,max_size=None,add_last_observation=True,
-               preprocess=lambda observations,actions,rewards,is_alive:(observations,actions,rewards,is_alive)):
+               preprocess=lambda observations,actions,rewards,is_alive,h0:(observations,actions,rewards,is_alive,h0)):
         """ a function that creates new sessions and ads them into the pool
+        :param n_steps: how many time steps in each session
+        :param append: if True, appends sessions to the pool and crops at max_size
+        :param max_size: if not None, substitutes default max_size (from __init__) for this update only
+        :param add_last_observation: see interact param add_last_observation
+        :param preprocess: a function that implements arbitrary processing of the sessions
+                            takes AND outputs (observation_tensor, action_tensor,reward_tensor,is_alive_tensor,preceding_memory_states)
+                            for param specs see .interact output format
+
+
         throwing the old ones away entirely for simplicity"""
 
         preceding_memory_states = list(self.prev_memory_states)
@@ -140,8 +149,8 @@ class EnvPool(object):
         observation_tensor, action_tensor, reward_tensor, _, is_alive_tensor, _ = self.interact(n_steps=n_steps,
                                                                                                 add_last_observation=add_last_observation)
 
-        observation_tensor, action_tensor, reward_tensor,is_alive_tensor = preprocess(observation_tensor, action_tensor,
-                                                                                      reward_tensor,is_alive_tensor)
+        observation_tensor, action_tensor, reward_tensor,is_alive_tensor,preceding_memory_states = \
+            preprocess(observation_tensor, action_tensor,reward_tensor,is_alive_tensor,preceding_memory_states)
 
         # load them into experience replay environment
         if not append:
