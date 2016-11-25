@@ -66,7 +66,7 @@ class EnvPool(object):
         :param n_steps: length of an interaction
         :param verbose: if True, prints small debug message whenever a game gets reloaded after end.
         :param add_last_observation: if True,appends the final state with
-                state=final_state,action=-1,reward=0,new_memory_states=prev_memory_states, effectively making n_steps+1 records
+                state=final_state,action=-1,reward=0,new_memory_states=prev_memory_states, effectively making n_steps-1 records
 
         :returns: observation_log,action_log,reward_log,[memory_logs],is_alive_log,info_log
         :rtype: a bunch of tensors [batch, tick, size...],
@@ -74,7 +74,7 @@ class EnvPool(object):
         """
         history_log = []
 
-        for i in range(n_steps):
+        for i in range(n_steps - int(add_last_observation)):
             res = self.agent_step(self.prev_observations, *self.prev_memory_states)
             actions, new_memory_states = res[0],res[1:]
 
@@ -106,8 +106,9 @@ class EnvPool(object):
         if add_last_observation:
             fake_actions = np.array([env.action_space.sample() for env in self.envs])
             fake_rewards = np.zeros(shape=len(self.envs))
-            is_fake_dead = np.zeros(shape=len(self.envs))
-            history_log.append((self.prev_observations,fake_actions,fake_rewards,self.prev_memory_states,is_fake_dead,None))
+            is_fake_dead = np.ones(shape=len(self.envs))
+            history_log.append((self.prev_observations,fake_actions,fake_rewards,self.prev_memory_states,
+                                is_fake_dead,[None]*len(self.envs)))
 
         # cast to numpy arrays
         observation_log, action_log, reward_log, memories_log, is_done_log, info_log = zip(*history_log)
