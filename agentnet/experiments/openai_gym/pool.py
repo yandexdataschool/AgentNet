@@ -56,23 +56,24 @@ class EnvPool(object):
 
 
 
-    def interact(self, n_steps=100, verbose=False):
+    def interact(self, n_steps=100, verbose=False, add_last_observation=True):
         """generate interaction sessions with ataries (openAI gym atari environments)
         Sessions will have length n_steps.
         Each time one of games is finished, it is immediately getting reset
 
 
-        params:
-            agent_step: a function(observations,memory_states) -> actions,new memory states for agent update
-            n_steps: length of an interaction
-            verbose: if True, prints small debug message whenever a game gets reloaded after end.
-        returns:
-            observation_log,action_log,reward_log,[memory_logs],is_alive_log,info_log
-            a bunch of tensors [batch, tick, size...]
+        :param agent_step: a function(observations,memory_states) -> actions,new memory states for agent update
+        :param n_steps: length of an interaction
+        :param verbose: if True, prints small debug message whenever a game gets reloaded after end.
+        :param add_last_observation: if True,appends the final state with
+                state=final_state,action=-1,reward=0,new_memory_states=prev_memory_states, effectively making n_steps+1 records
 
-            the only exception is info_log, which is a list of infos for [time][batch]
+        :returns: observation_log,action_log,reward_log,[memory_logs],is_alive_log,info_log
+        :rtype: a bunch of tensors [batch, tick, size...],
+                the only exception is info_log, which is a list of infos for [time][batch], None padded tick
         """
         history_log = []
+
         for i in range(n_steps):
             res = self.agent_step(self.prev_observations, *self.prev_memory_states)
             actions, new_memory_states = res[0],res[1:]
@@ -102,6 +103,9 @@ class EnvPool(object):
             self.prev_observations = new_observations
             self.prev_memory_states = new_memory_states
 
+        if add_last_observation:
+            history_log.append((self.prev_observations,-1,0,self.prev_memory_states))
+
         # cast to numpy arrays
         observation_log, action_log, reward_log, memories_log, is_done_log, info_log = zip(*history_log)
 
@@ -125,14 +129,19 @@ class EnvPool(object):
         return observation_log, action_log, reward_log, memories_log, is_alive_log, info_log
 
 
-    def update(self,n_steps=100,append=False,max_size=None):
+    def update(self,n_steps=100,append=False,max_size=None,add_last_observation=True,
+               preprocess=lambda observations,actions,rewards,is_alive:(observations,actions,rewards,is_alive)):
         """ a function that creates new sessions and ads them into the pool
         throwing the old ones away entirely for simplicity"""
 
         preceding_memory_states = list(self.prev_memory_states)
 
         # get interaction sessions
-        observation_tensor, action_tensor, reward_tensor, _, is_alive_tensor, _ = self.interact(n_steps=n_steps)
+        observation_tensor, action_tensor, reward_tensor, _, is_alive_tensor, _ = self.interact(n_steps=n_steps,
+                                                                                                add_last_observation=add_last_observation)
+
+        observation_tensor, action_tensor, reward_tensor,is_alive_tensor = preprocess(observation_tensor, action_tensor,
+                                                                                      reward_tensor,is_alive_tensor)
 
         # load them into experience replay environment
         if not append:
