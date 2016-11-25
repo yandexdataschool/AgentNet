@@ -106,7 +106,7 @@ class EnvPool(object):
         if add_last_observation:
             fake_actions = np.array([env.action_space.sample() for env in self.envs])
             fake_rewards = np.zeros(shape=len(self.envs))
-            history_log.append((self.prev_observations,fake_actions,cur_rewards*0,self.prev_memory_states,1,None))
+            history_log.append((self.prev_observations,fake_actions,fake_rewards,self.prev_memory_states,1,None))
 
         # cast to numpy arrays
         observation_log, action_log, reward_log, memories_log, is_done_log, info_log = zip(*history_log)
