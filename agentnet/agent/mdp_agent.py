@@ -474,13 +474,15 @@ class MDPAgent(object):
 
         return new_actions, new_states, new_outputs
 
-    def get_react_function(self):
+    def get_react_function(self,output_flags={'deterministic':True},
+                           function_flags={'allow_input_downcast':True}):
         """
         compiles and returns a function that performs one step of agent network
 
         :returns: a theano function.
             The returned function takes all observation inputs, followed by all agent memories.
             It's outputs are all actions, followed by all new agent memories
+            By default, the function will have allow_input_downcast=True, you can override it in function parameters
         :rtype: theano.function
         
         
@@ -504,7 +506,7 @@ class MDPAgent(object):
         # one step function
         res = self.get_agent_reaction(applier_memories,
                                       applier_observations,
-                                      deterministic=True  # disable dropout here. Only enable in experience replay
+                                      **output_flags  # disable dropout here. Only enable in experience replay
                                       )
 
         # unpack
@@ -512,7 +514,8 @@ class MDPAgent(object):
 
         # compile
         applier_fun = theano.function(applier_observations + list(applier_memories.values()),
-                                      applier_actions + applier_new_states)
+                                      applier_actions + applier_new_states,
+                                      **function_flags)
 
         # return
         return applier_fun
