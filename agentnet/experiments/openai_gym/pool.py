@@ -14,7 +14,8 @@ def GamePool(*args,**kwargs):
 
 # A whole lot of space invaders
 class EnvPool(object):
-    def __init__(self, agent, make_env=lambda:gym.make("SpaceInvaders-v0"), n_games=1, max_size=None):
+    def __init__(self, agent, make_env=lambda:gym.make("SpaceInvaders-v0"), n_games=1, max_size=None,
+                 preprocess_observation = lambda obs:obs):
         """
         A pool that stores several
            - game states (gym environment)
@@ -35,9 +36,11 @@ class EnvPool(object):
         #create atari games
         self.make_env = make_env
         self.envs = [self.make_env() for _ in range(n_games)]
+        self.preprocess_observation = preprocess_observation
+
 
         #initial observations
-        self.prev_observations = [make_env.reset() for make_env in self.envs]
+        self.prev_observations = [self.preprocess_observation(make_env.reset()) for make_env in self.envs]
 
         #agent memory variables (if you use recurrent networks
         self.prev_memory_states = [np.zeros((n_games,)+tuple(mem.output_shape[1:]),
@@ -85,7 +88,7 @@ class EnvPool(object):
                     actions)
                     )
 
-            new_observations = np.array(new_observations)
+            new_observations = np.array([self.preprocess_observation(obs) for obs in new_observations])
 
             for i in range(len(self.envs)):
                 if is_done[i]:
@@ -193,10 +196,11 @@ class EnvPool(object):
             total_reward = 0
             while True:
 
-                res = self.agent_step(observation[None,...], *prev_memories)
+                res = self.agent_step(self.preprocess_observation(observation)[None,...], *prev_memories)
                 action, new_memories = res[0],res[1:]
 
                 observation, reward, done, info = env.step(action[0])
+
                 total_reward += reward
                 prev_memories = new_memories
 
