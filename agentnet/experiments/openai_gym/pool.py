@@ -92,7 +92,7 @@ class EnvPool(object):
 
             for i in range(len(self.envs)):
                 if is_done[i]:
-                    new_observations[i] = self.envs[i].reset()
+                    new_observations[i] = self.preprocess_observation(self.envs[i].reset())
 
                     for m_i in range(len(new_memory_states)):
                         new_memory_states[m_i][i] = 0
