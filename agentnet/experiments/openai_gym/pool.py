@@ -57,6 +57,8 @@ class EnvPool(object):
                                                         agent_memories=agent.agent_states)
         self.max_size = max_size
 
+        #whether particular session has just been terminated and needs restarting
+        self.just_ended = [False] * len(self.envs)
 
 
     def interact(self, n_steps=100, verbose=False, add_last_observation=True):
@@ -65,7 +67,6 @@ class EnvPool(object):
         Each time one of games is finished, it is immediately getting reset
 
 
-        :param agent_step: a function(observations,memory_states) -> actions,new memory states for agent update
         :param n_steps: length of an interaction
         :param verbose: if True, prints small debug message whenever a game gets reloaded after end.
         :param add_last_observation: if True,appends the final state with
@@ -75,33 +76,52 @@ class EnvPool(object):
         :rtype: a bunch of tensors [batch, tick, size...],
                 the only exception is info_log, which is a list of infos for [time][batch], None padded tick
         """
+
+
+        def env_step(i,action):
+            """environment reaction,
+            :returns: observation, reward, is_alive, info"""
+
+            if not self.just_ended[i]:
+                new_observation, cur_reward,is_done,info = self.envs[i].step(action)
+                if is_done:
+                    # game ends now, will finalize on next tick
+                    self.just_ended[i] = True
+                new_observation = self.preprocess_observation(new_observation)
+
+                return new_observation, cur_reward,True,info
+
+
+            else:
+                assert self.just_ended[i] == True
+
+                # reset environment, get new observation to be used on next tick
+                new_observation = self.preprocess_observation(self.envs[i].reset())
+
+                #reset memory for new episode
+                for m_i in range(len(new_memory_states)):
+                    new_memory_states[m_i][i] = 0
+
+                if verbose:
+                    print("env %i reloaded" % i)
+
+                self.just_ended[i] = False
+
+                return new_observation,0,False,{'end':True}
+
+
         history_log = []
 
         for i in range(n_steps - int(add_last_observation)):
             res = self.agent_step(self.prev_observations, *self.prev_memory_states)
             actions, new_memory_states = res[0],res[1:]
 
-            new_observations, cur_rewards, is_done, infos = \
-                zip(*map(
-                    lambda env, action: env.step(action),
-                    self.envs,
-                    actions)
-                    )
+            new_observations, cur_rewards, is_alive, infos = \
+                zip(*map(env_step,range(len(self.envs)),actions))
 
-            new_observations = np.array([self.preprocess_observation(obs) for obs in new_observations])
 
-            for i in range(len(self.envs)):
-                if is_done[i]:
-                    new_observations[i] = self.preprocess_observation(self.envs[i].reset())
-
-                    for m_i in range(len(new_memory_states)):
-                        new_memory_states[m_i][i] = 0
-
-                    if verbose:
-                        print("env %i reloaded" % i)
-
-            # append observation -> action -> reward tuple
-            history_log.append((self.prev_observations, actions, cur_rewards, new_memory_states, is_done, infos))
+            # append data tuple for this tick. Is alive is always True
+            history_log.append((self.prev_observations, actions, cur_rewards, new_memory_states, is_alive, infos))
 
             self.prev_observations = new_observations
             self.prev_memory_states = new_memory_states
@@ -114,7 +134,7 @@ class EnvPool(object):
                                 is_fake_dead,[None]*len(self.envs)))
 
         # cast to numpy arrays
-        observation_log, action_log, reward_log, memories_log, is_done_log, info_log = zip(*history_log)
+        observation_log, action_log, reward_log, memories_log, is_alive_log, info_log = zip(*history_log)
 
         # tensor dimensions
         # [batch_i, time_i, observation_size...]
@@ -130,7 +150,7 @@ class EnvPool(object):
         reward_log = np.array(reward_log).swapaxes(0, 1)
 
         # [batch_i, time_i]
-        is_alive_log = 1 - np.array(is_done_log, dtype='int8').swapaxes(0, 1)
+        is_alive_log = np.array(is_alive_log).swapaxes(0, 1).astype('uint8')
 
 
         return observation_log, action_log, reward_log, memories_log, is_alive_log, info_log

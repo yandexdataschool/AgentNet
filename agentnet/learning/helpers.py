@@ -176,11 +176,13 @@ def get_end_indicator(is_alive, force_end_at_t_max=False):
     Auxiliary function to transform session alive indicator into end action indicator
     If force_end_at_t_max is True, all sessions that didn't end by the end of recorded sessions
     are ended at the last recorded tick."""
+    is_alive = T.neq(is_alive,0)
+
     # session-ending action indicator: uint8[batch,tick]
     is_end = T.eq(is_alive[:, :-1] - is_alive[:, 1:], 1)
 
     if force_end_at_t_max:
-        session_ended_before = T.sum(is_end, axis=1, keepdims=True)
+        session_ended_before = T.neq(T.sum(is_end, axis=1, keepdims=True),0)
         is_end_at_tmax = 1 - T.gt(session_ended_before, 0)
     else:
         is_end_at_tmax = T.zeros((is_end.shape[0], 1), dtype=is_end.dtype)

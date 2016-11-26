@@ -67,7 +67,7 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                               force_qvalues_after_end=True,
                               qvalues_after_end="zeros",
                               consider_reference_constant=True,
-                              aggregation_function=lambda qv: T.max(qv, axis=2)):
+                              aggregation_function=lambda qv: T.max(qv, axis=-1)):
     """
     Returns squared error between predicted and reference Qvalues according to Q-learning algorithm
 
@@ -122,7 +122,7 @@ def get_elementwise_objective(Qvalues, actions, rewards,
         elwise_squared_error = squared_error(reference_Qvalues, action_Qvalues)
 
     else:
-        # we are given an is_alive matrix : uint8[batch,tick]
+        # we are given is_alive matrix : uint8[batch,tick]
 
         # if asked to force reference_Q[end_tick+1,a] = 0, do it
         # note: if agent is always alive, this is meaningless
