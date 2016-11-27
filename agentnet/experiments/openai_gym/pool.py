@@ -89,6 +89,7 @@ class EnvPool(object):
                     self.just_ended[i] = True
                 new_observation = self.preprocess_observation(new_observation)
 
+                #note: is_alive=True in any case because environment is still alive (last tick alive) in our notation
                 return new_observation, cur_reward,True,info
 
 
@@ -129,7 +130,7 @@ class EnvPool(object):
         if add_last_observation:
             fake_actions = np.array([env.action_space.sample() for env in self.envs])
             fake_rewards = np.zeros(shape=len(self.envs))
-            is_fake_dead = np.ones(shape=len(self.envs))
+            is_fake_dead = np.zeros(shape=len(self.envs))
             history_log.append((self.prev_observations,fake_actions,fake_rewards,self.prev_memory_states,
                                 is_fake_dead,[None]*len(self.envs)))
 

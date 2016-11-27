@@ -62,6 +62,10 @@ def get_elementwise_objective(Qvalues, actions, rewards,
     if Qvalues_target is None:
         Qvalues_target = Qvalues
 
+    assert Qvalues.ndim == Qvalues_target.ndim == 3
+    assert actions.ndim == rewards.ndim ==2
+    if is_alive != 'always': assert is_alive.ndim==2
+
     # get Qvalues of best actions (used every K steps for reference Q-value computation
     optimal_Qvalues_target = aggregation_function(Qvalues_target)
 

@@ -8,8 +8,7 @@ from lasagne.objectives import squared_error
 
 from .helpers import get_end_indicator, get_action_Qvalues
 from ..utils.grad import consider_constant
-
-
+import numpy as np
 def get_reference_Qvalues(Qvalues, actions, rewards,
                           gamma_or_gammas=0.95,
                           qvalues_after_end="zeros",
@@ -98,8 +97,13 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                     If Qvalues_target are provided, they are used for reference computation instead of original Qvalues
 
     """
+
     if Qvalues_target is None:
         Qvalues_target = Qvalues
+
+    assert Qvalues.ndim == Qvalues_target.ndim == 3
+    assert actions.ndim == rewards.ndim ==2
+    if is_alive != 'always': assert is_alive.ndim==2
 
     # get reference Q-values via Q-learning algorithm
     reference_Qvalues = get_reference_Qvalues(Qvalues_target, actions, rewards,

@@ -66,8 +66,17 @@ def get_elementwise_objective(policy,
 
     """
 
+    if state_values.ndim ==3:
+        state_values = state_values[:,:,0]
     if state_values_target is None:
         state_values_target = state_values
+    if state_values_target.ndim ==3:
+        state_values_target = state_values_target[:,:,0]
+
+    assert policy.ndim==3
+    assert state_values.ndim == state_values_target.ndim == 2
+    assert actions.ndim == rewards.ndim ==2
+    if is_alive != 'always': assert is_alive.ndim==2
 
     # get reference values via Q-learning algorithm
     reference_state_values = get_n_step_value_reference(state_values_target, rewards, is_alive,
@@ -121,7 +130,7 @@ def get_elementwise_objective(policy,
 
     observed_state_values = consider_constant(state_values) if consider_predicted_value_constant else state_values
 
-    policy_loss_elwise = - log_probas * (reference_state_values - observed_state_values)
+    policy_loss_elwise = - log_probas * (observed_state_values - reference_state_values)
 
     # critic loss
     V_err_elwise = squared_error(reference_state_values, state_values)

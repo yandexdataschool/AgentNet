@@ -90,6 +90,7 @@ def get_elementwise_objective_components(policy,
     if action_values == 'same':
         action_values = policy_values
 
+
     # get reference values via DPG algorithm
     reference_action_values = get_n_step_value_reference(action_values,
                                                          rewards,

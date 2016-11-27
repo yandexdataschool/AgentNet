@@ -98,7 +98,9 @@ def get_elementwise_objective(Qvalues,
     if Qvalues_target is None:
         Qvalues_target = Qvalues
 
-
+    assert Qvalues.ndim == Qvalues_target.ndim == 3
+    assert actions.ndim == rewards.ndim ==2
+    if is_alive != 'always': assert is_alive.ndim==2
 
     # get reference Qvalues via Q-learning algorithm
     reference_Qvalues = get_reference_Qvalues(Qvalues_target, actions, rewards,

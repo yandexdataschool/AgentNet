@@ -170,7 +170,6 @@ def get_action_Qvalues(Qvalues, actions):
     action_Qvalues_predicted = Qvalues[batch_i, time_i, actions]
     return action_Qvalues_predicted
 
-
 def get_end_indicator(is_alive, force_end_at_t_max=False):
     """
     Auxiliary function to transform session alive indicator into end action indicator
