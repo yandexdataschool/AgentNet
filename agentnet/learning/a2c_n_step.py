@@ -123,7 +123,7 @@ def get_elementwise_objective(policy,
     # idea:
     # log(p) = log(p) if p != 0 else log(p+min_proba)
     if min_proba != 0:
-        log_probas = T.switch(T.eq(action_probas,0),
+        log_probas = T.switch(T.lt(action_probas,min_proba),
                                 T.log(action_probas+min_proba),
                                 log_probas
                               )
