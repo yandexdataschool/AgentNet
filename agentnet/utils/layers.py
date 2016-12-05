@@ -51,9 +51,11 @@ def get_layer_dtype(layer, default=None):
 
 class DictLayer(MergeLayer):
     """
-    An abstract base class for Lasagne layer that returns several outputs.
-    Has to implement get_output_shape so that it contains a list/tuple of output shapes(tuples),
-    one for each output.
+    A base class for Lasagne layer that returns several outputs.
+
+    For a custom dictlayer you should implement get_output_for so that it returns a dict of {key:tensor_for_that_key}
+
+    By default it just outputs all the inputs IF their number matches, otherwise it raises an exception.
 
     In other words, if you return 'foo' and 'bar' of shapes (None, 25) and (None,15,5,7),
     self.get_output_shape must be { 'foo':(None,25), 'bar': (None,15,5,7)]
@@ -116,10 +118,15 @@ class DictLayer(MergeLayer):
         
         super(DictLayer,self).__init__(check_list(incomings),**kwargs)
                      
-    def get_output_for(self,**kwargs):
-        raise NotImplementedError("One must implement get_output_for logic for DictLayer")
-        
-    def get_output_shape_for(self, input_shape):
+    def get_output_for(self,inputs,**flags):
+        """By default returns a dict of {key:theano_tensor}
+        please override this method to implement layer functionality (if any)."""
+        if len(inputs) == len(self.output_keys):
+            return OrderedDict(zip(self.output_keys,inputs))
+        else:
+            raise NotImplementedError("One must implement get_output_for logic for DictLayer")
+
+    def get_output_shape_for(self, input_shape,**flags):
         """
         DictLayer's shape is a dictionary of shapes for each output (each value is a tuple)
         """

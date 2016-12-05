@@ -29,37 +29,37 @@ def get_n_step_value_reference(state_values,
     
     Works with both Q-values and state values, depending on aggregation_function
     
-    parameters:
-        state_values - float[batch,tick] predicted state values V(s) at given batch session and time tick
+    :param state_values: float[batch,tick] predicted state values V(s) at given batch session and time tick
         
-        rewards - float[batch,tick] rewards achieved by commiting actions at [batch,tick]
+    :param rewards: - float[batch,tick] rewards achieved by commiting actions at [batch,tick]
     
-        is_alive: whether the session is still active int/bool[batch_size,time]
+    :param is_alive: whether the session is still active int/bool[batch_size,time]
         
         
-        n_steps: if an integer is given, the references are computed in loops of 3 states.
+    :param n_steps: if an integer is given, the references are computed in loops of n_steps
+            Every n_steps'th step reference is set to  V = r + gamma * next V_predicted_
+            On other steps, reference is propagated V = r + gamma * next V reference
             Defaults to None: propagating rewards throughout the whole session.
-            If n_steps equals 1, this works exactly as Q-learning (though less efficient one)
+            Widely known as "lambda" in RL community (TD-lambda, Q-lambda) plus or minus one :)
+            If n_steps equals 1, this works exactly as regular TD (though a less efficient one)
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
         
-        gamma_or_gammas: delayed reward discount number, scalar or vector[batch_size]
-        
-        optimal_state_values: state values given optimal actions.
+    :param gamma_or_gammas: delayed reward discount number, scalar or vector[batch_size]
+
+    :param optimal_state_values: state values given optimal actions.
             - for Q-learning, it's max over Q-values
             - for state-value based methods (a2c, dpg), it's same as state_values (defaults to that)
         
         
-        optimal_state_values_after_end - symbolic expression for "next state values" for last tick used for reference only. 
+    :param optimal_state_values_after_end: - symbolic expression for "next state values" for last tick used for reference only.
                         Defaults at  T.zeros_like(values[:,0,None,:])
                         If you wish to simply ignore the last tick, 
                         use defaults and crop output's last tick ( qref[:,:-1] )
                         
-        dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
+    :param dependencies: everything else you need to evaluate first 3 parameters (only if strict==True)
         
-        strict: whether to evaluate values using strict theano scan or non-strict one
-    returns:
-        V reference [batch,action_at_tick] according n-step algorithms
-        
+    :param strict: whether to evaluate values using strict theano scan or non-strict one
+    :returns: V reference [batch,action_at_tick] according n-step algorithms ~ eligibility traces
             e.g. mentioned here http://arxiv.org/pdf/1602.01783.pdf as A3c and k-step Q-learning
 
     """

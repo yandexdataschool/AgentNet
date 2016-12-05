@@ -21,7 +21,7 @@ def get_elementwise_objective(Qvalues, actions, rewards,
                               consider_reference_constant=True,
                               aggregation_function=lambda qv: T.max(qv, axis=-1),
                               return_reference=False,
-                              scan_dependencies=[],
+                              scan_dependencies=(),
                               scan_strict=True):
     """
     Returns squared error between predicted and reference Q-values according to n-step Q-learning algorithm
