@@ -226,6 +226,7 @@ class MDPAgent(object):
         """
         return self.recurrence.get_automatic_updates(recurrent=recurrent)
 
+    ###auxilaries for as_recurrence methods
     @staticmethod
     def _check_layer(inner_graph_layer, value, sequence_length=-1, prefix="agent.linker_layer."):
         """
@@ -313,9 +314,9 @@ class MDPAgent(object):
         new_state_outputs, new_observation_outputs = env.as_layers(prev_env_states, self.action_layers)
 
         # add state changes to memory dict
-        all_state_pairs = list(chain(self.agent_states.items(),
-                                     zip(new_state_outputs, prev_env_states),
-                                     zip(new_observation_outputs, self.observation_layers)))
+        all_state_pairs = OrderedDict(chain(self.agent_states.items(),
+                                            zip(new_state_outputs, prev_env_states),
+                                            zip(new_observation_outputs, self.observation_layers)))
 
         # compose a dict of {state:initialization}
         state_init_pairs = OrderedDict(chain(
@@ -330,8 +331,8 @@ class MDPAgent(object):
 
         # create the recurrence
         recurrence = Recurrence(
-            state_variables=OrderedDict(all_state_pairs),
-            state_init=OrderedDict(state_init_pairs),
+            state_variables=all_state_pairs,
+            state_init=state_init_pairs,
             tracked_outputs=self.policy + self.action_layers,
             n_steps=session_length,
             batch_size=batch_size,
@@ -394,7 +395,7 @@ class MDPAgent(object):
         #handle action sequences
         action_sequences = OrderedDict(zip(self.observation_layers, check_list(env.actions)))
         for layer, sequence in action_sequences.items():
-            observation_sequences[layer] = self._check_layer(layer, sequence, sequence_length=session_length)
+            action_sequences[layer] = self._check_layer(layer, sequence, sequence_length=session_length)
 
         all_sequences = OrderedDict(chain(observation_sequences.items(),action_sequences.items()))
 
