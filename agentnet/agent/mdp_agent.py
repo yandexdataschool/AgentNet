@@ -227,10 +227,10 @@ class MDPAgent(object):
         return self.recurrence.get_automatic_updates(recurrent=recurrent)
 
     @staticmethod
-    def _check_layer(v, inner_graph_layer, sequence_length=-1, prefix="agent.linker_layer."):
+    def _check_layer(inner_graph_layer, value, sequence_length=-1, prefix="agent.linker_layer."):
         """
         auxilary function that makes sure v is a lasagne layer with shapes matching inner_graph_layer
-        :param v: - lasagne layer or theano tensor or whatever that needs to be a lasagne layer
+        :param value: - lasagne layer or theano tensor or whatever that needs to be a lasagne layer
         :param inner_graph_layer: a layer in agent's inner graph to be matched against v
         :param sequence_length: if None, assumes v is not a sequence of values for inner_graph_layer,
             if not None, assumes it to be a sequence of given sequence_length"""
@@ -238,18 +238,18 @@ class MDPAgent(object):
         if sequence_length != -1:
             shape = shape[:1] + (sequence_length,) + shape[1:]
 
-        if not isinstance(v, lasagne.layers.Layer):
-            assert v.ndim == len(shape)
+        if not isinstance(value, lasagne.layers.Layer):
+            assert value.ndim == len(shape)
             return InputLayer(shape,
                               name=prefix + (inner_graph_layer.name or ""),
-                              input_var=v)
+                              input_var=value)
         else:
             # v is lasagne.layers.Layer
-            assert tuple(v.output_shape)[1:] == shape[1:]
-            return v
+            assert tuple(value.output_shape)[1:] == shape[1:]
+            return value
 
     @staticmethod
-    def _check_init_pairs(layers, initial_values):
+    def _check_init_pairs(layers,initial_values):
         """convert whatever user sends into a list of pairs to an OrderedDict{layer:initializer layer}"""
         if initial_values == "zeros":
             return OrderedDict()
@@ -326,7 +326,7 @@ class MDPAgent(object):
 
         #convert state initializations to layers
         for layer, init in list(state_init_pairs.items()):
-            state_init_pairs[layer] = self._check_layer(init,layer)
+            state_init_pairs[layer] = self._check_layer(layer,init)
 
         # create the recurrence
         recurrence = Recurrence(
@@ -384,7 +384,7 @@ class MDPAgent(object):
         initial_hidden = self._check_init_pairs(list(self.agent_states.keys()),initial_hidden)
         #convert state initializations to layers
         for layer, init in list(initial_hidden.items()):
-            initial_hidden[layer] = self._check_layer(init,layer)
+            initial_hidden[layer] = self._check_layer(layer,init)
 
         # handle observation sequences
         observation_sequences = OrderedDict(zip(self.observation_layers, check_list(env.observations)))
