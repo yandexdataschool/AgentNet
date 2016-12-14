@@ -1,6 +1,6 @@
 import numpy as np
 import theano.tensor as T
-from lasagne.layers import InputLayer,DenseLayer,GaussianNoiseLayer,ElemwiseSumLayer,ExpressionLayer,FlattenLayer
+from lasagne.layers import InputLayer,DenseLayer,GaussianNoiseLayer,ElemwiseSumLayer,NonlinearityLayer
 from agentnet.utils.layers import DictLayer
 
 from warnings import warn
@@ -129,11 +129,12 @@ def build_NAF_controller(input_layer = None,
                          mean_layer = None,
                          V_layer = None,
                          L_layer = None,
+                         action_low=-np.inf,
+                         action_high=np.inf,
                          ):
         '''
         Builds the regular NAF controller and outputs a dictionary of lasagne layers for each component.
 
-        action space is (-inf,inf) by default!
 
         :param input_layer: layer which is used to predict policy parameters.
             MUST be present unless both V_layer, L_layer and mean_layer are given
@@ -150,6 +151,8 @@ def build_NAF_controller(input_layer = None,
         :param V_layer: layer which returns state value baseline (V(state))
         :param L_layer: a layer which is used to compute the advantage term
             A(u) =  -1/2 * (u - mu)^T * P_layer * (u - mu)
+        :param action_low: minimum value for an action (float or np array for each action)
+        :param action_high: maximum value for an action (float or np array for each action)
         :returns: a dict of 'means','actions','action_qvalues','state_values', 'advantage' to respective lasagne layers
         :rtype: collections.OrderedDict
         '''
@@ -163,14 +166,18 @@ def build_NAF_controller(input_layer = None,
                                     nonlinearity=None,name="qnaf.weights")
         assert len(mean_layer.output_shape)==2 and mean_layer.output_shape[-1] == action_dimensions
 
+        #mean layer, clipped to action limits, used only for action picking
+        mean_clipped = NonlinearityLayer(mean_layer, lambda a: a.clip(action_low, action_high))
+
         #action with exploration
         if not isinstance(exploration,InputLayer):
             #exploration is a number
             assert additive_exploration
-            action_layer = GaussianNoiseLayer(mean_layer,sigma=exploration)
+
+            action_layer = GaussianNoiseLayer(mean_clipped,sigma=exploration)
         else:#exploration is a lasagne layer
             if additive_exploration:
-                action_layer = ElemwiseSumLayer([mean_layer,exploration])
+                action_layer = ElemwiseSumLayer([mean_clipped,exploration])
             else:
                 action_layer = exploration
 
@@ -190,7 +197,6 @@ def build_NAF_controller(input_layer = None,
         assert L_layer.output_shape[1] == L_layer.output_shape[2] == action_dimensions
 
         advantage_layer = NAFLayer(action_layer,mean_layer,L_layer,name="qnaf.advantage")
-        print V_layer.output_shape,advantage_layer.output_shape
         Q_layer = ElemwiseSumLayer([V_layer,advantage_layer])
 
         return OrderedDict([

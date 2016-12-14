@@ -31,7 +31,7 @@ def get_elementwise_objective(policy,
                               consider_predicted_value_constant=True,
                               scan_dependencies=(),
                               scan_strict=True,
-                              min_proba=1e-30):
+                              min_proba=0):
     """
     returns cross-entropy-like objective function for Actor-Critic method
 
