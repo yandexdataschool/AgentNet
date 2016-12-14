@@ -393,7 +393,7 @@ class MDPAgent(object):
             observation_sequences[layer] = self._check_layer(layer,sequence,sequence_length=session_length)
 
         #handle action sequences
-        action_sequences = OrderedDict(zip(self.observation_layers, check_list(env.actions)))
+        action_sequences = OrderedDict(zip(self.action_layers, check_list(env.actions)))
         for layer, sequence in action_sequences.items():
             action_sequences[layer] = self._check_layer(layer, sequence, sequence_length=session_length)
 
