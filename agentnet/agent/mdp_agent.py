@@ -482,7 +482,7 @@ class MDPAgent(object):
 
         return new_actions, new_states, new_outputs
 
-    def get_react_function(self,output_flags={'deterministic':True},
+    def get_react_function(self,output_flags={},
                            function_flags={'allow_input_downcast':True}):
         """
         compiles and returns a function that performs one step of agent network

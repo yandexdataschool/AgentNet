@@ -15,7 +15,7 @@ def GamePool(*args,**kwargs):
 # A whole lot of space invaders
 class EnvPool(object):
     def __init__(self, agent, make_env=lambda:gym.make("SpaceInvaders-v0"), n_games=1, max_size=None,
-                 preprocess_observation = lambda obs:obs):
+                 preprocess_observation = lambda obs:obs,agent_step=None):
         """
         A pool that stores several
            - game states (gym environment)
@@ -49,7 +49,7 @@ class EnvPool(object):
 
         #save agent
         self.agent = agent
-        self.agent_step = agent.get_react_function()
+        self.agent_step = agent_step or agent.get_react_function()
 
         # Create experience replay environment
         self.experience_replay = SessionPoolEnvironment(observations=agent.observation_layers,
