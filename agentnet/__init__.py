@@ -12,5 +12,5 @@ from . import resolver
 from . import utils
 from .agent import Agent,Recurrence
 
-__version__ = '0.9.1'
+__version__ = '0.10.1'
 __author__ = 'YandexDataSchool and contributors.'
