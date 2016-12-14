@@ -232,46 +232,51 @@ class Recurrence(DictLayer):
                                  "agentnet can't infer the batch size. ")
         self.batch_size = batch_size
         
-        
+
+        #all inputs and outputs
+        #outputs = all new_state+output dependencies (input layers) lie inside one-step recurrence
+        self.all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
+
+        #inputs = all prev states, initializers, nonsequences and sequences
+        self.all_inputs = list(chain(self.state_variables.values(),
+                                self.state_init.values(),
+                                self.input_nonsequences.keys(),
+                                self.input_sequences.keys()))
+
+
         #output shapes and dtypes
-        all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
-        
-        output_shapes = [tuple(layer.output_shape) for layer in all_outputs]
+        output_shapes = [tuple(layer.output_shape) for layer in self.all_outputs]
         output_shapes =  [shape[:1] + (self.n_steps,) + shape[1:] for shape in output_shapes]
-        output_shapes = OrderedDict(zip(all_outputs,output_shapes))
+        output_shapes = OrderedDict(zip(self.all_outputs,output_shapes))
         
-        output_dtypes = [get_layer_dtype(layer) for layer in all_outputs]
-        output_dtypes = OrderedDict(zip(all_outputs,output_dtypes))
+        output_dtypes = [get_layer_dtype(layer) for layer in self.all_outputs]
+        output_dtypes = OrderedDict(zip(self.all_outputs,output_dtypes))
 
         super(Recurrence, self).__init__(incomings, 
                                          output_shapes = output_shapes,
                                          output_dtypes = output_dtypes,
                                          name = name)
 
+
         # assertions and only assertions. From now this function only asserts stuff.
 
         if verify_graph:
             # verifying graph topology (assertions)
-            all_inputs = list(chain(self.state_variables.values(),
-                                    self.state_init.keys(),
-                                    self.input_nonsequences.keys(),
-                                    self.input_sequences.keys()))
 
             # all recurrent graph inputs and prev_states are unique (no input/prev_state is used more than once)
-            assert len(all_inputs) == len(set(all_inputs))
+            assert len(self.all_inputs) == len(set(self.all_inputs))
 
             # all state_init correspond to defined state variables
             for state_out in list(self.state_init.keys()):
                 assert state_out in list(self.state_variables.keys())
 
-            # all new_state+output dependencies (input layers) lie inside one-step recurrence
-            all_outputs = list(self.state_variables.keys()) + self.tracked_outputs
 
-            all_inputs = set(all_inputs)
-
-            for layer in lasagne.layers.get_all_layers(all_outputs):
+            # all input layers must be in inputs list (but not all inputs must be input layers)
+            for layer in lasagne.layers.get_all_layers(self.all_outputs,treat_as_input=self.all_inputs):
                 if type(layer) is InputLayer:
-                    if layer not in all_inputs:
+                    if layer not in self.all_inputs:
+                        #note: all_inptus is a list, so technically this is a O(n) lookup,
+                        #but it's negligible if network has reasonable input count :)
                         message = "One of your network dependencies ({layer_name}) isn't mentioned in Recurrence inputs"
                         raise ValueError(message.format(layer_name=layer.name))
 
@@ -411,14 +416,21 @@ class Recurrence(DictLayer):
                     )
         return updates
 
-    def get_params(self, **tags):
+    def get_params(self,**tags):
         """returns all params, including recurrent params from one-step network"""
 
         params = super(Recurrence, self).get_params(**tags)
 
-        # include inner recurrence params
-        outputs = list(self.state_variables.keys()) + self.tracked_outputs
-        inner_params = lasagne.layers.get_all_params(outputs, **tags)
+
+        #get inner graph
+        inner_layers = lasagne.layers.get_all_layers(self.all_outputs,treat_as_input=self.all_inputs)
+        print([i.name for i in self.all_inputs])
+        #remove input layers themselves since their params are not used
+        inner_layers = [l for l in inner_layers if l not in self.all_inputs]
+
+        inner_params = chain.from_iterable(l.get_params(**tags) for l in inner_layers)
+        inner_params = lasagne.utils.unique(inner_params)
+
         params += inner_params
 
         return params

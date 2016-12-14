@@ -24,6 +24,9 @@ from ..utils.format import supported_sequences, unpack_list, check_list, check_t
 from ..deprecated import deprecated
 
 
+
+
+
 class MDPAgent(object):
     """
     A generic agent within MDP (markov decision process) abstraction.
@@ -71,7 +74,6 @@ class MDPAgent(object):
     @deprecated(".agent_states")
     def state_variables(self):
         raise ValueError("Please use .agent_states instead")
-        return self.agent_states
 
 
     def get_sessions(self,
@@ -81,9 +83,10 @@ class MDPAgent(object):
                      initial_env_states='zeros',
                      initial_observations='zeros',
                      initial_hidden='zeros',
-                     optimize_experience_replay=False,
+                     experience_replay=False,
                      unroll_scan=True,
                      return_automatic_updates=False,
+                     optimize_experience_replay=None,
                      **kwargs
                      ):
         """
@@ -98,14 +101,15 @@ class MDPAgent(object):
 
         :type batch_size: int or theano.tensor.TensorVariable
 
-        :param optimize_experience_replay: whether or not to optimize for experience replay
-            if True, assumes environment to have a pre-defined sequence of observations(as env.observations).
+        :param experience_replay: whether or not to use experience replay if True, assumes environment to have
+            a pre-defined sequence of observations and actions (as env.observations etc.)
+            The agent will then observe sequence of observations and will be forced to take recorded actions
+            via get_output(...,{action_layer=recorded_action}
             Saves some time by directly using environment.observations (list of sequences) instead of calling
             environment.get_action_results via environment.as_layers(...).
-            Note that this parameter is not required since experience replay environments have everythin required to
-            behave as regular environments
+            Note that if this parameter is false, agent will be allowed to pick any actions during experience replay
 
-        :type optimize_experience_replay: bool
+        :type experience_replay: bool
 
         :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
         :param return_automatic_updates: whether to append automatic updates to returned tuple (as last element)
@@ -118,6 +122,8 @@ class MDPAgent(object):
             'zeros' default means filling variables with zeros
             Initial values are NOT included in history sequences
 
+        :param optimize_experience_replay: deprecated, use experience_replay
+
         :returns: state_seq,observation_seq,hidden_seq,action_seq,policy_seq,
             for environment state, observation, hidden state, chosen actions and agent policy respectively
             each of them having dimensions of [batch_i,seq_i,...]
@@ -127,15 +133,21 @@ class MDPAgent(object):
 
         :rtype: tuple of Theano tensors
 
+
+
         """
+
+        if optimize_experience_replay is not None:
+            experience_replay = optimize_experience_replay
+            warn("optimize_experience_replay is deprecated and will be removed in 1.0.2. Use experience_replay parameter.")
+
         env = environment
 
-        if optimize_experience_replay:
-            if not hasattr(env, "observations"):
+        if experience_replay:
+            if not hasattr(env, "observations") or not hasattr(env, "actions"):
                 raise ValueError(
                     'if optimize_experience_replay is turned on, one must provide an environment with .observations'
-                    'property containing tensor [batch,tick,observation_size] of a list of such (in case of several'
-                    'observation layers)')
+                    'and .actions properties containing observations and actions to replay.')
             if initial_env_states != 'zeros' or initial_observations != 'zeros':
                 warn("In experience replay mode, initial env states and initial observations parameters are unused")
 
@@ -172,7 +184,7 @@ class MDPAgent(object):
         n_states = len(state_layers_dict)
         states_list, outputs = theano_expressions[:n_states], theano_expressions[n_states:]
 
-        if optimize_experience_replay:
+        if experience_replay:
             assert len(states_list) == len(self.agent_states)
             agent_states = states_list
             env_states = [T.arange(session_length)]
@@ -213,6 +225,46 @@ class MDPAgent(object):
         :return: theano.OrderedUpdates with all automatic updates
         """
         return self.recurrence.get_automatic_updates(recurrent=recurrent)
+
+    @staticmethod
+    def _check_layer(v, inner_graph_layer, sequence_length=-1, prefix="agent.linker_layer."):
+        """
+        auxilary function that makes sure v is a lasagne layer with shapes matching inner_graph_layer
+        :param v: - lasagne layer or theano tensor or whatever that needs to be a lasagne layer
+        :param inner_graph_layer: a layer in agent's inner graph to be matched against v
+        :param sequence_length: if None, assumes v is not a sequence of values for inner_graph_layer,
+            if not None, assumes it to be a sequence of given sequence_length"""
+        shape = tuple(inner_graph_layer.output_shape)
+        if sequence_length != -1:
+            shape = shape[:1] + (sequence_length,) + shape[1:]
+
+        if not isinstance(v, lasagne.layers.Layer):
+            assert v.ndim == len(shape)
+            return InputLayer(shape,
+                              name=prefix + (inner_graph_layer.name or ""),
+                              input_var=v)
+        else:
+            # v is lasagne.layers.Layer
+            assert tuple(v.output_shape)[1:] == shape[1:]
+            return v
+
+    @staticmethod
+    def _check_init_pairs(layers, initial_values):
+        """convert whatever user sends into a list of pairs to an OrderedDict{layer:initializer layer}"""
+        if initial_values == "zeros":
+            return OrderedDict()
+        elif isinstance(initial_values, dict):
+            for key,val in initial_values.items():
+                assert key in layers
+            return check_ordered_dict(initial_values)
+        else:
+            #type(initialization) is list of inits for each layer
+            initial_values = check_list(initial_values)
+            assert len(initial_values) == len(layers)
+            return OrderedDict([(layer,init) for layer,init in zip(layers, initial_values) if init is not None])
+
+
+
 
     def as_recurrence(self,
                       environment,
@@ -265,34 +317,16 @@ class MDPAgent(object):
                                      zip(new_state_outputs, prev_env_states),
                                      zip(new_observation_outputs, self.observation_layers)))
 
-        # compose state initialization dict
-        state_init_pairs = []
-        for initialization, layers in zip(
-                [initial_env_states, initial_observations, initial_hidden],
-                [new_state_outputs, new_observation_outputs, list(self.agent_states.keys())]
-        ):
-            if initialization == "zeros":
-                continue
-            elif isinstance(initialization, dict):
-                state_init_pairs += list(initialization.items())
-            else:
-                initialization = check_list(initialization)
-                assert len(initialization) == len(layers)
+        # compose a dict of {state:initialization}
+        state_init_pairs = OrderedDict(chain(
+            self._check_init_pairs(new_state_outputs,initial_env_states).items(),
+            self._check_init_pairs(new_observation_outputs, initial_observations).items(),
+            self._check_init_pairs(list(self.agent_states.keys()), initial_hidden).items()
+        ))
 
-                for layer, init in zip(layers, initialization):
-                    if init is not None:
-                        state_init_pairs.append([layer, init])
-
-        # convert all initializations into layers:
-        for i in range(len(state_init_pairs)):
-            layer, init = state_init_pairs[i]
-
-            # replace theano variables with input layers for them
-            if not isinstance(init, lasagne.layers.Layer):
-                init_layer = InputLayer(layer.output_shape,
-                                        name="env.initial_values_for." + (layer.name or "state"),
-                                        input_var=init)
-                state_init_pairs[i][1] = init_layer
+        #convert state initializations to layers
+        for layer, init in list(state_init_pairs.items()):
+            state_init_pairs[layer] = self._check_layer(init,layer)
 
         # create the recurrence
         recurrence = Recurrence(
@@ -313,14 +347,14 @@ class MDPAgent(object):
                              environment,
                              session_length=10,
                              initial_hidden='zeros',
-                             recurrence_name='AgentRecurrence',
+                             recurrence_name='ReplayRecurrence',
                              unroll_scan=True,
                              ):
         """
         returns a Recurrence lasagne layer that contains.
 
         :param environment: an environment to interact with
-        :type environment: BaseEnvironment
+        :type environment: SessionBatchEnvironment or SessionPoolEnvironment
         :param session_length: how many turns of interaction shall there be for each batch
         :type session_length: int
 
@@ -347,60 +381,33 @@ class MDPAgent(object):
 
         assert len(check_list(env.observation_shapes)) == len(self.observation_layers)
 
-        # state initialization dict item pairs
-        if initial_hidden == "zeros":
-            initial_hidden = {}
-        elif isinstance(initial_hidden, dict):
-            for layer in list(initial_hidden.keys()):
-                assert layer in list(self.agent_states.keys())
-            initial_hidden = check_ordered_dict(initial_hidden)
-
-        else:
-            initial_hidden = check_list(initial_hidden)
-            assert len(initial_hidden) == len(self.agent_states)
-
-            state_init_pairs = []
-            for layer, init in zip(list(self.agent_states.keys()), initial_hidden):
-                if init is not None:
-                    state_init_pairs.append([layer, init])
-            initial_hidden = OrderedDict(state_init_pairs)
-
+        initial_hidden = self._check_init_pairs(list(self.agent_states.keys()),initial_hidden)
+        #convert state initializations to layers
         for layer, init in list(initial_hidden.items()):
-            # replace theano variables with input layers for them
-            if not isinstance(init, lasagne.layers.Layer):
-                init_layer = InputLayer(layer.output_shape,
-                                        name="agent.initial_values_for." + (layer.name or "state"),
-                                        input_var=init)
-                initial_hidden[layer] = init_layer
+            initial_hidden[layer] = self._check_layer(init,layer)
 
         # handle observation sequences
-        observation_sequences = check_list(env.observations)
-        for i, obs_seq in enumerate(observation_sequences):
+        observation_sequences = OrderedDict(zip(self.observation_layers, check_list(env.observations)))
+        for layer,sequence in observation_sequences.items():
+            observation_sequences[layer] = self._check_layer(layer,sequence,sequence_length=session_length)
 
-            # replace theano variables with input layers for them
-            if not isinstance(obs_seq, lasagne.layers.Layer):
-                layer = self.observation_layers[i]
-                obs_shape = tuple(layer.output_shape)
-                obs_seq_shape = obs_shape[:1] + (session_length,) + obs_shape[1:]
+        #handle action sequences
+        action_sequences = OrderedDict(zip(self.observation_layers, check_list(env.actions)))
+        for layer, sequence in action_sequences.items():
+            observation_sequences[layer] = self._check_layer(layer, sequence, sequence_length=session_length)
 
-                obs_seq = InputLayer(obs_seq_shape,
-                                     name="agent.initial_values_for." + (layer.name or "state"),
-                                     input_var=obs_seq)
-
-                observation_sequences[i] = obs_seq
-        observation_sequences = OrderedDict(list(zip(self.observation_layers, observation_sequences)))
+        all_sequences = OrderedDict(chain(observation_sequences.items(),action_sequences.items()))
 
         # create the recurrence
         recurrence = Recurrence(
             state_variables=self.agent_states,
             state_init=initial_hidden,
-            input_sequences=observation_sequences,
+            input_sequences=all_sequences,
             tracked_outputs=self.policy + self.action_layers,
             n_steps=session_length,
             name=recurrence_name,
             unroll_scan=unroll_scan
         )
-
         return recurrence
 
     def get_agent_reaction(self,
@@ -416,8 +423,8 @@ class MDPAgent(object):
         :param current_observations: agent observations at this step
         :type current_observations: a list of inputs where i-th input corresponds to 
             i-th input slot from self.observations
-        
-        :param flags: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
+
+        :param kwargs: any flag that should be passed to the lasagne network for lasagne.layers.get_output method
         
         :return: a tuple of [actions, new agent states]
             actions: a list of all action layer outputs

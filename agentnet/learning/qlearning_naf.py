@@ -122,8 +122,7 @@ class NAFLayer(MergeLayer):
         return (batch_size,1)
 
 
-def build_NAF_controller(self,
-                         input_layer = None,
+def build_NAF_controller(input_layer = None,
                          action_dimensions=1,
                          exploration=1e-2,
                          additive_exploration=True,
