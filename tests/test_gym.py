@@ -126,7 +126,7 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
         env,
         session_length=replay_seq_len,
         batch_size=env.batch_size,
-        optimize_experience_replay=True,
+        experience_replay=True,
     )
 
     # Evaluating loss function

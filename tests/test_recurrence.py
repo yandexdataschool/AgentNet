@@ -34,7 +34,7 @@ def test_recurrence():
     assert tuple(run(np.random.randn(5, 25, 3), np.random.randn(5, 10)).shape) == (5, 25, 10)
 
 
-def test_recurrence_weird():
+def test_recurrence_larger():
     """larger recurrence"""
     sequence = InputLayer((None, None, 3), name='input sequence')
     initial_cell = InputLayer((None, 20), name='lstm cell zero tick')
@@ -77,6 +77,50 @@ def test_recurrence_weird():
     assert tuple(out[0].shape) == (5, 25, 10) #rnn
     assert tuple(out[1].shape) == (5, 25, 20) #lstm cell
     assert tuple(out[2].shape) == (5, 25, 20) #lstm hid (aka output)
+
+
+def test_recurrence_substituted():
+    """test whether it is possible to use intermediate layers as recurrence inputs"""
+    sequence = InputLayer((None, None, 3), name='input sequence')
+    sequence_intermediate = InputLayer((None, None, 5), name='intermediate values sequence')
+    initial = InputLayer((None, 10), name='gru zero tick')
+
+    # step
+    inp = InputLayer((None, 3),name='input')
+    intermediate = DenseLayer(inp,5,name='intermediate')
+    prev_gru = InputLayer((None, 10),name='prev rnn')
+    gru = GRUCell(prev_gru, intermediate, name='rnn')
+
+    #regular recurrence, provide inputs, intermediate is computed regularly
+    rec = agentnet.Recurrence(input_sequences={inp: sequence},
+                              state_variables={gru: prev_gru},
+                              state_init={gru: initial},  # defaults to zeros
+                              unroll_scan=False)
+
+    weights = get_all_params(rec)
+    assert intermediate.b in weights
+
+    gru_states = rec[gru]
+
+    run = theano.function([sequence.input_var, initial.input_var], get_output(gru_states), )
+
+    assert tuple(run(np.random.randn(5, 25, 3), np.random.randn(5, 10)).shape) == (5, 25, 10)
+
+    #recurrence with substituted intermediate values
+    rec2= agentnet.Recurrence(input_sequences={intermediate: sequence_intermediate},
+                              state_variables={gru: prev_gru},
+                              state_init={gru: initial},  # defaults to zeros
+                              unroll_scan=False)
+
+    weights2 = get_all_params(rec2)
+    assert intermediate.b not in weights2
+
+    gru_states2 = rec2[gru]
+
+    run = theano.function([sequence_intermediate.input_var, initial.input_var], get_output(gru_states2), )
+
+    assert tuple(run(np.random.randn(5, 25, 5), np.random.randn(5, 10)).shape) == (5, 25, 10)
+
 
 
 def test_recurrence_mask():
