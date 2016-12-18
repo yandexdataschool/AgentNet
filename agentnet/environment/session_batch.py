@@ -81,7 +81,7 @@ class SessionBatchEnvironment(BaseEnvironment, BaseObjective):
             self.preceding_agent_memory = check_list(preceding_agent_memory)
 
         self.padded_observations = [
-            T.concatenate([obs, insert_dim(T.zeros_like(obs[:, 0]), 1)], axis=1)
+            T.concatenate([obs, T.zeros_like(obs[:, :1])], axis=1)
             for obs in self.observations
             ]
 
@@ -112,6 +112,9 @@ class SessionBatchEnvironment(BaseEnvironment, BaseObjective):
             new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
+        warn("Warning - a session pool has all the observations already stored as .observations property."
+             "Recomputing them this way is probably just a slower way of calling your_session_pool.observations")
+
         time_i = check_list(last_states)[0]
 
         batch_range = T.arange(time_i.shape[0])

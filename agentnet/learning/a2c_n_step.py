@@ -99,7 +99,6 @@ def get_elementwise_objective(policy,
             # "set reference state values at end action ids to just the immediate rewards"
             reference_state_values = T.set_subtensor(reference_state_values[end_ids], rewards[end_ids])
         else:
-
             # "set reference state values at end action ids to the immediate rewards + qvalues after end"
             new_state_values = rewards[end_ids] + gamma_or_gammas * state_values_after_end[end_ids[0], 0]
             reference_state_values = T.set_subtensor(reference_state_values[end_ids], new_state_values)

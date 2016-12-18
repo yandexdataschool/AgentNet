@@ -10,7 +10,7 @@ from .session_batch import SessionBatchEnvironment
 
 from ..objective import BaseObjective
 
-from ..utils import create_shared, set_shared, insert_dim
+from ..utils import create_shared, set_shared
 from ..utils.format import check_list
 from ..utils.layers import get_layer_dtype
 
@@ -96,7 +96,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
 
         # padded observations (to avoid index error when interacting with agent)
         self.padded_observations = [
-            T.concatenate([obs, T.zeros_like(insert_dim(obs[:, 0], 1))], axis=1)
+            T.concatenate([obs, T.zeros_like(obs[:, :1])], axis=1)
             for obs in self.observations
             ]
 
@@ -177,6 +177,9 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             new_state float[batch_id, memory_id0,[memory_id1],...]: environment state after processing agent's action
             observation float[batch_id,n_agent_inputs]: what agent observes after commiting the last action
         """
+        warn("Warning - a session pool has all the observations already stored as .observations property."
+             "Recomputing them this way is probably just a slower way of calling your_session_pool.observations")
+
         time_i = check_list(last_states)[0]
 
         batch_range = T.arange(time_i.shape[0])

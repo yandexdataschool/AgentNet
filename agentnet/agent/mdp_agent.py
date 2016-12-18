@@ -399,6 +399,9 @@ class MDPAgent(object):
 
         all_sequences = OrderedDict(chain(observation_sequences.items(),action_sequences.items()))
 
+        #assert observation and action layers do not intersect
+        assert len(all_sequences) == len(observation_sequences) + len(action_sequences)
+
         # create the recurrence
         recurrence = Recurrence(
             state_variables=self.agent_states,

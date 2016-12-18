@@ -159,6 +159,3 @@ def test_recurrence_mask():
     assert np.all(np.diff(out, axis=1)[2:, 1:] != 0)
     assert np.all(np.diff(out, axis=1)[2:, :1] == 0)
 
-
-
-

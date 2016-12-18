@@ -424,7 +424,6 @@ class Recurrence(DictLayer):
 
         #get inner graph
         inner_layers = lasagne.layers.get_all_layers(self.all_outputs,treat_as_input=self.all_inputs)
-        print([i.name for i in self.all_inputs])
         #remove input layers themselves since their params are not used
         inner_layers = [l for l in inner_layers if l not in self.all_inputs]
 
@@ -486,13 +485,13 @@ class Recurrence(DictLayer):
                 initial_state = initial_states_provided[state_out_layer]
             # otherwise initialize with zeros
             else:
-                #constant batch_size==1 causes T.zeros to get broadcastable, which results in an error
-                #TODO(jheuristic) investigate a better way to do so.
-                if (type(batch_size) is int) and (batch_size == 1):
-                    batch_size = theano.shared(batch_size)
+                dtype = get_layer_dtype(state_out_layer)
+                initial_state = T.zeros((batch_size,) + tuple(state_out_layer.output_shape[1:]),dtype=dtype)
 
-                initial_state = T.zeros((batch_size,) + tuple(state_out_layer.output_shape[1:]),
-                                    dtype=get_layer_dtype(state_out_layer))
+                #cast to non-broadcastable tensortype
+                t_state = T.TensorType(dtype, (False,) * initial_state.ndim)
+                initial_state = t_state.convert_variable(initial_state)
+                assert initial_state is not None #if None, conversion failed. report ASAP
 
             return initial_state
 
@@ -513,7 +512,6 @@ class Recurrence(DictLayer):
 
             sequence_slices, prev_states, prev_outputs, nonsequences = \
                 unpack_list(args, [n_input_seq, n_states, n_outputs, n_input_nonseq])
-
             # make dicts of prev_states and inputs
             prev_states_dict = OrderedDict(zip(list(self.state_variables.keys()), prev_states))
 
@@ -524,6 +522,15 @@ class Recurrence(DictLayer):
 
             # call one step recurrence
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
+
+            #make sure output variable is of exactly the same type as corresponding input
+            #TODO submit lasagne issue to make dense layers with 1 unit non-broadcastable
+            new_states = [prev_state.type.convert_variable(state)
+                            for (prev_state,state) in zip(prev_states,new_states)]
+            new_outputs = [prev_out.type.convert_variable(out)
+                            for (prev_out,out) in zip(prev_outputs,new_outputs)]
+
+
             return new_states + new_outputs
 
         ###handling mask_input###
