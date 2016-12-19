@@ -110,7 +110,7 @@ def get_n_step_value_reference(state_values,
     non_seqs = (gamma_or_gammas,) + tuple(dependencies)
 
     if n_steps is None:
-        tmax_indicator = T.zeros(rewards.shape[1],dtype='uint8')
+        tmax_indicator = T.zeros((rewards.shape[1],),dtype='uint8')
         tmax_indicator = T.set_subtensor(tmax_indicator[-1],1)
     else:
         time_ticks = T.arange(rewards.shape[1])
