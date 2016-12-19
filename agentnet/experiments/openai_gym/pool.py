@@ -134,7 +134,7 @@ class EnvPool(object):
             fake_rewards = np.zeros(shape=len(self.envs))
             is_fake_alive = np.ones(shape=len(self.envs))
             history_log.append((self.prev_observations,fake_actions,fake_rewards,self.prev_memory_states,
-                                is_fake_dead,[None]*len(self.envs)))
+                                is_fake_alive,[None]*len(self.envs)))
 
         # cast to numpy arrays
         observation_log, action_log, reward_log, memories_log, is_alive_log, info_log = zip(*history_log)
