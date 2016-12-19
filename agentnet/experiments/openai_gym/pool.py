@@ -7,6 +7,8 @@ import gym
 import numpy as np
 from ...utils.layers import get_layer_dtype
 from ...environment import SessionPoolEnvironment
+from warnings import warn
+
 function = type(lambda:0)
 
 def GamePool(*args,**kwargs):
@@ -130,7 +132,7 @@ class EnvPool(object):
         if add_last_observation:
             fake_actions = np.array([env.action_space.sample() for env in self.envs])
             fake_rewards = np.zeros(shape=len(self.envs))
-            is_fake_dead = np.zeros(shape=len(self.envs))
+            is_fake_alive = np.ones(shape=len(self.envs))
             history_log.append((self.prev_observations,fake_actions,fake_rewards,self.prev_memory_states,
                                 is_fake_dead,[None]*len(self.envs)))
 
@@ -190,7 +192,7 @@ class EnvPool(object):
                                                    max_pool_size=max_size or self.max_size)
 
 
-    def evaluate(self,n_games=1,save_path="./records", record_video=True,verbose=True,t_max=10000):
+    def evaluate(self,n_games=1,save_path="./records", use_monitor=True,record_video=True,verbose=True,t_max=10000):
         """
         Plays an entire game start to end, records the logs(and possibly mp4 video), returns reward
         :param save_path: where to save the report
@@ -199,9 +201,12 @@ class EnvPool(object):
         """
         env = self.make_env()
 
-        if record_video:
+        if not use_monitor and record_video:
+            raise warn("Cannot video without gym monitor. If you still want video, set use_monitor to True")
+
+        if record_video :
             env.monitor.start(save_path, force=True)
-        else:
+        elif not use_monitor:
             env.monitor.start(save_path, lambda i: False, force=True)
 
         game_rewards = []

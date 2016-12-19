@@ -84,7 +84,8 @@ def get_elementwise_objective(policy,
                                                         optimal_state_values_after_end=state_values_after_end,
                                                         gamma_or_gammas=gamma_or_gammas,
                                                         dependencies=scan_dependencies,
-                                                        strict=scan_strict
+                                                        strict=scan_strict,
+                                                        crop_last=crop_last,
                                                         )
 
     # if we have to set after_end values
