@@ -19,6 +19,7 @@ def get_n_step_value_reference(state_values,
                                optimal_state_values="same_as_state_values",
                                optimal_state_values_after_end="zeros",
                                dependencies=tuple(),
+                               crop_last=True,
                                strict=True):
     """
     Computes the reference for state value function via n-step algorithm:
@@ -59,6 +60,7 @@ def get_n_step_value_reference(state_values,
     :param dependencies: everything else you need to evaluate first 3 parameters (only if strict==True)
         
     :param strict: whether to evaluate values using strict theano scan or non-strict one
+
     :returns: V reference [batch,action_at_tick] according n-step algorithms ~ eligibility traces
             e.g. mentioned here http://arxiv.org/pdf/1602.01783.pdf as A3c and k-step Q-learning
 
@@ -84,32 +86,47 @@ def get_n_step_value_reference(state_values,
     if is_alive == "always":
         is_alive = T.ones_like(rewards)
 
-    # get "Next state_values": floatX[batch,time] at each tick
-    # do so by shifting state_values backwards in time, pad with state_values_after_end
-    if optimal_state_values_after_end == "zeros":
-        optimal_state_values_after_end = T.zeros_like(insert_dim(optimal_state_values[:, 0], 1))
 
-    next_state_values = T.concatenate([optimal_state_values[:, 1:] * is_alive[:, 1:], optimal_state_values_after_end],
-                                      axis=1)
+    if crop_last:
+        #TODO rewrite by precomputing correct td-0 qvalues here to clarify notation
+        #alter tensors so that last reference = last prediction
+        is_alive = T.set_subtensor(is_alive[:,-1],1)
+        rewards = T.set_subtensor(rewards[:,-1],0)
+        next_state_values = T.concatenate([optimal_state_values[:, 1:] * is_alive[:, 1:],
+                                           state_values[:,-1:]/gamma_or_gammas], axis=1)
 
-    # recurrent computation of reference state values (backwards through time)
+    else:
+        #crop_last == False
+        if optimal_state_values_after_end == "zeros":
+            optimal_state_values_after_end = T.zeros_like(optimal_state_values[:, :1])
+        # get "Next state_values": floatX[batch,time] at each tick
+        # do so by shifting state_values backwards in time, pad with state_values_after_end
+        next_state_values = T.concatenate(
+            [optimal_state_values[:, 1:] * is_alive[:, 1:], optimal_state_values_after_end], axis=1)
 
     # initialize each reference with ZEROS after the end (won't be in output tensor)
     outputs_info = [T.zeros_like(rewards[:, 0]), ]
 
     non_seqs = (gamma_or_gammas,) + tuple(dependencies)
 
-    time_ticks = T.arange(rewards.shape[1])
+    if n_steps is None:
+        tmax_indicator = T.zeros_like(rewards,dtype='uint8')
+        tmax_indicator = T.set_subtensor(tmax_indicator[:,-1],1)
+    else:
+        time_ticks = T.arange(rewards.shape[1])
+        tmax_indicator = T.eq(time_ticks%n_steps,0)
+        tmax_indicator = T.set_subtensor(tmax_indicator[:,-1], 1).astype('uint8')
 
     sequences = [rewards.T,
                  is_alive.T,
                  next_state_values.T,  # transpose to iterate over time, not over batch
-                 time_ticks]
+                 tmax_indicator.T]
 
+    # recurrent computation of reference state values (backwards through time)
     def backward_V_step(rewards,
                         is_alive,
                         next_Vpred,
-                        time_i,
+                        is_tmax,
                         next_Vref,
                         *args #you won't dare delete me
                        ):
@@ -132,13 +149,8 @@ def get_n_step_value_reference(state_values,
         propagated_Vref = rewards + gamma_or_gammas * next_Vref  # propagates value from actual next action
         optimal_Vref = rewards + gamma_or_gammas * next_Vpred  # uses agent's prediction for next state
 
-        if n_steps is None:
-            chosen_Vref = propagated_Vref
-        else:
-            is_Tmax = T.eq(time_i % n_steps, 0)  # indicator for Tmax
-
-            # pick new_Vref if is_Tmax, else propagate existing one
-            chosen_Vref = T.switch(is_Tmax, optimal_Vref, propagated_Vref)
+        # pick new_Vref if is_Tmax, else propagate existing one
+        chosen_Vref = T.switch(is_tmax, optimal_Vref, propagated_Vref)
 
         # zero out references if session has ended already
         this_Vref = T.switch(is_alive, chosen_Vref, 0.)
