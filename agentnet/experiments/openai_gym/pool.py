@@ -206,7 +206,7 @@ class EnvPool(object):
 
         if record_video :
             env.monitor.start(save_path, force=True)
-        elif not use_monitor:
+        elif use_monitor:
             env.monitor.start(save_path, lambda i: False, force=True)
 
         game_rewards = []
