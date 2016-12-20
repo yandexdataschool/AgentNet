@@ -121,11 +121,10 @@ def get_elementwise_objective(policy,
     if min_proba != 0:
         log_probas = T.switch(T.lt(action_probas,min_proba),
                                 T.log(action_probas+min_proba),
-                                log_probas
-                              )
+                                log_probas)
 
-    # actor loss
-    policy_loss_elwise = log_probas * consider_constant(state_values - reference_state_values)
+    # actor loss                                          (    r + gamma * V'    -   V )
+    policy_loss_elwise = - log_probas * consider_constant(reference_state_values - state_values)
 
     # critic loss
     V_err_elwise = squared_error(reference_state_values, state_values)
