@@ -84,7 +84,8 @@ def get_elementwise_objective(Qvalues, actions, rewards,
         optimal_state_values=optimal_Qvalues_target,
         optimal_state_values_after_end=optimal_qvalues_after_end,
         dependencies=scan_dependencies,
-        strict=scan_strict
+        strict=scan_strict,
+        crop_last=crop_last,
     )
 
     if consider_reference_constant:

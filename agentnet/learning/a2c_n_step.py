@@ -28,7 +28,6 @@ def get_elementwise_objective(policy,
                               force_values_after_end=True,
                               state_values_after_end="zeros",
                               consider_value_reference_constant=True,
-                              consider_predicted_value_constant=True,
                               scan_dependencies=(),
                               scan_strict=True,
                               min_proba=0):
@@ -78,6 +77,10 @@ def get_elementwise_objective(policy,
     assert actions.ndim == rewards.ndim ==2
     if is_alive != 'always': assert is_alive.ndim==2
 
+    if is_alive == "always":
+        is_alive = T.ones_like(actions, dtype=theano.config.floatX)
+
+
     # get reference values via Q-learning algorithm
     reference_state_values = get_n_step_value_reference(state_values_target, rewards, is_alive,
                                                         n_steps=n_steps,
@@ -104,33 +107,25 @@ def get_elementwise_objective(policy,
             new_state_values = rewards[end_ids] + gamma_or_gammas * state_values_after_end[end_ids[0], 0]
             reference_state_values = T.set_subtensor(reference_state_values[end_ids], new_state_values)
 
-    # now compute the loss
-    if is_alive == "always":
-        is_alive = T.ones_like(actions, dtype=theano.config.floatX)
-
-    # actor loss
-    action_probas = get_action_Qvalues(policy, actions)
-
     if crop_last:
-        reference_state_values = T.set_subtensor(reference_state_values[:,-1],
-                                                 state_values[:,-1])
+        reference_state_values = T.set_subtensor(reference_state_values[:, -1],
+                                                 state_values[:, -1])
     if consider_value_reference_constant:
         reference_state_values = consider_constant(reference_state_values)
 
+    #probas for actions taken
+    action_probas = get_action_Qvalues(policy, actions)
     log_probas = T.log(action_probas)
 
     #set min proba in a way that does not zero-out the derivatives
-    # idea:
-    # log(p) = log(p) if p != 0 else log(p+min_proba)
     if min_proba != 0:
         log_probas = T.switch(T.lt(action_probas,min_proba),
                                 T.log(action_probas+min_proba),
                                 log_probas
                               )
 
-    observed_state_values = consider_constant(state_values) if consider_predicted_value_constant else state_values
-
-    policy_loss_elwise = - log_probas * (observed_state_values - reference_state_values)
+    # actor loss
+    policy_loss_elwise = - log_probas * consider_constant(state_values - reference_state_values)
 
     # critic loss
     V_err_elwise = squared_error(reference_state_values, state_values)

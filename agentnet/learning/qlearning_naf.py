@@ -286,7 +286,8 @@ def get_elementwise_objective(action_qvalues,
         gamma_or_gammas=gamma_or_gammas,
         optimal_state_values_after_end=state_values_after_end,
         dependencies=scan_dependencies,
-        strict=scan_strict
+        strict=scan_strict,
+        crop_last=crop_last,
     )
 
     if consider_reference_constant:
