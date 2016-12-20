@@ -125,7 +125,7 @@ def get_elementwise_objective(policy,
                               )
 
     # actor loss
-    policy_loss_elwise = - log_probas * consider_constant(state_values - reference_state_values)
+    policy_loss_elwise = log_probas * consider_constant(state_values - reference_state_values)
 
     # critic loss
     V_err_elwise = squared_error(reference_state_values, state_values)
