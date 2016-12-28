@@ -53,12 +53,12 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
     :type observations: int or lasagne.layers.Layer or list of lasagne.layers.Layer
     :param actions: number of int32 scalar actions or a list of resolvers to mimic
     :type actions: int or lasagne.layers.Layer or list of lasagne.layers.Layer
-    :param agent_memories: number of agent states [batch,tick,unit] each or a list of memory layers to minic
+    :param agent_memories: number of agent states [batch,tick,unit] each or a list of memory layers to mimic
     :type agent_memories: int or lasagne.layers.Layer or a list of lasagne.layers.Layer
     :param default_action_dtype: if actions are given as lasagne layers with valid dtypes, this is a default dtype of action
                             Otherwise agentnet.utils.layers.get_layer_dtype is used on a per-layer basis
     :type default_action_dtype: string or dtype
-
+    :param force_use_ram: if True, allocates shared variables in RAM rather than on GPU memory
     To setup custom dtype, set the .output_dtype property of layers you send as actions, observations of memories.
 
     WARNING! this session pool is stored entirely as a set of theano shared variables.
@@ -70,9 +70,10 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                  actions=1,
                  agent_memories=1,
                  default_action_dtype="int32",
+                 force_use_ram=True,
                  rng_seed=1337):
 
-
+        device = 'cpu' if force_use_ram else None
 
         # observations
         if type(observations) is int:
@@ -80,7 +81,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             self.observations = [
                 create_shared("sessions.observations_history." + str(i),
                               observation_init,
-                              dtype=theano.config.floatX)
+                              dtype=theano.config.floatX,
+                              device=device )
                 for i in range(observations)
                 ]
         else:
@@ -89,7 +91,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                 create_shared(
                     "sessions.observations_history." + str(i),
                     np.zeros((10, 5) + tuple(obs.output_shape[1:])),
-                    dtype=get_layer_dtype(obs)
+                    dtype=get_layer_dtype(obs),
+                    device=device
                 )
                 for i, obs in enumerate(observations)
                 ]
@@ -103,7 +106,9 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         # actions log
         if type(actions) is int:
             self.actions = [
-                create_shared("session.actions_history." + str(i), np.zeros([10, 5]), dtype=default_action_dtype)
+                create_shared("session.actions_history." + str(i), np.zeros([10, 5]),
+                              dtype=default_action_dtype,
+                              device=device )
                 for i in range(actions)
                 ]
 
@@ -113,7 +118,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                 create_shared(
                     "session.actions_history." + str(i),
                     np.zeros((10, 5) + tuple(action.output_shape[1:])),
-                    dtype=get_layer_dtype(action, theano.config.floatX)
+                    dtype=get_layer_dtype(action, theano.config.floatX),
+                    device=device
                 )
                 for i, action in enumerate(actions)
                 ]
@@ -124,7 +130,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
             self.preceding_agent_memories = [
                 create_shared("session.prev_memory." + str(i),
                               memory_init,
-                              dtype=theano.config.floatX)
+                              dtype=theano.config.floatX,
+                              device=device )
                 for i in range(agent_memories)
                 ]
 
@@ -138,7 +145,8 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                 create_shared(
                     "session.prev_memory." + str(i),
                     np.zeros((10,) + tuple(mem.output_shape[1:])),
-                    dtype=get_layer_dtype(mem)
+                    dtype=get_layer_dtype(mem),
+                    device=device
                 )
                 for i, mem in enumerate(agent_memories)
                 ]
@@ -157,12 +165,12 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
         self.rng = T.shared_randomstreams.RandomStreams(rng_seed)
         
         BaseEnvironment.__init__(self,
-                                 state_shapes = [tuple()],
-                                 observation_shapes = [obs.get_value().shape[2:] for obs in self.observations],
-                                 action_shapes = [act.get_value().shape[2:] for act in self.actions],
-                                 state_dtypes= ["int32"],
-                                 observation_dtypes = [obs.dtype for obs in self.observations],
-                                 action_dtypes = [act.dtype for act in self.actions]
+                                 state_shapes = (tuple(),),
+                                 observation_shapes = tuple(obs.get_value().shape[2:] for obs in self.observations),
+                                 action_shapes = tuple(act.get_value().shape[2:] for act in self.actions),
+                                 state_dtypes= ("int32",),
+                                 observation_dtypes = tuple(obs.dtype for obs in self.observations),
+                                 action_dtypes = tuple(act.dtype for act in self.actions)
                                  )
                                  
         
