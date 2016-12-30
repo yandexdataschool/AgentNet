@@ -70,7 +70,7 @@ class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
                  actions=1,
                  agent_memories=1,
                  default_action_dtype="int32",
-                 force_use_ram=True,
+                 force_use_ram=False,
                  rng_seed=1337):
 
         device = 'cpu' if force_use_ram else None
