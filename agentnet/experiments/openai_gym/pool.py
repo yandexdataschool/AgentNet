@@ -10,7 +10,6 @@ from warnings import warn
 import gym
 from gym.wrappers import Monitor
 
-function = type(lambda:0)
 
 def GamePool(*args,**kwargs):
     raise ValueError("Deprecated. Use EnvPool(agent,env_title,n_parallel_agents) instead")
@@ -27,12 +26,12 @@ class EnvPool(object):
 
         and is capable of some auxilary actions like evaluating agent on one game session.
 
-        :param make_env: a factory that produces environments OR a name of the gym environment.
+        :param make_env: a factory (callable) that produces environments OR a name of the gym environment.
                 See gym.envs.registry.all()
         :param n_games: number of parallel games
         :param max_size: max pool size by default (if appending sessions)
         """
-        if not isinstance(make_env, function):
+        if not callable(make_env):
             env_name = make_env
             make_env = lambda: gym.make(env_name)
 
