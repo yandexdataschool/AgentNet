@@ -246,7 +246,8 @@ class Recurrence(DictLayer):
 
         #output shapes and dtypes
         output_shapes = [tuple(layer.output_shape) for layer in self.all_outputs]
-        output_shapes =  [shape[:1] + (self.n_steps,) + shape[1:] for shape in output_shapes]
+        time_shape = None if is_theano_object(self.n_steps) else self.n_steps
+        output_shapes =  [shape[:1] + (time_shape,) + shape[1:] for shape in output_shapes]
         output_shapes = OrderedDict(zip(self.all_outputs,output_shapes))
         
         output_dtypes = [get_layer_dtype(layer) for layer in self.all_outputs]
