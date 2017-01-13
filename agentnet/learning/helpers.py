@@ -76,11 +76,11 @@ def get_n_step_value_reference(state_values,
             raise ValueError("state_values must have shape [batch,tick] (ndim = 2),"
                              "while you have" + str(state_values.ndim))
 
-    # handle aggregation function
+    # fill default values
     if optimal_state_values == "same_as_state_values":
         optimal_state_values = state_values
-
-    # fill default values
+    if optimal_state_values_after_end == "zeros":
+        optimal_state_values_after_end = T.zeros_like(optimal_state_values[:, :1])
     if is_alive == "always":
         is_alive = T.ones_like(rewards)
 
@@ -93,7 +93,6 @@ def get_n_step_value_reference(state_values,
 
 
     if crop_last:
-        #TODO rewrite by precomputing correct td-0 qvalues here to clarify notation
         #alter tensors so that last reference = last prediction
         is_alive = T.set_subtensor(is_alive[:,-1],1)
         rewards = T.set_subtensor(rewards[:,-1],0)
@@ -102,8 +101,7 @@ def get_n_step_value_reference(state_values,
 
     else:
         #crop_last == False
-        if optimal_state_values_after_end == "zeros":
-            optimal_state_values_after_end = T.zeros_like(optimal_state_values[:, :1])
+
         # get "Next state_values": floatX[batch,time] at each tick
         # do so by shifting state_values backwards in time, pad with state_values_after_end
         next_state_values = T.concatenate(
