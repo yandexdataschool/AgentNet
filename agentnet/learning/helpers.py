@@ -8,8 +8,6 @@ from warnings import warn
 import theano
 import theano.tensor as T
 
-from ..utils import insert_dim
-
 
 def get_n_step_value_reference(state_values,
                                rewards,
@@ -86,6 +84,13 @@ def get_n_step_value_reference(state_values,
     if is_alive == "always":
         is_alive = T.ones_like(rewards)
 
+    #cast everything to floatX
+    floatX = theano.config.floatX
+    tensors = state_values,rewards,is_alive,optimal_state_values,optimal_state_values_after_end
+    tensors = [tensor.astype(floatX) for tensor in tensors]
+    state_values, rewards, is_alive, optimal_state_values, optimal_state_values_after_end = tensors
+
+
 
     if crop_last:
         #TODO rewrite by precomputing correct td-0 qvalues here to clarify notation
@@ -153,7 +158,7 @@ def get_n_step_value_reference(state_values,
         chosen_Vref = T.switch(is_tmax, optimal_Vref, propagated_Vref)
 
         # zero out references if session has ended already
-        this_Vref = T.switch(is_alive, chosen_Vref, 0.)
+        this_Vref = T.switch(is_alive, chosen_Vref, 0)
 
         return this_Vref
 
