@@ -11,7 +11,7 @@ from lasagne.layers import InputLayer, DimshuffleLayer
 from agentnet.memory import WindowAugmentation
 from agentnet.resolver import ProbabilisticResolver
 from lasagne.layers import DenseLayer, ExpressionLayer
-from agentnet.learning import qlearning, sarsa,qlearning_n_step, a2c_n_step
+from agentnet.learning import qlearning,sarsa,a2c
 import theano
 from lasagne.regularization import regularize_network_params, l2
 from agentnet.experiments.openai_gym.pool import EnvPool
@@ -156,7 +156,7 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
                                                               gamma_or_gammas=0.99, )
     #qlearning_n_step
     for n in (1,3,replay_seq_len-1, replay_seq_len, replay_seq_len+1,None):
-        elwise_mse_loss += qlearning_n_step.get_elementwise_objective(q_values_sequence,
+        elwise_mse_loss += qlearning.get_elementwise_objective(q_values_sequence,
                                                               env.actions[0],
                                                               scaled_reward_seq,
                                                               env.is_alive,
@@ -165,7 +165,7 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
         
     #a2c n_step
     
-    elwise_mse_loss += a2c_n_step.get_elementwise_objective(policy_sequence,
+    elwise_mse_loss += a2c.get_elementwise_objective(policy_sequence,
                                                             value_sequence[:,:,0],
                                                             env.actions[0],
                                                             scaled_reward_seq,
