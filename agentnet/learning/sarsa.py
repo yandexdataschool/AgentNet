@@ -76,7 +76,7 @@ def get_elementwise_objective(qvalues, actions, rewards,
     #set defaults
     if qvalues_target is None:
         qvalues_target = qvalues
-    if is_alive != 'always':
+    if is_alive == 'always':
         is_alive = T.ones_like(rewards)
     assert qvalues.ndim == qvalues_target.ndim == 3
     assert actions.ndim == rewards.ndim ==2

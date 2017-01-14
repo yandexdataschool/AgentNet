@@ -74,7 +74,9 @@ def get_elementwise_objective_critic(action_qvalues,
     """
 
     assert action_qvalues.ndim  == state_values.ndim == rewards.ndim ==2
-    if is_alive != 'always': assert is_alive.ndim==2
+    if is_alive == 'always':
+        is_alive = T.ones_like(rewards)
+    assert is_alive.ndim==2
 
 
     # get reference Q-values via Q-learning algorithm
