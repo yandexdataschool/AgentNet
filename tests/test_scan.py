@@ -7,15 +7,13 @@ import numpy as np
 
 import theano
 import lasagne
-from lasagne.layers import InputLayer, DimshuffleLayer
-from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer
 from lasagne.regularization import regularize_network_params, l2
 
 from agentnet.agent import Agent
 from agentnet.resolver import EpsilonGreedyResolver,ProbabilisticResolver
 from agentnet.memory.rnn import RNNCell
 import agentnet.experiments.boolean_reasoning as experiment
-from agentnet.learning import qlearning, sarsa,qlearning_n_step, a2c_n_step
+from agentnet.learning import qlearning
 from agentnet.display import Metrics
 
 

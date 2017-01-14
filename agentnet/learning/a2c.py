@@ -15,7 +15,7 @@ from lasagne.objectives import squared_error
 
 from .generic import get_n_step_value_reference, get_action_Qvalues
 from ..utils.grad import consider_constant
-
+from warnings import warn
 
 def get_elementwise_objective(policy,state_values,actions,rewards,
                               is_alive="always",
@@ -88,11 +88,19 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
     if is_alive == "always":
         is_alive = T.ones_like(actions, dtype=theano.config.floatX)
 
+    # check dimensions
     assert policy.ndim==3
     assert state_values.ndim in (2,3)
     assert state_values_target.ndim in (2,3)
     assert actions.ndim == rewards.ndim ==2
     if is_alive != 'always': assert is_alive.ndim==2
+
+    #fix state_values dimensions
+    #note: state_values_target is validated inside get_n_step_value_reference
+    if state_values.ndim == 3:
+        warn("""state_values must have shape [batch,tick] (ndim = 2).
+            Currently assuming state_values you provided to have shape [batch, tick,1].""")
+        state_values = state_values[:, :, 0]
 
     #####################
     #####Critic loss#####
