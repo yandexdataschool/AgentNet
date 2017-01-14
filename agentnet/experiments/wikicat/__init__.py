@@ -118,7 +118,8 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
         #init default (some shapes will be overloaded below
         BaseEnvironment.__init__(self,
                                 env_state_shapes,
-                                observation_shapes)
+                                observation_shapes,
+                                action_shapes=[tuple()])
 
         
         
@@ -282,8 +283,6 @@ class WikicatEnvironment(BaseObjective,BaseEnvironment):
             session_is_active,
             reward_for_action,
             0,
-
-            
         )
         
         
