@@ -30,6 +30,8 @@ from ..deprecated import deprecated
 class MDPAgent(object):
     """
     A generic agent within MDP (markov decision process) abstraction.
+    Basically wraps Recurrence layer to interact between agent and environment.
+
     :param observation_layers: agent observation(s)
     :type observation_layers: lasagne.layers.InputLayer or a list of such
 
@@ -150,6 +152,9 @@ class MDPAgent(object):
                     'and .actions properties containing observations and actions to replay.')
             if initial_env_states != 'zeros' or initial_observations != 'zeros':
                 warn("In experience replay mode, initial env states and initial observations parameters are unused")
+
+            if initial_hidden == 'zeros' and hasattr(env,"preceding_agent_memories"):
+                initial_hidden = getattr(env,"preceding_agent_memories")
 
             # create recurrence
             self.recurrence = self.as_replay_recurrence(environment=environment,

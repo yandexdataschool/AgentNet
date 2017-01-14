@@ -1,156 +1,120 @@
 """
-State-Action-Reward-State-Action (sars'a') learning algorithm implementation
+State-Action-Reward-State-Action (sars'a') learning algorithm implementation.
+Supports n-step eligibility traces.
+This is an on-policy SARSA. To use off-policy Expected Value SARSA, use agentnet.learning.qlearning
+with custom aggregation_function
 """
 from __future__ import division, print_function, absolute_import
 
 import theano.tensor as T
-import theano
-import numpy as np
 
 from lasagne.objectives import squared_error
 
-from .helpers import get_end_indicator, get_action_Qvalues
+from .generic import get_action_Qvalues,get_n_step_value_reference
 from ..utils.grad import consider_constant
-from ..utils import create_shared
-
-default_gamma = create_shared('sarsa_gamma_default', np.float32(0.99), theano.config.floatX)
 
 
-def get_reference_Qvalues(Qvalues,
-                          actions,
-                          rewards,
-                          gamma_or_gammas=default_gamma,
-                          qvalues_after_end="zeros"
-                          ):
-    """
-    Returns reference Qvalues according to State-Action-Reward-State-Action (SARSA) algorithm
-
-    :param Qvalues: [batch,tick,action_id] - predicted Q-values
-    :param actions: [batch,tick] - committed actions
-    :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
-    :param gamma_or_gammas: a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
-    :param qvalues_after_end: symbolic expression for "future rewards" term for last tick used for reference only.
-                        Defaults at  T.zeros_like(rewards[:,0,None])
-                        If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
-    :return: Qreference - reference Q-values at [batch,tick] using formula
-
-        Q reference [batch,action_at_tick] = rewards[t] + gamma_or_gammas * Qs(t+1,action[t+1])
-        Where action[t+1] is simply action that agent took at next time tick [padded with qvalues_after_end]
-    """
-    if qvalues_after_end == "zeros":
-        qvalues_after_end = T.zeros_like(rewards[:, 0, None])
-
-    # Q-values for "next" states (missing last tick): float[batch,tick-1,action]
-    next_Qvalues_predicted = Qvalues[:, 1:]
-
-    # actions committed at next ticks (missing last tick): int[batch,tick-1]
-    next_actions = actions[:, 1:]
-
-    future_rewards_estimate = get_action_Qvalues(next_Qvalues_predicted, next_actions)
-
-    # adding the last tick
-    future_rewards_estimate = T.concatenate(
-        [
-            future_rewards_estimate,
-            qvalues_after_end,
-        ],
-        axis=1
-    )
-
-    # full Q-value formula (SARSA algorithm)
-    reference_Qvalues = rewards + gamma_or_gammas * future_rewards_estimate
-
-    return reference_Qvalues
-
-
-def get_elementwise_objective(Qvalues,
-                              actions,
-                              rewards,
+def get_elementwise_objective(qvalues, actions, rewards,
                               is_alive="always",
-                              Qvalues_target=None,
-                              gamma_or_gammas=0.95,
+                              qvalues_target=None,
+                              n_steps=1,
+                              gamma_or_gammas=0.99,
                               crop_last=True,
-                              force_qvalues_after_end=True,
-                              qvalues_after_end="zeros",
-                              consider_reference_constant=True, ):
+                              state_values_target_after_end="zeros",
+                              consider_reference_constant=True,
+                              force_end_at_last_tick=False,
+                              return_reference=False,
+                              loss_function=squared_error,
+                              scan_dependencies=(),
+                              scan_strict=True):
     """
-    Returns squared error between predicted and reference Qvalues according to Q-learning algorithm
+    Returns squared error between predicted and reference Q-values according to n-step SARSA algorithm
 
-        Qreference(state,action) = reward(state,action) + gamma* Q(next_state,next_action)
+        Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * max[action_n]( Q(state_n,action_n)
         loss = mean over (Qvalues - Qreference)**2
 
-    :param Qvalues: [batch,tick,action_id] - predicted qvalues
+    :param qvalues: [batch,tick,action_id] - predicted qvalues
     :param actions: [batch,tick] - commited actions
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
     :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
-                            Default value of is_alive implies a simplified computation algorithm for Qlearning loss
-    :param Qvalues_target: Older snapshot Qvalues (e.g. from a target network). If None, uses current Qvalues
-    :param gamma_or_gammas: a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
+
+
+    :param qvalues_target: Older snapshot qvalues (e.g. from a target network). If None, uses current qvalues
+
+    :param n_steps: if an integer is given, the references are computed in loops of 3 states.
+            If 1 (default), this works exactly as Q-learning (though less efficient one)
+            If None: propagating rewards throughout the whole session.
+            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
+
+    :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
+
     :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
-    :param force_qvalues_after_end: if true, sets reference Qvalues at session end to rewards[end] + qvalues_after_end
-    :param qvalues_after_end: [batch,1,n_actions] - symbolic expression for "next state q-values" for last tick used for reference only.
-                            Defaults at  T.zeros_like(Qvalues[:,0,None,:])
+
+    :param qvalues_after_end: [batch,1] - symbolic expression for "best next state q-values" for last tick
+                            used when computing reference Q-values only.
+                            Defaults at  T.zeros_like(Q-values[:,0,None,0])
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
-    :param consider_reference_constant: whether or not zero-out gradient flow through reference_Qvalues
-            (True is highly recommended unless you know what you're doind)
-    :return: tensor [batch, tick] of squared errors over Qvalues (using formula above for loss)
+    :param consider_reference_constant: whether or not zero-out gradient flow through reference_qvalues
+            (True is highly recommended)
+    :param aggregation_function: a function that takes all Qvalues for "next state Q-values" term and returns what
+                                is the "best next Q-value". Normally you should not touch it. Defaults to max over actions.
+                                Normally you shouldn't touch this
+                                Takes input of [batch,n_actions] Q-values
+
+    :param force_end_at_last_tick: if True, forces session end at last tick unless ended otehrwise
+
+    :param loss_function: loss_function(V_reference,V_predicted). Defaults to (V_reference-V_predicted)**2.
+                            Use to override squared error with different loss (e.g. Huber or MAE)
+
+    :param return_reference: if True, returns reference Qvalues.
+            If False, returns squared_error(action_qvalues, reference_qvalues)
+    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
+    :param scan_strict: whether to evaluate Qvalues using strict theano scan or non-strict one
+    :return: loss [squared error] over Q-values (using formula above for loss)
+
     """
-    if Qvalues_target is None:
-        Qvalues_target = Qvalues
-
-    assert Qvalues.ndim == Qvalues_target.ndim == 3
+    #set defaults
+    if qvalues_target is None:
+        qvalues_target = qvalues
+    if is_alive != 'always':
+        is_alive = T.ones_like(rewards)
+    assert qvalues.ndim == qvalues_target.ndim == 3
     assert actions.ndim == rewards.ndim ==2
-    if is_alive != 'always': assert is_alive.ndim==2
+    assert is_alive.ndim == 2
 
-    # get reference Qvalues via Q-learning algorithm
-    reference_Qvalues = get_reference_Qvalues(Qvalues_target, actions, rewards,
-                                              gamma_or_gammas=gamma_or_gammas,
-                                              qvalues_after_end=qvalues_after_end,
-                                              )
+
+    # get Qvalues of taken actions (used every K steps for reference Q-value computation
+    state_values_target = get_action_Qvalues(qvalues_target,actions)
+
+    # get predicted Q-values for committed actions by both current and target networks
+    # (to compare with reference Q-values and use for recurrent reference computation)
+    action_qvalues = get_action_Qvalues(qvalues, actions)
+
+    # get reference Q-values via Q-learning algorithm
+    reference_qvalues = get_n_step_value_reference(
+        state_values=state_values_target,
+        rewards=rewards,
+        is_alive=is_alive,
+        n_steps=n_steps,
+        gamma_or_gammas=gamma_or_gammas,
+        state_values_after_end=state_values_target_after_end,
+        end_at_tmax=force_end_at_last_tick,
+        dependencies=scan_dependencies,
+        strict=scan_strict,
+        crop_last=crop_last,
+    )
 
     if consider_reference_constant:
-        # do not pass gradient through reference Q-values (since they DO depend on Q-values by default)
-        reference_Qvalues = consider_constant(reference_Qvalues)
+        # do not pass gradient through reference Qvalues (since they DO depend on Qvalues by default)
+        reference_qvalues = consider_constant(reference_qvalues)
 
-    # get predicted qvalues for committed actions (to compare with reference Q-values)
-    action_Qvalues = get_action_Qvalues(Qvalues, actions)
-
-    # if agent is always alive, return the simplified loss
-    if is_alive == "always":
-
-        # tensor of element-wise squared errors
-        elwise_squared_error = squared_error(reference_Qvalues, action_Qvalues)
-
-    else:
-        # we are given an is_alive matrix : uint8[batch,tick]
-
-        # if asked to force reference_Q[end_tick+1,a] = 0, do it
-        # note: if agent is always alive, this is meaningless
-
-        if force_qvalues_after_end:
-            # set future rewards at session end to rewards + qvalues_after_end
-            end_ids = get_end_indicator(is_alive, force_end_at_t_max=True).nonzero()
-
-            if qvalues_after_end == "zeros":
-                # "set reference Q-values at end action ids to just the immediate rewards"
-                reference_Qvalues = T.set_subtensor(reference_Qvalues[end_ids], rewards[end_ids])
-            else:
-                last_optimal_rewards = T.zeros_like(rewards[:, 0])
-
-                # "set reference Q-values at end action ids to the immediate rewards + qvalues after end"
-                reference_Qvalues = T.set_subtensor(reference_Qvalues[end_ids],
-                                                    rewards[end_ids] + gamma_or_gammas * last_optimal_rewards[
-                                                        end_ids[0], 0]
-                                                    )
-
-        # tensor of element-wise squared errors
-        elwise_squared_error = squared_error(reference_Qvalues, action_Qvalues)
-
-        # zero-out loss after session ended
-        elwise_squared_error = elwise_squared_error * is_alive
-     
+    #If asked, make sure loss equals 0 for the last time-tick.
     if crop_last:
-        elwise_squared_error = T.set_subtensor(elwise_squared_error[:,-1],0)
+        reference_qvalues = T.set_subtensor(reference_qvalues[:,-1],action_qvalues[:,-1])
 
-
-    return elwise_squared_error
+    if return_reference:
+        return reference_qvalues
+    else:
+        # tensor of elementwise squared errors
+        elwise_squared_error = loss_function(reference_qvalues, action_qvalues)
+        return elwise_squared_error * is_alive

@@ -213,108 +213,13 @@ def build_NAF_controller(input_layer = None,
             # qvalue for optimal actions  aka V aka Q(Mu)
             ('state_value', V_layer),
 
-            # advantage term
+            # advantage term (negative)
             ('advantage', advantage_layer)
 
         ])
 
 
-
-from helpers import get_n_step_value_reference,get_end_indicator
-from ..utils.grad import consider_constant
-from lasagne.objectives import squared_error
-def get_elementwise_objective(action_qvalues,
-                              state_values,
-                              rewards,
-                              is_alive="always",
-                              n_steps=None,
-                              gamma_or_gammas=0.95,
-                              crop_last=True,
-                              force_state_values_after_end=True,
-                              state_values_after_end="zeros",
-                              consider_reference_constant=True,
-                              return_reference=False,
-                              scan_dependencies=(),
-                              scan_strict=True):
-    """
-    Returns squared error between predicted and reference Q-values according to n-step Q-learning algorithm
-
-        Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * max[action_n]( Q(state_n,action_n)
-        loss = mean over (Qvalues - Qreference)**2
-
-    :param action_qvalues: [batch,tick,action_id] - predicted qvalues
-    :param state_values: [batch,tick] - predicted state values (aka qvalues for best actions)
-    :param actions: [batch,tick] - commited actions
-    :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
-    :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
-                            Default value of is_alive implies a simplified computation algorithm for Qlearning loss
-    :param n_steps: if an integer is given, the references are computed in loops of 3 states.
-            Defaults to None: propagating rewards throughout the whole session.
-            If n_steps equals 1, this works exactly as Q-learning (though less efficient one)
-            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
-    :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
-    :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
-    :param force_state_values_after_end: if true, sets reference Qvalues at session end to rewards[end] + qvalues_after_end
-    :param state_values_after_end: [batch,1] - symbolic expression for "best next state q-values" for last tick
-                            used when computing reference Q-values only.
-                            Defaults at  T.zeros_like(Q-values[:,0,None,0])
-                            If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
-    :param consider_reference_constant: whether or not zero-out gradient flow through reference_Qvalues
-            (True is highly recommended)
-    :param aggregation_function: a function that takes all Qvalues for "next state Q-values" term and returns what
-                                is the "best next Q-value". Normally you should not touch it. Defaults to max over actions.
-                                Normally you shouldn't touch this
-                                Takes input of [batch,n_actions] Q-values
-    :param return_reference: if True, returns reference Qvalues.
-            If False, returns squared_error(action_Qvalues, reference_Qvalues)
-    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-    :param scan_strict: whether to evaluate Qvalues using strict theano scan or non-strict one
-    :return: mean squared error over Q-values (using formula above for loss)
-
-    """
-
-    assert action_qvalues.ndim  == state_values.ndim == rewards.ndim ==2
-    if is_alive != 'always': assert is_alive.ndim==2
-
-
-    # get reference Q-values via Q-learning algorithm
-    reference_qvalues = get_n_step_value_reference(
-        state_values=state_values,
-        rewards=rewards,
-        is_alive=is_alive,
-        n_steps=n_steps,
-        gamma_or_gammas=gamma_or_gammas,
-        optimal_state_values_after_end=state_values_after_end,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
-        crop_last=crop_last,
-    )
-
-    if consider_reference_constant:
-        # do not pass gradient through reference Qvalues (since they DO depend on Qvalues by default)
-        reference_qvalues = consider_constant(reference_qvalues)
-
-    if force_state_values_after_end and is_alive != "always":
-        # if asked to force reference_Q[end_tick+1,a] = 0, do it
-        # note: if agent is always alive, this is meaningless
-        # set future rewards at session end to rewards+qvalues_after_end
-        end_ids = get_end_indicator(is_alive, force_end_at_t_max=True).nonzero()
-
-        if state_values_after_end == "zeros":
-            # "set reference Q-values at end action ids to just the immediate rewards"
-            reference_qvalues = T.set_subtensor(reference_qvalues[end_ids], rewards[end_ids])
-        else:
-            # "set reference Q-values at end action ids to the immediate rewards + qvalues after end"
-            new_reference_values = rewards[end_ids] + gamma_or_gammas * state_values_after_end
-            reference_qvalues = T.set_subtensor(reference_qvalues[end_ids], new_reference_values[end_ids[0], 0])
-
-    #If asked, make sure loss equals 0 for the last time-tick.
-    if crop_last:
-        reference_qvalues = T.set_subtensor(reference_qvalues[:,-1],state_values[:,-1])
-
-    if return_reference:
-        return reference_qvalues
-    else:
-        # tensor of elementwise squared errors
-        elwise_squared_error = squared_error(action_qvalues,reference_qvalues)
-        return elwise_squared_error * is_alive
+#Since q-learning with NAF is effectively using a deterministic policy gradient over mu (mean, optimal action),
+#we can seamlessly train it using dpg objective
+from . import dpg
+get_elementwise_objective = dpg.get_elementwise_objective_critic
