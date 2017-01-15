@@ -28,6 +28,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                               consider_value_reference_constant=True,
                               force_end_at_last_tick=False,
                               return_separate=False,
+                              treat_policy_as_logpolicy=False,
                               loss_function=squared_error,
                               scan_dependencies=(),
                               scan_strict=True,
@@ -68,6 +69,9 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
     :param consider_value_reference_constant: whether or not to zero-out critic gradients through the reference state values term
 
     :param return_separate: if True, returns a tuple of (actor loss , critic loss ) instead of their sum.
+
+    :param treat_policy_as_logpolicy: if True, policy is used as log(pi(a|s)). You may want to do this for numerical stability reasons.
+
     :param loss_function: loss_function(V_reference,V_predicted) used for CRITIC. Defaults to (V_reference-V_predicted)**2
                                 Use to override squared error with different loss (e.g. Huber or MAE)
 
@@ -129,8 +133,10 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
     #####Actor loss#####
     ####################
 
+    #logprobas for all actions
+    logpolicy = T.log(policy) if not treat_policy_as_logpolicy else policy
     #logprobas for actions taken
-    action_logprobas = get_action_Qvalues(T.log(policy), actions)
+    action_logprobas = get_action_Qvalues(logpolicy, actions)
 
 
     #if n_steps_advantage is different than n_steps, compute actor advantage separately. Otherwise reuse old
