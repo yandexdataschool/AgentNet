@@ -160,7 +160,7 @@ def get_n_step_value_reference(state_values,rewards,
         chosen_Vref = T.switch(is_tmax, optimal_Vref, propagated_Vref)
 
         # zero out references if session has ended already
-        this_Vref = T.switch(is_end, chosen_Vref, rewards)
+        this_Vref = T.switch(is_end, rewards,chosen_Vref)
 
         return this_Vref
 
