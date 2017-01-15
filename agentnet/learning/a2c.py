@@ -25,6 +25,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                               gamma_or_gammas=0.99,
                               crop_last=True,
                               state_values_target_after_end="zeros",
+                              state_values_after_end="zeros",
                               consider_value_reference_constant=True,
                               force_end_at_last_tick=False,
                               return_separate=False,
@@ -63,9 +64,11 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
     :param force_values_after_end: if true, sets reference policy at session end to rewards[end] + qvalues_after_end
 
 
-    :param state_values_target_after_end: [batch,1,n_actions] - "next state values" for last tick used for reference.
+    :param state_values_target_after_end: [batch,1] - "next target state values" after last tick; used for reference.
+                            Defaults at  T.zeros_like(state_values_target[:,0,None,:])
+
+    :param state_values_after_end: [batch,1] - "next state values" after last tick; used for reference.
                             Defaults at  T.zeros_like(state_values[:,0,None,:])
-                            If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
 
     :param consider_value_reference_constant: whether or not to zero-out critic gradients through the reference state values term
 
@@ -145,23 +148,24 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
 
 
     #if n_steps_advantage is different than n_steps, compute actor advantage separately. Otherwise reuse old
-    if n_steps_advantage == 'same' or n_steps_advantage == n_steps:
-        observed_state_values = reference_state_values
-    else:
-        observed_state_values = get_n_step_value_reference(
-        state_values=state_values_target,
+    if n_steps_advantage == 'same':
+        n_steps_advantage = n_steps
+
+    #estimate n-step advantage. Note that we use current state values here (and not e.g. state_values_target)
+    observed_state_values = get_n_step_value_reference(
+        state_values=state_values,
         rewards=rewards,
         is_alive=is_alive,
         n_steps=n_steps_advantage,
         gamma_or_gammas=gamma_or_gammas,
-        state_values_after_end=state_values_target_after_end,
+        state_values_after_end=state_values_after_end,
         end_at_tmax=force_end_at_last_tick,
         dependencies=scan_dependencies,
         strict=scan_strict,
         crop_last=crop_last,
     )
 
-    advantage = consider_constant(observed_state_values - state_values_target)
+    advantage = consider_constant(observed_state_values - state_values)
 
     actor_loss_elwise = - action_logprobas * advantage * is_alive
 
