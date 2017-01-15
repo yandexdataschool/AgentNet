@@ -7,15 +7,13 @@ import numpy as np
 
 import theano
 import lasagne
-from lasagne.layers import InputLayer, DimshuffleLayer
-from lasagne.layers import DropoutLayer, DenseLayer, ExpressionLayer
 from lasagne.regularization import regularize_network_params, l2
 
 from agentnet.agent import Agent
-from agentnet.resolver import EpsilonGreedyResolver,ProbabilisticResolver
+from agentnet.resolver import EpsilonGreedyResolver
 from agentnet.memory.rnn import RNNCell
 import agentnet.experiments.boolean_reasoning as experiment
-from agentnet.learning import qlearning, sarsa,qlearning_n_step, a2c_n_step
+from agentnet.learning import qlearning, sarsa
 from agentnet.display import Metrics
 
 
@@ -23,13 +21,14 @@ from agentnet.display import Metrics
 from nose_parameterized import parameterized
 
 @parameterized([
-    (25, qlearning),
-    (25, qlearning_n_step),
-    (25, sarsa),
+    (25, qlearning,1),
+    (25, sarsa,1),
+    (25, qlearning,3),
 
 ])
 def test_reasoning_value_based(n_parallel_games=25,
-                   algo = qlearning,
+                               algo = qlearning,
+                               n_steps=1
                   ):
     """
     :param game_title: name of atari game in Gym

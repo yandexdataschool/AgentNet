@@ -218,7 +218,7 @@ class MDPAgent(object):
         if return_automatic_updates:
             ret_tuple += (self.get_automatic_updates(),)
 
-        if unroll_scan == return_automatic_updates:
+        if unroll_scan and return_automatic_updates:
             warn("return_automatic_updates useful when and only when unroll_scan == False")
 
         return ret_tuple
