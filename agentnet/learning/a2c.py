@@ -62,7 +62,8 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
 
     :param force_values_after_end: if true, sets reference policy at session end to rewards[end] + qvalues_after_end
 
-    :param state_values_target_after_end: [batch,1,n_actions] - "next state values" for last tick used for reference only.
+
+    :param state_values_target_after_end: [batch,1,n_actions] - "next state values" for last tick used for reference.
                             Defaults at  T.zeros_like(state_values[:,0,None,:])
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
 
@@ -105,6 +106,10 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         warn("""state_values must have shape [batch,tick] (ndim = 2).
             Currently assuming state_values you provided to have shape [batch, tick,1].""")
         state_values = state_values[:, :, 0]
+    if state_values_target.ndim == 3:
+        warn("""state_values_target must have shape [batch,tick] (ndim = 2).
+            Currently assuming state_values_target you provided to have shape [batch, tick,1].""")
+        state_values_target = state_values_target[:, :, 0]
 
     #####################
     #####Critic loss#####
@@ -156,7 +161,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         crop_last=crop_last,
     )
 
-    advantage = consider_constant(observed_state_values - state_values)
+    advantage = consider_constant(observed_state_values - state_values_target)
 
     actor_loss_elwise = - action_logprobas * advantage * is_alive
 
