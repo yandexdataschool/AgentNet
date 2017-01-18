@@ -16,10 +16,12 @@ def GamePool(*args, **kwargs):
     raise ValueError("Deprecated. Use EnvPool(agent,env_title,n_parallel_agents) instead")
 
 
+deprecated_preprocess_obs = lambda obs: obs
+
 # A whole lot of space invaders
 class EnvPool(object):
     def __init__(self, agent, make_env=lambda: gym.make("SpaceInvaders-v0"), n_games=1, max_size=None,
-                 preprocess_observation=lambda obs: obs, agent_step=None):
+                 preprocess_observation=deprecated_preprocess_obs, agent_step=None):
         """A pool that stores several
            - game states (gym environment)
            - prev observations - last agent observations
@@ -50,6 +52,10 @@ class EnvPool(object):
         if not callable(make_env):
             env_name = make_env
             make_env = lambda: gym.make(env_name)
+
+        ##Deprecation warning
+        if preprocess_observation != deprecated_preprocess_obs:
+            warn("preprocess_observation is deprecated (will be removed in 0.11). Use gym.core.Wrapper instead.")
 
         # Create atari games.
         self.make_env = make_env
