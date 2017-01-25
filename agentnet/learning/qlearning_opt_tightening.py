@@ -5,11 +5,11 @@ Q-learning algorithm with optimality tightening
 
 import theano
 import theano.tensor as T
-
 from lasagne.objectives import squared_error
-
-from .helpers import get_action_Qvalues
-
+from .generic import get_values_for_actions
+__author__ = "Konstantin Sidorov"
+from warnings import warn
+warn("qlearning with optimality tightening will have a major update in 0.10.3. Use at your own risk")
 
 
 def get_elementwise_objective(
@@ -26,14 +26,14 @@ def get_elementwise_objective(
     :param is_alive: [batch, tick] - whether given session is still active at given tick.
         Default value implies simplified construction of error function.
     :param gamma: delayed reward discount (defaults to 0.95).
-    :param lambda_constr: penalty coefficient for vonstrain violation (default to 1000).
+    :param lambda_constr: penalty coefficient for constraint violation (default to 1000).
 
     :return: tensor [batch, tick] of error function values for every tick in every batch.
     """
 
     # Computing standard Q-learning error.
     opt_Qvalues = T.max(Qvalues, axis=-1)
-    act_Qvalues = get_action_Qvalues(Qvalues, actions)
+    act_Qvalues = get_values_for_actions(qvalues, actions)
     ref_Qvalues = rewards + gamma * T.concatenate((opt_Qvalues[:, 1:], T.zeros_like(opt_Qvalues[:, 0:1])), axis=1)
     classic_error = squared_error(ref_Qvalues, act_Qvalues)
 

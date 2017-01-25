@@ -8,7 +8,7 @@ from __future__ import division, print_function, absolute_import
 import theano.tensor as T
 from lasagne.objectives import squared_error
 
-from .generic import get_n_step_value_reference, get_action_Qvalues
+from .generic import get_n_step_value_reference, get_values_for_actions
 from ..utils.grad import consider_constant
 
 
@@ -40,17 +40,17 @@ def get_elementwise_objective(qvalues, actions, rewards,
     :param qvalues_target: Older snapshot Qvalues (e.g. from a target network). If None, uses current Qvalues
 
     :param n_steps: if an integer is given, the references are computed in loops of 3 states.
-            If 1 (default), this works exactly as Q-learning (though less efficient one)
-            If None: propagating rewards throughout the whole session.
+            If 1 (default), this works exactly as normal Q-learning: Q(s,a) = r+gamma*max_a' Q(s',a')
+            If None: propagates rewards through whole session, only using Q(s_n,a) at the very end and on env reset.
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
 
     :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
 
     :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
 
-    :param qvalues_after_end: [batch,1] - symbolic expression for "best next state q-values" for last tick
+    :param state_values_target_after_end: [batch,1] - symbolic expression for "next best q-values" for last tick
                             used when computing reference Q-values only.
-                            Defaults at  T.zeros_like(Q-values[:,0,None,0])
+                            Defaults at  T.zeros_like(Q-values[:,0,None,0]). if crop_last=True, simply does not penalize at last tick.
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
     :param consider_reference_constant: whether or not zero-out gradient flow through reference_qvalues
             (True is highly recommended)
@@ -86,7 +86,7 @@ def get_elementwise_objective(qvalues, actions, rewards,
 
     # get predicted Q-values for committed actions by both current and target networks
     # (to compare with reference Q-values and use for recurrent reference computation)
-    action_qvalues = get_action_Qvalues(qvalues, actions)
+    action_qvalues = get_values_for_actions(qvalues, actions)
 
     # get reference Q-values via Q-learning algorithm
     reference_qvalues = get_n_step_value_reference(

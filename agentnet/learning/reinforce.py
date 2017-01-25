@@ -1,12 +1,9 @@
 """
-Advantage Actor-Critic (A2c or A3c) implementation.
-Follows the article http://arxiv.org/pdf/1602.01783v1.pdf
-Supports K-step advantage estimation as in https://arxiv.org/pdf/1506.02438v5.pdf
-
-Agent should output action probabilities and state values instead of Q-values.
-Works with discrete action space only.
-
+Basic REINFORCE algorithm.
+Simple policy gradient method for discounted reward MDPs.
+http://kvfrans.com/simple-algoritms-for-solving-cartpole/
 """
+
 from __future__ import division, print_function, absolute_import
 
 import theano
@@ -17,81 +14,36 @@ from .generic import get_n_step_value_reference, get_values_for_actions
 from ..utils.grad import consider_constant
 from warnings import warn
 
-def get_elementwise_objective(policy,state_values,actions,rewards,
+def get_elementwise_objective(policy,actions,rewards,
                               is_alive="always",
-                              state_values_target=None,
-                              n_steps=1,
-                              n_steps_advantage='same',
+                              baseline="zeros",
                               gamma_or_gammas=0.99,
                               crop_last=True,
-                              state_values_target_after_end="zeros",
-                              state_values_after_end="zeros",
-                              consider_value_reference_constant=True,
-                              force_end_at_last_tick=False,
-                              return_separate=False,
                               treat_policy_as_logpolicy=False,
-                              loss_function=squared_error,
                               scan_dependencies=(),
                               scan_strict=True,
                               ):
     """
-    returns cross-entropy-like objective function for Actor-Critic method
-        L_policy = - log(policy) * A(s,a)
+    Compute and return policy gradient as evaluates
+
+        L_policy = - log(policy) * (V_reference - baseline)
         L_V = (V - Vreference)^2
-        where A(s,a) is an advantage term (e.g. [r+gamma*V(s') - V(s)])
-        and Vreference is reference state values as per Temporal Difference.
 
 
     :param policy: [batch,tick,action_id] - predicted action probabilities
-    :param state_values: [batch,tick] - predicted state values
     :param actions: [batch,tick] - committed actions
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
     :param is_alive: [batch,tick] - binary matrix whether given session is active at given tick. Defaults to all ones.
-    :param state_values_target: there should be state values used to compute reference (e.g. older network snapshot)
-                If None (defualt), uses current Qvalues to compute reference
-
-    :param n_steps: if an integer is given, the STATE VALUE references are computed in loops of 3 states.
-            If 1 (default), this uses a one-step TD rollout, i.e. reference_V(s) = r+gamma*V(s')
-            If None: propagating rewards throughout the whole session and only taking V(s_last) at session ends at last tensor element.
-            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
-
-    :param n_steps_advantage: same as n_steps, but for advantage term A(s,a) (see above). Defaults to same as n_steps
-
-    :param gamma_or_gammas: a single value or array[batch,tick](can broadcast dimensions) of discount for delayed reward
-
-    :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
-
-    :param force_values_after_end: if true, sets reference policy at session end to rewards[end] + qvalues_after_end
-
-    :param state_values_target_after_end: [batch,1] - "next target state values" after last tick; used for reference.
-                            Defaults at  T.zeros_like(state_values_target[:,0,None,:])
-
-    :param state_values_after_end: [batch,1] - "next state values" after last tick; used for reference.
-                            Defaults at  T.zeros_like(state_values[:,0,None,:])
-
-    :param consider_value_reference_constant: whether or not to zero-out critic gradients through the reference state values term
-
-    :param return_separate: if True, returns a tuple of (actor loss , critic loss ) instead of their sum.
-
+    :param baseline: [batch,tick] - REINFORCE  baselines tensor for each batch/tick. Uses no baseline by default.
+    :param gamma_or_gammas: a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
+    :param crop_last: if True, zeros-out loss at final tick
     :param treat_policy_as_logpolicy: if True, policy is used as log(pi(a|s)). You may want to do this for numerical stability reasons.
-
-    :param loss_function: loss_function(V_reference,V_predicted) used for CRITIC. Defaults to (V_reference-V_predicted)**2
-                                Use to override squared error with different loss (e.g. Huber or MAE)
-
-
     :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-
-    :param force_end_at_last_tick: if True, forces session end at last tick unless ended otherwise
-
     :param scan_strict: whether to evaluate values using strict theano scan or non-strict one
-
-
     :return: elementwise sum of policy_loss + state_value_loss [batch,tick]
 
     """
 
-    if state_values_target is None:
-        state_values_target = state_values
     if is_alive == "always":
         is_alive = T.ones_like(actions, dtype=theano.config.floatX)
 

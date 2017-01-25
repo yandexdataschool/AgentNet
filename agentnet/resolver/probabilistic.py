@@ -11,7 +11,7 @@ class ProbabilisticResolver(BaseResolver):
         - samples actions with probabilities given by input layer
     """
 
-    def __init__(self, incoming, assume_normalized=False, seed=1234, action_dtype='int32',
+    def __init__(self, incoming, assume_normalized=False, seed=1234, output_dtype='int32',
                  name='ProbabilisticResolver'):
         """
         :param incoming: a lasagne layer that outputs action probability vectors
@@ -35,11 +35,10 @@ class ProbabilisticResolver(BaseResolver):
         # probas float[2] - probability of random and optimal action respectively
 
         self.assume_normalized = assume_normalized
-        self.action_dtype = action_dtype
 
         self.rng = random_streams.RandomStreams(seed)
 
-        super(ProbabilisticResolver, self).__init__(incoming, name=name)
+        super(ProbabilisticResolver, self).__init__(incoming, name=name,output_dtype=output_dtype)
 
     def get_output_for(self, policy, greedy=False, **kwargs):
         """
@@ -52,7 +51,7 @@ class ProbabilisticResolver(BaseResolver):
         """
         if greedy:
             # greedy branch
-            chosen_action_ids = T.argmax(policy, axis=-1).astype(self.action_dtype)
+            chosen_action_ids = T.argmax(policy, axis=-1).astype(self.output_dtype)
 
         else:
             # probabilistic branch
@@ -74,6 +73,6 @@ class ProbabilisticResolver(BaseResolver):
             # by definition (never being less than random[0,1]), but it can be less due to
             # inaccurate float32 computation, causing algorithm to pick action id = (n_actions)+1
             # which results in IndexError
-            chosen_action_ids = T.sum((batch_randomness > cum_probas[:, :-1]), axis=1, dtype=self.action_dtype)
+            chosen_action_ids = T.sum((batch_randomness > cum_probas[:, :-1]), axis=1, dtype=self.output_dtype)
 
         return chosen_action_ids
