@@ -1,8 +1,9 @@
 """
 Q-learning implementation.
 Works with discrete action space.
-Supports eligibility traces and custom state value function (max(Q(s,a)), boltzmann, mellowmax, expected value sarsa)
+Supports n-step updates and custom state value function (max(Q(s,a)), boltzmann, mellowmax, expected value sarsa)
 """
+
 from __future__ import division, print_function, absolute_import
 
 import theano.tensor as T
@@ -11,6 +12,7 @@ from lasagne.objectives import squared_error
 from .generic import get_n_step_value_reference, get_values_for_actions
 from ..utils.grad import consider_constant
 
+__author__ = "Konstantin Sidorov(partobs-mdp), justheuristic"
 
 def get_elementwise_objective(qvalues, actions, rewards,
                               is_alive="always",

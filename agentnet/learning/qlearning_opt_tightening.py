@@ -33,7 +33,7 @@ def get_elementwise_objective(
 
     # Computing standard Q-learning error.
     opt_Qvalues = T.max(Qvalues, axis=-1)
-    act_Qvalues = get_values_for_actions(qvalues, actions)
+    act_Qvalues = get_values_for_actions(Qvalues, actions)
     ref_Qvalues = rewards + gamma * T.concatenate((opt_Qvalues[:, 1:], T.zeros_like(opt_Qvalues[:, 0:1])), axis=1)
     classic_error = squared_error(ref_Qvalues, act_Qvalues)
 

@@ -100,7 +100,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
     assert state_values.ndim in (2,3)
     assert state_values_target.ndim in (2,3)
     assert actions.ndim == rewards.ndim ==2
-    if is_alive != 'always': assert is_alive.ndim==2
+    assert is_alive.ndim==2
 
     #fix state_values dimensions
     #note: state_values_target is validated inside get_n_step_value_reference
