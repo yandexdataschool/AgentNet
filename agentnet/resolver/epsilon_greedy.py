@@ -14,7 +14,7 @@ class EpsilonGreedyResolver(BaseResolver):
         - takes random action with probability epsilon
     """
 
-    def __init__(self, incoming, epsilon=None, seed=1234, name='EpsilonGreedyResolver'):
+    def __init__(self, incoming, epsilon=None, seed=1234, name='EpsilonGreedyResolver',**kwargs):
         """
             epsilon float scalar: probability of random choice instead of optimal one
             seed constant: - random seed
@@ -30,7 +30,7 @@ class EpsilonGreedyResolver(BaseResolver):
 
         self.rng = random_streams.RandomStreams(seed)
 
-        super(EpsilonGreedyResolver, self).__init__(incoming, name=name)
+        super(EpsilonGreedyResolver, self).__init__(incoming, name=name,**kwargs)
 
     def get_output_for(self, policy, **kwargs):
         """

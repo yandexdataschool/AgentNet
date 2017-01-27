@@ -10,7 +10,7 @@ import theano.tensor as T
 
 from lasagne.objectives import squared_error
 
-from .generic import get_action_Qvalues,get_n_step_value_reference
+from .generic import get_values_for_actions,get_n_step_value_reference
 from ..utils.grad import consider_constant
 
 
@@ -29,9 +29,8 @@ def get_elementwise_objective(qvalues, actions, rewards,
                               scan_strict=True):
     """
     Returns squared error between predicted and reference Q-values according to n-step SARSA algorithm
-
-        Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * max[action_n]( Q(state_n,action_n)
-        loss = mean over (Qvalues - Qreference)**2
+    Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n*Q(state_n,action_n)
+    loss = mean over (Qvalues - Qreference)**2
 
     :param qvalues: [batch,tick,action_id] - predicted qvalues
     :param actions: [batch,tick] - commited actions
@@ -42,7 +41,7 @@ def get_elementwise_objective(qvalues, actions, rewards,
     :param qvalues_target: Older snapshot qvalues (e.g. from a target network). If None, uses current qvalues
 
     :param n_steps: if an integer is given, the references are computed in loops of 3 states.
-            If 1 (default), this works exactly as Q-learning (though less efficient one)
+            If 1 (default), this works exactly as normal SARSA
             If None: propagating rewards throughout the whole session.
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
 
@@ -50,16 +49,12 @@ def get_elementwise_objective(qvalues, actions, rewards,
 
     :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
 
-    :param qvalues_after_end: [batch,1] - symbolic expression for "best next state q-values" for last tick
+    :param state_values_target_after_end: [batch,1] - symbolic expression for "best next state q-values" for last tick
                             used when computing reference Q-values only.
                             Defaults at  T.zeros_like(Q-values[:,0,None,0])
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
     :param consider_reference_constant: whether or not zero-out gradient flow through reference_qvalues
             (True is highly recommended)
-    :param aggregation_function: a function that takes all Qvalues for "next state Q-values" term and returns what
-                                is the "best next Q-value". Normally you should not touch it. Defaults to max over actions.
-                                Normally you shouldn't touch this
-                                Takes input of [batch,n_actions] Q-values
 
     :param force_end_at_last_tick: if True, forces session end at last tick unless ended otehrwise
 
@@ -84,11 +79,11 @@ def get_elementwise_objective(qvalues, actions, rewards,
 
 
     # get Qvalues of taken actions (used every K steps for reference Q-value computation
-    state_values_target = get_action_Qvalues(qvalues_target,actions)
+    state_values_target = get_values_for_actions(qvalues_target, actions)
 
     # get predicted Q-values for committed actions by both current and target networks
     # (to compare with reference Q-values and use for recurrent reference computation)
-    action_qvalues = get_action_Qvalues(qvalues, actions)
+    action_qvalues = get_values_for_actions(qvalues, actions)
 
     # get reference Q-values via Q-learning algorithm
     reference_qvalues = get_n_step_value_reference(

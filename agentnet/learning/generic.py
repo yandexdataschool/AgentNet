@@ -38,7 +38,7 @@ def get_n_step_value_reference(state_values,rewards,
         
         
     :param n_steps: if an integer is given, the references are computed in loops of n_steps
-            Every n_steps'th step reference is set to  V = r + gamma * next V_predicted_
+            Every n_steps'th step reference is set to  V = r + gamma * next V_predicted
             On other steps, reference is propagated V = r + gamma * next V reference
             Defaults to None: propagating rewards throughout the whole session.
             Widely known as "lambda" in RL community (TD-lambda, Q-lambda) plus or minus one :)
@@ -105,16 +105,16 @@ def get_n_step_value_reference(state_values,rewards,
     next_state_values = T.concatenate([state_values[:, 1:],state_values_after_end], axis=1)
 
     #create an indicator that is
-    # - 1 when Vref(s) = r+gamma*V(s')
-    # - 0 when Vref(s) = r + gamma*r' + gamma^2 * ... = r+gamma*Vref(s')
+    # - 1 when Vref(s) should be r+gamma*V(s')     -- only at the end and every n_steps-th tick
+    # - 0 when Vref(s) should be r + gamma*r' + gamma^2 * ... = r+gamma*Vref(s')
 
     tmax_indicator = T.zeros((rewards.shape[1],), dtype='uint8')
-    tmax_indicator = T.set_subtensor(tmax_indicator[-1-int(crop_last)], 1)
+    tmax_indicator = T.set_subtensor(tmax_indicator[-1-int(crop_last)], 1) #at the end
 
     if n_steps is not None:
         #set tmax_indicator at every n_steps'th tick, starting from last (or pre-last if crop_last)
         time_ticks = T.arange(rewards.shape[1])[::-1] + int(crop_last)
-        tmax_indicator = T.eq(time_ticks%n_steps,0)
+        tmax_indicator = T.eq(time_ticks%n_steps,0) #every n_steps-th tick
 
     # initialize each reference with ZEROS after the end (won't be in output tensor)
     outputs_info = [T.zeros_like(rewards[:, 0]), ]
@@ -261,17 +261,22 @@ def get_1_step_value_reference(state_values,rewards,
 
 # minor helpers
 
-def get_action_Qvalues(Qvalues, actions):
+def get_values_for_actions(values_for_all_actions, actions):
     """
-    Auxiliary function to select Q-values corresponding to actions taken.
-    :param Qvalues: qvalues or similar floatX[batch,tick,action]
+    Auxiliary function to select policy/Q-values corresponding to chosen actions.
+    :param values_for_all_actions: qvalues or similar for all actions: floatX[batch,tick,action]
     :param actions: action ids int32[batch,tick]
-    Returns Q-values predicted that resulted in actions: float[batch,tick]
+    :returns: values selected for the given actions: float[batch,tick]
     """
-    batch_i = T.arange(Qvalues.shape[0])[:, None]
-    time_i = T.arange(Qvalues.shape[1])[None, :]
-    action_Qvalues_predicted = Qvalues[batch_i, time_i, actions]
-    return action_Qvalues_predicted
+    batch_i = T.arange(values_for_all_actions.shape[0])[:, None]
+    time_i = T.arange(values_for_all_actions.shape[1])[None, :]
+    action_values_predicted = values_for_all_actions[batch_i, time_i, actions]
+    return action_values_predicted
+
+def get_action_Qvalues(*args,**kwargs):
+    "get_action_Qvalues has been renamed to get_values_for_actions in the same module. The alias will be removed in 0.11"
+    warn("get_action_Qvalues has been renamed to get_values_for_actions in the same module. The alias will be removed in 0.11")
+    return get_values_for_actions(*args,**kwargs)
 
 def get_end_indicator(is_alive, force_end_at_t_max=False):
     """

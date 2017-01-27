@@ -6,7 +6,6 @@ from .base import *
 from .epsilon_greedy import *
 from .probabilistic import *
 
-
-def ProbablisticResolver(*args,**kwargs):
-    raise ValueError("Use Probabilistic resolver (with i)")
+#alias
+GreedyResolver = BaseResolver
 

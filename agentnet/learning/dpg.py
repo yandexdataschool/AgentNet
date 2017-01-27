@@ -37,19 +37,20 @@ def get_elementwise_objective_critic(action_qvalues,
         - Since you can provide any state_values, you can technically use any other advantage function shape
             as long as you know it's maximum.
 
-    If n_steps != 1,, this algorithm uses an n-step Temporal Difference (aka eligibility traces)
-        Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * max[action_n]( Q(state_n,action_n)
-        loss = mean over (Qvalues - Qreference)**2
+    If n_steps > 1, the algorithm will use n-step Temporal Difference updates
+        V_reference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * V(state_n)
 
     :param action_qvalues: [batch,tick,action_id] - predicted qvalues
     :param state_values: [batch,tick] - predicted state values (aka qvalues for best actions)
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
     :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
                             Default value of is_alive implies a simplified computation algorithm for Qlearning loss
-    :param n_steps: if an integer is given, the references are computed in loops of 3 states.
-            If 1 (default), this works exactly as Q-learning (though less efficient one)
-            If None: propagating rewards throughout the whole session.
+
+    :param n_steps: if an integer is given, the STATE VALUE references are computed in loops of 3 states.
+            If 1 (default), this uses a one-step TD rollout, i.e. reference_V(s) = r+gamma*V(s')
+            If None: propagating rewards throughout the whole session and only taking V(s_last) at session ends at last tensor element.
             If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
+
     :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
     :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
     :param state_values_after_end: [batch,1] - symbolic expression for "best next state q-values" for last tick
