@@ -3,20 +3,29 @@ Learning Algorithms
 
 .. automodule:: agentnet.learning
 
-Algorithms
+Q-learning
 ---------------------
 
 .. automodule:: agentnet.learning.qlearning
 .. currentmodule:: agentnet.learning.qlearning
 .. autofunction:: get_elementwise_objective
 
+SARSA
+---------------------
+
 .. automodule:: agentnet.learning.sarsa
 .. currentmodule:: agentnet.learning.sarsa
 .. autofunction:: get_elementwise_objective
 
+Advantage actor-critic
+---------------------
+
 .. automodule:: agentnet.learning.a2c
 .. currentmodule:: agentnet.learning.a2c
 .. autofunction:: get_elementwise_objective
+
+Deterministic policy gradient
+---------------------
 
 .. automodule:: agentnet.learning.dpg
 .. currentmodule:: agentnet.learning.dpg
