@@ -281,8 +281,10 @@ def get_action_Qvalues(*args,**kwargs):
 def get_end_indicator(is_alive, force_end_at_t_max=False):
     """
     Auxiliary function to transform session alive indicator into end action indicator
-    :param force_end_at_t_max: if True, all sessions that didn't end by the end of recorded
-        sessions are ended at the last recorded tick."""
+    :param force_end_at_t_max: if True, all sessions that didn't end by the end of recorded sessions
+    are ended at the last recorded tick.
+
+    """
 
     # session-ending action indicator: uint8[batch,tick]
     # end = is_alive[now] and not is_alive[next tick]

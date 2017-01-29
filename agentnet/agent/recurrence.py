@@ -30,12 +30,10 @@ from ..utils.layers import DictLayer, get_layer_dtype
 
 class Recurrence(DictLayer):
     """
+
     A generic recurrent layer that works with a custom graph.
     Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
     Conversely, it can be used as any other lasagne layer, even as a part of another recurrence.
-
-    Parameters
-    --------
 
     :param input_nonsequences: inputs that are same at each time tick.
         Technically it's a dictionary that maps InputLayer from one-step graph

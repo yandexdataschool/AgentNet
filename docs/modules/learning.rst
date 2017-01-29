@@ -3,7 +3,7 @@ Learning Algorithms
 
 .. automodule:: agentnet.learning
 
-algorithms
+Algorithms
 ---------------------
 
 .. automodule:: agentnet.learning.qlearning
@@ -14,25 +14,27 @@ algorithms
 .. currentmodule:: agentnet.learning.sarsa
 .. autofunction:: get_elementwise_objective
 
-.. automodule:: agentnet.learning.qlearning_n_step
-.. currentmodule:: agentnet.learning.qlearning_n_step
+.. automodule:: agentnet.learning.a2c
+.. currentmodule:: agentnet.learning.a2c
 .. autofunction:: get_elementwise_objective
 
-.. automodule:: agentnet.learning.a2c_n_step
-.. currentmodule:: agentnet.learning.a2c_n_step
-.. autofunction:: get_elementwise_objective
+.. automodule:: agentnet.learning.dpg
+.. currentmodule:: agentnet.learning.dpg
+.. autofunction:: get_elementwise_objective_critic
 
-.. automodule:: agentnet.learning.dpg_n_step
-.. currentmodule:: agentnet.learning.dpg_n_step
-.. autofunction:: get_elementwise_objective_components
+.. automodule:: agentnet.learning.qlearning_naf
+.. currentmodule:: agentnet.learning.qlearning_naf
+.. autofunction:: LowerTriangularLayer
+.. autofunction:: NAFLayer
 
-helpers
+
+Generic
 ---------------------
-.. automodule:: agentnet.learning.helpers
+.. automodule:: agentnet.learning.generic
 
-.. autofunction:: get_action_Qvalues
-
+.. autofunction:: get_values_for_actions
 .. autofunction:: get_end_indicator
 
 .. autofunction:: get_n_step_value_reference
+.. autofunction:: get_1_step_value_reference
 

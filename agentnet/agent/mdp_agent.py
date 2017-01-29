@@ -40,11 +40,10 @@ class MDPAgent(object):
             or a tuple of such, that can be fed into environment to get next state and observation.
 
     :param agent_states: OrderedDict{ memory_output: memory_input}, where
-            memory_output: lasagne layer
-                - generates first agent state (before any interaction)
-                - determines new agent state given previous agent state and an observation
-
-            memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
+        memory_output: lasagne layer
+        generates first agent state (before any interaction)
+        determines new agent state given previous agent state and an observation
+        memory_input: lasagne.layers.InputLayer that is used as "previous state" input for memory_output
 
     :type agent_states: collections.OrderedDict or dict
 

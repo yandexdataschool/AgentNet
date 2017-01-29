@@ -1,11 +1,10 @@
 """
-Deterministic policy gradient loss, also used for model-based acceleration algorithms.
+Deterministic policy gradient loss, Also used for model-based acceleration algorithms.
 Supports regular and k-step implementation.
-Based on
-    http://arxiv.org/abs/1509.02971
-    http://arxiv.org/abs/1603.00748
-    http://jmlr.org/proceedings/papers/v32/silver14.pdf
-
+Based on:
+- http://arxiv.org/abs/1509.02971
+- http://arxiv.org/abs/1603.00748
+- http://jmlr.org/proceedings/papers/v32/silver14.pdf
 """
 from __future__ import division, print_function, absolute_import
 import theano.tensor as T
@@ -32,10 +31,10 @@ def get_elementwise_objective_critic(action_qvalues,
     """
     Returns squared error between action values and reference (r+gamma*V(s')) according to deterministic policy gradient.
 
-    This function can also be used for any model-based acceleration like Qlearning with normalized advantage functions:
-        - http://arxiv.org/abs/1603.00748
+    This function can also be used for any model-based acceleration like Qlearning with normalized advantage functions.
+        - Original article: http://arxiv.org/abs/1603.00748
         - Since you can provide any state_values, you can technically use any other advantage function shape
-            as long as you know it's maximum.
+            as long as you can compute V(s).
 
     If n_steps > 1, the algorithm will use n-step Temporal Difference updates
         V_reference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * V(state_n)

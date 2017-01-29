@@ -1,7 +1,12 @@
+"""
+Implements layers required to train qlearning with normalized advantage functions.
+All the math taken from the original article: http://arxiv.org/abs/1603.00748
+Loss function is exactly same as deterministic policy gradient (agentnet.learning.dpg)
+Usage example: https://github.com/yandexdataschool/AgentNet/blob/master/examples/Continuous%20LunarLander%20%20using%20normalized%20advantage%20functions.ipynb
+"""
 import numpy as np
 import theano.tensor as T
 from lasagne.layers import InputLayer,DenseLayer,GaussianNoiseLayer,ElemwiseSumLayer,NonlinearityLayer
-from agentnet.utils.layers import DictLayer
 
 from warnings import warn
 from collections import OrderedDict

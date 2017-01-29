@@ -239,11 +239,13 @@ def LSTMCell(prev_cell,
 
     """
 
-    Implements a one-step gated recurrent unit (GRU) with arbitrary number of units.
+    Implements a one-step LSTM update. Note that LSTM requires both c_t (private memory) and h_t aka output.
 
 
-    :param prev_cell: input that denotes previous state (shape must be (None, n_units) )
+    :param prev_cell: input that denotes previous "private" state (shape must be (None, n_units) )
     :type prev_cell: lasagne.layers.Layer
+    :param prev_out: input that denotes previous "public" state (shape must be (None,n_units))
+    :type prev_out: lasagne.layers.Layer
     :param input_or_inputs: a single layer or a list/tuple of layers that go as inputs
     :type input_or_inputs: lasagne.layers.Layer or list of such
 
