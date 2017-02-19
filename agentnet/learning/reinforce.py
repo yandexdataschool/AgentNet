@@ -61,7 +61,7 @@ def get_elementwise_objective(policy,actions,rewards,
 
     #estimate n-step advantage. Note that we use current state values here (and not e.g. state_values_target)
     observed_state_values = get_n_step_value_reference(
-        state_values=T.zeros_like(rewards),
+        state_values=T.zeros_like(rewards,dtype=theano.config.floatX),
         rewards=rewards,
         is_alive=is_alive,
         n_steps=None,

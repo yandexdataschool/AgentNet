@@ -11,7 +11,7 @@ from __future__ import division, print_function, absolute_import
 
 from collections import OrderedDict
 from itertools import chain
-from warnings import warn
+from .. import warn
 
 import numpy as np
 import theano
@@ -23,7 +23,6 @@ from .recurrence import Recurrence
 from ..environment import SessionPoolEnvironment, SessionBatchEnvironment, BaseEnvironment
 from ..utils.format import supported_sequences, unpack_list, check_list, check_tuple, check_ordered_dict
 from ..utils.layers import get_layer_dtype
-from ..deprecated import deprecated
 
 
 
@@ -217,7 +216,8 @@ class MDPAgent(object):
                     'if optimize_experience_replay is turned on, one must provide an environment with .observations'
                     'and .actions properties containing observations and actions to replay.')
             if initial_env_states != 'zeros' or initial_observations != 'zeros':
-                warn("In experience replay mode, initial env states and initial observations parameters are unused")
+                warn("In experience replay mode, initial env states and initial observations parameters are unused",
+                     verbosity_level=2)
 
             if initial_hidden == 'zeros' and hasattr(env,"preceding_agent_memories"):
                 initial_hidden = getattr(env,"preceding_agent_memories")
@@ -232,10 +232,10 @@ class MDPAgent(object):
 
         else:
             if isinstance(env, SessionPoolEnvironment) or isinstance(env, SessionBatchEnvironment):
-                warn(
-                    "You are using experience replay environment as normal environment. "
-                    "This will work, but you can get a free performance boost "
-                    "by using passing optimize_experience_replay = True to .get_sessions")
+                warn("You are using experience replay environment as normal environment. "
+                     "This will work, but you can get a free performance boost "
+                     "by using passing optimize_experience_replay = True to .get_sessions",
+                     verbosity_level=2)
 
             # create recurrence in active mode (using environment.get_action_results)
             self.recurrence = self.as_recurrence(environment=environment,
@@ -285,7 +285,7 @@ class MDPAgent(object):
             ret_tuple += (self.get_automatic_updates(),)
 
         if unroll_scan and return_automatic_updates:
-            warn("return_automatic_updates useful when and only when unroll_scan == False")
+            warn("return_automatic_updates useful when and only when unroll_scan == False",verbosity_level=2)
 
         return ret_tuple
 

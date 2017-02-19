@@ -4,7 +4,6 @@ An overly generic layer that implements a custom [stacked] gate to be used in al
 
 from functools import reduce
 from operator import add
-from warnings import warn
 from collections import OrderedDict
 
 import theano.tensor as T
@@ -13,7 +12,7 @@ from lasagne.layers import flatten
 
 from ..utils.format import is_layer, check_list, supported_sequences
 from ..utils.layers import DictLayer, get_layer_dtype
-
+from .. import warn
 
 class GateLayer(DictLayer):
     """
@@ -77,7 +76,7 @@ class GateLayer(DictLayer):
             lname = layer.name or ""
             if len(layer.output_shape) != 2:
                 warn("One of the channels (name='%s') has an input dimension of %s and will be flattened." % (
-                    lname, layer.output_shape))
+                    lname, layer.output_shape),verbosity_level=2)
                 self.channel_layers[i] = flatten(layer,
                                                  outdim=2,
                                                  name=lname)
@@ -89,7 +88,7 @@ class GateLayer(DictLayer):
             lname = layer.name or ""
             if len(layer.output_shape) != 2:
                 warn("One of the gate controllers (name='%s') has an input dimension of %s and will be flattened." % (
-                    lname, layer.output_shape))
+                    lname, layer.output_shape),verbosity_level=2)
                 self.gate_controllers[i] = flatten(layer,
                                                    outdim=2,
                                                    name=lname)

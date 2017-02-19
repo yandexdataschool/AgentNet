@@ -3,7 +3,7 @@ Several helper functions used in various reinforcement learning algorithms.
 """
 from __future__ import division, print_function, absolute_import
 
-from warnings import warn
+from .. import warn
 
 import theano
 import theano.tensor as T
@@ -275,8 +275,8 @@ def get_values_for_actions(values_for_all_actions, actions):
 
 def get_action_Qvalues(*args,**kwargs):
     "get_action_Qvalues has been renamed to get_values_for_actions in the same module. The alias will be removed in 0.11"
-    warn("get_action_Qvalues has been renamed to get_values_for_actions in the same module. The alias will be removed in 0.11")
-    return get_values_for_actions(*args,**kwargs)
+    raise NameError("get_action_Qvalues has been renamed to get_values_for_actions in the same module. The alias will be removed in 0.11")
+
 
 def get_end_indicator(is_alive, force_end_at_t_max=False):
     """

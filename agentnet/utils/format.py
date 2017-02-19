@@ -4,7 +4,7 @@ Used widely within AgentNet.
 """
 
 from collections import OrderedDict
-from warnings import warn
+from .. import warn
 
 import lasagne
 import numpy as np

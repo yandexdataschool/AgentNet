@@ -1,4 +1,4 @@
-from warnings import warn
+from .. import warn
 
 from theano import tensor as T
 

@@ -1,2 +1,2 @@
 """Deprecated"""
-raise ImportError("N-step Q-learning objective has been moved to agentnet.learning.generic")
+raise ImportError("agentnet.learning.helpers has been moved to agentnet.learning.generic")

@@ -27,8 +27,6 @@ class CounterLayer(Layer):
     def output_dtype(self):
         return 'int32'
     
-#TODO(jheuristic) try ifelse?
-        
 class SwitchLayer(MergeLayer):
     """a simple layer that implements an 'if-than-else' logic
 

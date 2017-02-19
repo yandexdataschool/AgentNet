@@ -10,7 +10,7 @@ from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
 from collections import OrderedDict
 
 from .format import supported_sequences, check_list, check_ordered_dict
-from warnings import warn
+from .. import warn
 
 
 # shortcut functions
@@ -82,7 +82,7 @@ class DictLayer(MergeLayer):
             if not isinstance(output_shapes, OrderedDict):
                 warn("DictLayer output_shapes should be collections.OrderedDict, instead given a regular dict. "
                      "Assuming keys order to be {}. If you want a different order, consider sending an OrderedDict"
-                     " instead.".format(keys))
+                     " instead.".format(keys),verbosity_level=2)
 
         elif isinstance(output_dtypes, dict):
             keys = output_dtypes.keys()
@@ -182,6 +182,8 @@ class DictElementLayer(Layer):
         self.name = name
         self.params = OrderedDict()
         self.get_output_kwargs = []
+
+        #deliberately NOT calling Layer's consructor
 
     def get_output_for(self, inputs_dict, **flags):
         return inputs_dict[self.key]

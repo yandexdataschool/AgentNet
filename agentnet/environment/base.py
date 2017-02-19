@@ -63,7 +63,7 @@ class BaseEnvironment(object):
         :param observation_dtypes: Types of observations. None means all theano.config.floatX.
         :type observation_dtypes: tuple or None
 
-        :param action_dtypes: Types of actions. None means all "int32".
+        :param actionwarnings_dtypes: Types of actions. None means all "int32".
         :type action_dtypes: tuple or None
         
         """

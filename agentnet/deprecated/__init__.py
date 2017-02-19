@@ -1,7 +1,7 @@
 __doc__= """Here lie parts of architecture that are no longer supported and will be removed in one of the following versons"""
 
 
-import warnings
+from .. import warn
 class deprecated:
     def __init__(self,new_name=None,removed_after="next major patch"):
         self.new_name = new_name
@@ -14,8 +14,7 @@ class deprecated:
             warning = "%s is deprecated and will be removed in %s. " % (func.__name__,self.removed_after)
             if self.new_name is not None:
                 warning += "This functionality has been replaced with %s." % self.new_name
-            warnings.warn(warning,
-                          category=DeprecationWarning)
+            warn(warning,category=DeprecationWarning)
             return func(*args, **kwargs)
         newFunc.__name__ = func.__name__
         newFunc.__doc__ = func.__doc__

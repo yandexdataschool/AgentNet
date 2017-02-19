@@ -8,7 +8,7 @@ Utility functions that can clone lasagne network layers in a custom way.
 import lasagne
 from .format import check_list,check_ordered_dict
 from copy import deepcopy
-from warnings import warn
+from .. import warn
 
 def clone_network(original_network, bottom_layers=None,
                   share_params=False, share_inputs=True,name_prefix = None):
