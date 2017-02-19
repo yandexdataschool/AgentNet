@@ -13,14 +13,16 @@ from collections import OrderedDict
 from itertools import chain
 from warnings import warn
 
-import lasagne
+import numpy as np
 import theano
+import lasagne
 from lasagne.layers import InputLayer
 from theano import tensor as T
 
 from .recurrence import Recurrence
 from ..environment import SessionPoolEnvironment, SessionBatchEnvironment, BaseEnvironment
 from ..utils.format import supported_sequences, unpack_list, check_list, check_tuple, check_ordered_dict
+from ..utils.layers import get_layer_dtype
 from ..deprecated import deprecated
 
 
@@ -71,11 +73,76 @@ class MDPAgent(object):
         self.policy = check_list(policy_estimators)
         self.action_layers = check_list(action_layers)
         
-    @property
-    @deprecated(".agent_states")
-    def state_variables(self):
-        raise ValueError("Please use .agent_states instead")
+    def get_react_function(self, output_flags={},
+                           function_flags={'allow_input_downcast': True}):
+        """
+        compiles and returns a function that performs one step of agent network
 
+        :returns: a theano function.
+            The returned function takes all observation inputs, followed by all agent memories.
+            It's outputs are all actions, followed by all new agent memories
+            By default, the function will have allow_input_downcast=True, you can override it in function parameters
+        :rtype: theano.function
+
+
+        :Example:
+
+        The regular use case would look something like this:
+        (assuming agent is an MDPagent with single observation, single action and 2 memory slots)
+        >> react = agent.get_react_function
+        >> action, new_mem0, new_mem1 = react(observation, mem0, mem1)
+
+
+        """
+        # observation variables
+        applier_observations = [layer.input_var for layer in self.observation_layers]
+
+        # inputs to all agent memory states (using lasagne defaults, may use any theano inputs)
+        applier_memories = OrderedDict([(new_st, prev_st.input_var)
+                                        for new_st, prev_st in list(self.agent_states.items())
+                                        ])
+
+        # one step function
+        res = self.get_agent_reaction(applier_memories,
+                                      applier_observations,
+                                      **output_flags  # disable dropout here. Only enable in experience replay
+                                      )
+
+        # unpack
+        applier_actions, applier_new_states, applier_policy = res
+
+        # compile
+        applier_fun = theano.function(applier_observations + list(applier_memories.values()),
+                                      applier_actions + applier_new_states,
+                                      **function_flags)
+
+        # return
+        return applier_fun
+
+    def get_zeros_like_memory(self, batch_size=1):
+        """
+        Returns a list of tensors matching initial agent memory, filled with zeros
+        :param batch_size: how many parallel session memories to store
+        :return: list of numpy arrays filled with zeros zeros with shape/dtype matching agent memory
+        """
+        return [np.zeros((batch_size,) + tuple(mem.output_shape[1:]),
+                         dtype=get_layer_dtype(mem))
+                for mem in self.agent_states]
+
+    def get_all_params(self, **kwargs):
+        """calls lasagne.layers.get_all_params(all_agent_layers,**kwargs)"""
+        layers = list(self.agent_states) + self.policy + self.action_layers
+        return lasagne.layers.get_all_params(layers, **kwargs)
+
+    def get_all_param_values(self, **kwargs):
+        """calls lasagne.layers.get_all_param_values(all_agent_layers,**kwargs)"""
+        layers = list(self.agent_states) + self.policy + self.action_layers
+        return lasagne.layers.get_all_param_values(layers, **kwargs)
+
+    def set_all_param_values(self, values, **kwargs):
+        """calls lasagne.layers.set_all_param_values(all_agent_layers,values,**kwargs)"""
+        layers = list(self.agent_states) + self.policy + self.action_layers
+        return lasagne.layers.set_all_param_values(layers, values, **kwargs)
 
     def get_sessions(self,
                      environment,
@@ -489,48 +556,4 @@ class MDPAgent(object):
 
         return new_actions, new_states, new_outputs
 
-    def get_react_function(self,output_flags={},
-                           function_flags={'allow_input_downcast':True}):
-        """
-        compiles and returns a function that performs one step of agent network
 
-        :returns: a theano function.
-            The returned function takes all observation inputs, followed by all agent memories.
-            It's outputs are all actions, followed by all new agent memories
-            By default, the function will have allow_input_downcast=True, you can override it in function parameters
-        :rtype: theano.function
-        
-        
-        :Example:
-        
-        The regular use case would look something like this:
-        (assuming agent is an MDPagent with single observation, single action and 2 memory slots)
-        >> react = agent.get_react_function
-        >> action, new_mem0, new_mem1 = react(observation, mem0, mem1)
-        
-        
-        """
-        # observation variables
-        applier_observations = [layer.input_var for layer in self.observation_layers]
-
-        # inputs to all agent memory states (using lasagne defaults, may use any theano inputs)
-        applier_memories = OrderedDict([(new_st, prev_st.input_var)
-                                        for new_st, prev_st in list(self.agent_states.items())
-                                        ])
-
-        # one step function
-        res = self.get_agent_reaction(applier_memories,
-                                      applier_observations,
-                                      **output_flags  # disable dropout here. Only enable in experience replay
-                                      )
-
-        # unpack
-        applier_actions, applier_new_states, applier_policy = res
-
-        # compile
-        applier_fun = theano.function(applier_observations + list(applier_memories.values()),
-                                      applier_actions + applier_new_states,
-                                      **function_flags)
-
-        # return
-        return applier_fun

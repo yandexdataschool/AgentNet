@@ -13,19 +13,20 @@ from __future__ import division, print_function, absolute_import
 
 from collections import OrderedDict
 from itertools import chain
-from warnings import warn
+from agentnet import warn
+
+import theano
+from theano import tensor as T
+from theano.updates import OrderedUpdates
 
 import lasagne
 from lasagne.layers import InputLayer
 from lasagne.utils import unroll_scan
-import theano
-from theano import tensor as T
 
 
 from ..utils import insert_dim
 from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences,is_theano_object
 from ..utils.layers import DictLayer, get_layer_dtype
-
 
 
 class Recurrence(DictLayer):
@@ -138,6 +139,7 @@ class Recurrence(DictLayer):
         self.n_steps = n_steps
         self.unroll_scan = unroll_scan
         self.updates=theano.OrderedUpdates()
+        self._updates_received=False
         self.mask_input = mask_input
         assert mask_input is None or isinstance(self.mask_input,lasagne.layers.Layer)
 
@@ -161,7 +163,7 @@ class Recurrence(DictLayer):
             else:   # verify n_steps
                 if inp_seq_length != self.n_steps:
                     warn("number of steps is inconsistent. Either n_steps != input_sequence.output_shape[1] or "
-                         "several input sequences have different lengths. "
+                         "several input sequences have different lengths.\n"
                          "The Recurrence will roll for {} steps".format(self.n_steps))
 
 
@@ -183,7 +185,7 @@ class Recurrence(DictLayer):
 
                 Current order is: {state_variables}
                 You may find OrderedDict in standard collections module: from collections import OrderedDict
-                """.format(state_variables=list(self.state_variables.keys())))
+                """.format(state_variables=list(self.state_variables.keys())),verbosity_level=2)
 
 
         self.delayed_states = delayed_states
@@ -296,7 +298,8 @@ class Recurrence(DictLayer):
                 assert seq_len is None or n_steps is None or seq_len >= n_steps
                 if seq_len is None:
                     warn("You are giving Recurrence an input sequence of undefined length (None).\n" \
-                         "Make sure it is always above {}(n_steps) you specified for recurrence".format(n_steps or "<unspecified>"))
+                         "Make sure it is always above {}(n_steps) you specified for "
+                         "recurrence".format(n_steps or "<unspecified>"),verbosity_level=2)
 
     def get_sequence_layers(self):
         """
@@ -413,6 +416,7 @@ class Recurrence(DictLayer):
                         " - recurrence with theano.scan - on the bottom level\n"
                         " - recurrence with theano.scan - if all lower levels are unrolled OR have no random state updates\n"
                     )
+        self._updates_received=True
         return updates
 
     def get_params(self,**tags):
@@ -433,7 +437,7 @@ class Recurrence(DictLayer):
 
         return params
 
-    def get_output_for(self, inputs, recurrence_flags={}, **kwargs):
+    def get_output_for(self, inputs, accumulate_updates="warn",recurrence_flags={}, **kwargs):
         """
         returns history of agent interaction with environment for given number of turns.
         
@@ -580,7 +584,10 @@ class Recurrence(DictLayer):
                                   non_sequences=nonsequences,
                                   n_steps=self.n_steps
                                   )
-            self.updates=OrderedDict()
+            #if explicitly asked to reset updates, do so
+            if accumulate_updates == False:
+                self.updates=OrderedUpdates()
+
         else:
             history,updates = theano.scan(step_function,
                                   sequences=sequences,
@@ -588,12 +595,32 @@ class Recurrence(DictLayer):
                                   non_sequences=nonsequences,
                                   n_steps=self.n_steps
                                   )
-            self.updates = updates
-            if len(updates) !=0:
-                warn("Warning: recurrent loop without unroll_scan got nonempty random state updates list. That happened"
+
+            if accumulate_updates in (True,'warn'):
+                self.updates += updates
+            else:#replace updates
+                self.updates = updates
+
+            if len(self.updates) !=0:
+                self._updates_received=False
+                warn("Recurrent loop without unroll_scan got nonempty random state updates list. That happened"
                      " because there is some source of randomness (e.g. dropout) inside recurrent step graph."
                      " To compile such graph, one must either call .get_automatic_updates() right after .get_output"
-                     " and pass these updates to a function, or use no_defalt_updates=True when compiling theano.function.")
+                     " and pass these updates to a function when compiling theano.function.",verbosity_level=2)
+
+            #check if user received last updates
+            if not self._updates_received and accumulate_updates=='warn':
+                warn("You called get_output from recurrence several times without gathering the updates.\n"
+                     "(A) If you wanted to get two outputs from recurrence, use NOT\n"
+                     ">>>out1 = get_output(rec[layer1])\n"
+                     ">>>out2 = get_output(rec[layer2])\n"
+                     "but instead:\n"
+                     ">>>out1,out2 = get_output((rec[layer1],rec[layer2])) #or rec[layer1,layer2].\n"
+                     "(B) If you want to run recurrence several times and accumulate updates from all runs,"
+                     "use get_output(...,accumulate_updates=True) to silence the warning.\n"
+                     "(C) If you want to get rid of old updates, use get_output(...,accumulate_updates=False)\n"
+                     )
+
 
 
         # reordering from [time,batch,...] to [batch,time,...]
