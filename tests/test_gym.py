@@ -36,7 +36,6 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
     # Game Parameters
     n_actions = atari.action_space.n
     observation_shape = (None,) + atari.observation_space.shape
-    action_names = atari.get_action_meanings()
     del atari
     # ##### Agent observations
 
@@ -94,7 +93,6 @@ def test_space_invaders(game_title='SpaceInvaders-v0',
 
     observation_log, action_log, reward_log, _, _, _ = pool.interact(50)
 
-    print(np.array(action_names)[np.array(action_log)[:3, :5]])
 
     # # experience replay pool
     # Create an environment with all default parameters
