@@ -180,7 +180,6 @@ class MDPAgent(object):
 
         :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
         :param return_automatic_updates: whether to append automatic updates to returned tuple (as last element)
-from warnings import warn
 
         
         :param kwargs: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
@@ -274,7 +273,7 @@ from warnings import warn
         if type(environment.state_shapes) not in supported_sequences:
             env_states = env_states[0]
         if self.single_observation:
-            observations = observations[0]from ..utils.logging import warn
+            observations = observations[0]
 
         if self.single_action:
             actions = actions[0]
