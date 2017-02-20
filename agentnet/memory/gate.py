@@ -12,7 +12,7 @@ from lasagne.layers import flatten
 
 from ..utils.format import is_layer, check_list, supported_sequences
 from ..utils.layers import DictLayer, get_layer_dtype
-from .. import warn
+from ..utils.logging import warn
 
 class GateLayer(DictLayer):
     """

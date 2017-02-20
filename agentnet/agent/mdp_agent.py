@@ -11,7 +11,6 @@ from __future__ import division, print_function, absolute_import
 
 from collections import OrderedDict
 from itertools import chain
-from .. import warn
 
 import numpy as np
 import theano
@@ -23,6 +22,7 @@ from .recurrence import Recurrence
 from ..environment import SessionPoolEnvironment, SessionBatchEnvironment, BaseEnvironment
 from ..utils.format import supported_sequences, unpack_list, check_list, check_tuple, check_ordered_dict
 from ..utils.layers import get_layer_dtype
+from ..utils.logging import warn
 
 
 
@@ -180,6 +180,7 @@ class MDPAgent(object):
 
         :param unroll_scan: whether use theano.scan or lasagne.utils.unroll_scan
         :param return_automatic_updates: whether to append automatic updates to returned tuple (as last element)
+from warnings import warn
 
         
         :param kwargs: optional flags to be sent to NN when calling get_output (e.g. deterministic = True)
@@ -273,7 +274,8 @@ class MDPAgent(object):
         if type(environment.state_shapes) not in supported_sequences:
             env_states = env_states[0]
         if self.single_observation:
-            observations = observations[0]
+            observations = observations[0]from ..utils.logging import warn
+
         if self.single_action:
             actions = actions[0]
         if self.single_policy:

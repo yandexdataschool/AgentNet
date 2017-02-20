@@ -15,7 +15,7 @@ from lasagne.objectives import squared_error
 
 from .generic import get_n_step_value_reference, get_values_for_actions
 from ..utils.grad import consider_constant
-from warnings import warn
+from ..utils.logging import warn
 
 def get_elementwise_objective(policy,state_values,actions,rewards,
                               is_alive="always",

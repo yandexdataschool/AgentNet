@@ -10,7 +10,7 @@ from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
 from collections import OrderedDict
 
 from .format import supported_sequences, check_list, check_ordered_dict
-from .. import warn
+from ..utils.logging import warn
 
 
 # shortcut functions

@@ -8,9 +8,9 @@ import numpy as np
 import theano.tensor as T
 from lasagne.layers import InputLayer,DenseLayer,GaussianNoiseLayer,ElemwiseSumLayer,NonlinearityLayer
 
-from warnings import warn
 from collections import OrderedDict
 from lasagne.layers import Layer, DenseLayer
+from ..utils.logging import warn
 
 def diag_to_tril_size(diag):
     return diag*(diag+1)/2

@@ -1,7 +1,21 @@
 __doc__= """Here lie parts of architecture that are no longer supported and will be removed in one of the following versons"""
 
 
-from .. import warn
+from warnings import warn as default_warn
+from .config import config
+
+def warn(message="Hello, world!",verbosity_level=1,**kwargs):
+    """issues a warning if verbosity_level is above current verbosity level
+    :param message: what to warn about
+    :verbosity_level: an integer, lower means more important warning
+    :param kwargs: whatever else you want to send to warnings.warn function
+    """
+    if config.verbose >= verbosity_level:
+        default_warn("[Verbose>=%s] %s"%(verbosity_level,message),**kwargs)
+
+    #TODO make unsuppressable somehow
+
+
 class deprecated:
     def __init__(self,new_name=None,removed_after="next major patch"):
         self.new_name = new_name

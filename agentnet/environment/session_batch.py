@@ -1,10 +1,9 @@
-from .. import warn
-
 from theano import tensor as T
 
 from ..environment import BaseEnvironment
 from ..objective import BaseObjective
 from ..utils.format import check_list
+from ..utils.logging import warn
 
 
 class SessionBatchEnvironment(BaseEnvironment, BaseObjective):

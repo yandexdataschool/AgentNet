@@ -13,7 +13,6 @@ from __future__ import division, print_function, absolute_import
 
 from collections import OrderedDict
 from itertools import chain
-from agentnet import warn
 
 import theano
 from theano import tensor as T
@@ -27,6 +26,7 @@ from lasagne.utils import unroll_scan
 from ..utils import insert_dim
 from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences,is_theano_object
 from ..utils.layers import DictLayer, get_layer_dtype
+from ..utils.logging import warn
 
 
 class Recurrence(DictLayer):

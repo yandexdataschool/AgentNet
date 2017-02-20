@@ -3,10 +3,9 @@ Several helper functions used in various reinforcement learning algorithms.
 """
 from __future__ import division, print_function, absolute_import
 
-from .. import warn
-
 import theano
 import theano.tensor as T
+from ..utils.logging import warn
 
 
 def get_n_step_value_reference(state_values,rewards,

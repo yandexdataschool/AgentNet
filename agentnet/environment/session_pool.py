@@ -13,8 +13,8 @@ from ..objective import BaseObjective
 from ..utils import create_shared, set_shared
 from ..utils.format import check_list
 from ..utils.layers import get_layer_dtype
+from ..utils.logging import warn
 
-from .. import warn
 
 
 class SessionPoolEnvironment(BaseEnvironment, BaseObjective):
