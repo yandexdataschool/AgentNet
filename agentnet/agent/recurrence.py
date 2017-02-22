@@ -139,7 +139,7 @@ class Recurrence(DictLayer):
         self.n_steps = n_steps
         self.unroll_scan = unroll_scan
         self.updates=theano.OrderedUpdates()
-        self._updates_received=False
+        self._updates_received=True
         self.mask_input = mask_input
         assert mask_input is None or isinstance(self.mask_input,lasagne.layers.Layer)
 
