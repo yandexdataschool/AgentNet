@@ -529,7 +529,9 @@ class Recurrence(DictLayer):
 
             #make sure output variable is of exactly the same type as corresponding input
 
-            get_type = lambda tensor: T.TensorType(tensor.dtype, tensor.broadcastable, tensor.type.sparse_grad)
+            get_type = lambda tensor: T.TensorType(tensor.dtype,
+                                                   tensor.broadcastable, 
+                                                   sparse_grad=getattr(tensor.type,"sparse_grad",False))
 
             new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
                             for (prev_state,state) in zip(prev_states,new_states)]
