@@ -528,11 +528,14 @@ class Recurrence(DictLayer):
 
 
             #make sure output variable is of exactly the same type as corresponding input
-            new_states = [prev_state.type.convert_variable(state) or prev_state.type.convert_variable(state.astype(prev_state.dtype))
+
+            get_type = lambda tensor: T.TensorType(tensor.dtype, tensor.broadcastable, tensor.type.sparse_grad)
+
+            new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
                             for (prev_state,state) in zip(prev_states,new_states)]
             assert None not in new_states, "Some state variables has different dtype/shape from init ."
 
-            new_outputs = [prev_out.type.convert_variable(out) or prev_out.type.convert_variable(out.astype(prev_out.dtype))
+            new_outputs = [get_type(prev_out).convert_variable(out.astype(prev_out.dtype))
                             for (prev_out,out) in zip(prev_outputs,new_outputs)]
             assert None not in new_outputs, "Some of the tracked outputs has shape/dtype changing over time. Please report this."
 
