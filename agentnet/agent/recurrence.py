@@ -530,7 +530,7 @@ class Recurrence(DictLayer):
             #make sure output variable is of exactly the same type as corresponding input
 
             get_type = lambda tensor: T.TensorType(tensor.dtype,
-                                                   tensor.broadcastable, 
+                                                   tensor.broadcastable,
                                                    sparse_grad=getattr(tensor.type,"sparse_grad",False))
 
             new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
@@ -606,13 +606,6 @@ class Recurrence(DictLayer):
             else:#replace updates
                 self.updates = updates
 
-            if len(self.updates) !=0:
-                self._updates_received=False
-                warn("Recurrent loop without unroll_scan got nonempty random state updates list. That happened"
-                     " because there is some source of randomness (e.g. dropout) inside recurrent step graph."
-                     " To compile such graph, one must either call .get_automatic_updates() right after .get_output"
-                     " and pass these updates to a function when compiling theano.function.",verbosity_level=2)
-
             #check if user received last updates
             if not self._updates_received and accumulate_updates=='warn':
                 warn("You called get_output from recurrence several times without gathering the updates.\n"
@@ -625,6 +618,14 @@ class Recurrence(DictLayer):
                      "use get_output(...,accumulate_updates=True) to silence the warning.\n"
                      "(C) If you want to get rid of old updates, use get_output(...,accumulate_updates=False)\n"
                      )
+
+            if len(self.updates) !=0:
+                self._updates_received=False
+                warn("Recurrent loop without unroll_scan got nonempty random state updates list. That happened"
+                     " because there is some source of randomness (e.g. dropout) inside recurrent step graph."
+                     " To compile such graph, one must either call .get_automatic_updates() right after .get_output"
+                     " and pass these updates to a function when compiling theano.function.",verbosity_level=2)
+
 
 
 
