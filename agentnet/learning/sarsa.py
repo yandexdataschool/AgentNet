@@ -24,9 +24,7 @@ def get_elementwise_objective(qvalues, actions, rewards,
                               consider_reference_constant=True,
                               force_end_at_last_tick=False,
                               return_reference=False,
-                              loss_function=squared_error,
-                              scan_dependencies=(),
-                              scan_strict=True):
+                              loss_function=squared_error):
     """
     Returns squared error between predicted and reference Q-values according to n-step SARSA algorithm
     Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n*Q(state_n,action_n)
@@ -37,13 +35,16 @@ def get_elementwise_objective(qvalues, actions, rewards,
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
     :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
 
+    :param qvalues_target: Q-values[batch,time,actions] or V(s)[batch_size,seq_length,1] used for reference.
+        Some examples:
+        (default) If None, uses current Qvalues.
+        Older snapshot Qvalues (e.g. from a target network)
+        Double q-learning V(s) = Q_old(s,argmax Q_new(s,a))[:,:,None]
+        State values from teacher network (knowledge transfer)
 
-    :param qvalues_target: Older snapshot qvalues (e.g. from a target network). If None, uses current qvalues
-
-    :param n_steps: if an integer is given, the references are computed in loops of 3 states.
+    :param n_steps: if an integer is given, uses n-step sarsa algorithm
             If 1 (default), this works exactly as normal SARSA
-            If None: propagating rewards throughout the whole session.
-            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
+            If None: propagating rewards throughout the whole sequence of state-action pairs.
 
     :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
 
@@ -63,22 +64,23 @@ def get_elementwise_objective(qvalues, actions, rewards,
 
     :param return_reference: if True, returns reference Qvalues.
             If False, returns squared_error(action_qvalues, reference_qvalues)
-    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-    :param scan_strict: whether to evaluate Qvalues using strict theano scan or non-strict one
+
     :return: loss [squared error] over Q-values (using formula above for loss)
 
     """
-    #set defaults
-    if qvalues_target is None:
-        qvalues_target = qvalues
+    #set defaults and assert shapes
     if is_alive == 'always':
         is_alive = T.ones_like(rewards)
-    assert qvalues.ndim == qvalues_target.ndim == 3
-    assert actions.ndim == rewards.ndim ==2
-    assert is_alive.ndim == 2
+    if qvalues_target is None:
+        qvalues_target = qvalues
+
+    assert qvalues.ndim == 3, "q-values must have shape [batch,time,n_actions]"
+    assert actions.ndim == rewards.ndim == is_alive.ndim == 2, "actions, rewards and is_alive must have shape [batch,time]"
+    assert qvalues_target.ndim ==3,"qvalues_target must be action values, shape[batch,time,n_actions]. " \
+                                   "If you want to provide target V(s) instead (e.g. expected value sarsa), try agentnet.learning.qlearning"
 
 
-    # get Qvalues of taken actions (used every K steps for reference Q-value computation
+    # get q-values of taken actions if not supplied already
     state_values_target = get_values_for_actions(qvalues_target, actions)
 
     # get predicted Q-values for committed actions by both current and target networks
@@ -94,8 +96,6 @@ def get_elementwise_objective(qvalues, actions, rewards,
         gamma_or_gammas=gamma_or_gammas,
         state_values_after_end=state_values_target_after_end,
         end_at_tmax=force_end_at_last_tick,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
         crop_last=crop_last,
     )
 

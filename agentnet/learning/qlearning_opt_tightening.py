@@ -9,7 +9,7 @@ from lasagne.objectives import squared_error
 from .generic import get_values_for_actions
 __author__ = "Konstantin Sidorov"
 from ..utils.logging import warn
-warn("qlearning with optimality tightening will have a major update in 0.10.3. Use at your own risk")
+warn("qlearning with optimality tightening will have a major update in 0.10.5. Use at your own risk")
 
 
 def get_elementwise_objective(

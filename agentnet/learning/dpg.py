@@ -45,10 +45,9 @@ def get_elementwise_objective_critic(action_qvalues,
     :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
                             Default value of is_alive implies a simplified computation algorithm for Qlearning loss
 
-    :param n_steps: if an integer is given, the STATE VALUE references are computed in loops of 3 states.
-            If 1 (default), this uses a one-step TD rollout, i.e. reference_V(s) = r+gamma*V(s')
-            If None: propagating rewards throughout the whole session and only taking V(s_last) at session ends at last tensor element.
-            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
+    :param n_steps: if an integer is given, uses n-step TD algorithm
+            If 1 (default), this works exactly as normal TD
+            If None: propagating rewards throughout the whole sequence of state-action pairs.
 
     :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
     :param crop_last: if True, zeros-out loss at final tick, if False - computes loss VS Qvalues_after_end
@@ -67,8 +66,6 @@ def get_elementwise_objective_critic(action_qvalues,
     :param loss_function: loss_function(V_reference,V_predicted). Defaults to (V_reference-V_predicted)**2.
                             Use to override squared error with different loss (e.g. Huber or MAE)
 
-    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-    :param scan_strict: whether to evaluate Qvalues using strict theano scan or non-strict one
     :return: mean squared error over Q-values (using formula above for loss)
 
     """
@@ -87,8 +84,6 @@ def get_elementwise_objective_critic(action_qvalues,
         n_steps=n_steps,
         gamma_or_gammas=gamma_or_gammas,
         state_values_after_end=state_values_after_end,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
         end_at_tmax=force_end_at_last_tick,
         crop_last=crop_last,
     )

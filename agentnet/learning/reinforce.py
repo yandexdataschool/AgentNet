@@ -18,8 +18,6 @@ def get_elementwise_objective(policy,actions,rewards,
                               gamma_or_gammas=0.99,
                               crop_last=True,
                               treat_policy_as_logpolicy=False,
-                              scan_dependencies=(),
-                              scan_strict=True,
                               ):
     """
     Compute and return policy gradient as evaluates
@@ -29,6 +27,9 @@ def get_elementwise_objective(policy,actions,rewards,
 
 
     :param policy: [batch,tick,action_id] - predicted action probabilities
+        either for all actions, shape [batch,tick,action]
+        or for chosen actions, shape [batch,tick]
+
     :param actions: [batch,tick] - committed actions
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
     :param is_alive: [batch,tick] - binary matrix whether given session is active at given tick. Defaults to all ones.
@@ -36,8 +37,6 @@ def get_elementwise_objective(policy,actions,rewards,
     :param gamma_or_gammas: a single value or array[batch,tick](can broadcast dimensions) of delayed reward discounts
     :param crop_last: if True, zeros-out loss at final tick
     :param treat_policy_as_logpolicy: if True, policy is used as log(pi(a|s)). You may want to do this for numerical stability reasons.
-    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-    :param scan_strict: whether to evaluate values using strict theano scan or non-strict one
     :return: elementwise sum of policy_loss + state_value_loss [batch,tick]
 
     """
@@ -47,17 +46,17 @@ def get_elementwise_objective(policy,actions,rewards,
     if baseline == "zeros":
         baseline = T.zeros_like(rewards,dtype=theano.config.floatX)
     # check dimensions
-    assert policy.ndim==3
-    assert actions.ndim == rewards.ndim ==2
-    assert is_alive.ndim==2
-    assert baseline.ndim==2
+    assert policy.ndim in (2,3),"policy must have shape either [batch,tick,action], for all actions," \
+                                " or [batch,tick], for chosen actions"
+
+    assert actions.ndim == rewards.ndim == is_alive.ndim==2, "actions, rewards and is_alive must have shape [batch,time]"
 
     #logprobas for all actions
     logpolicy = T.log(policy) if not treat_policy_as_logpolicy else policy
+
     #logprobas for actions taken
-    action_logprobas = get_values_for_actions(logpolicy, actions)
-
-
+    given_action_probas = (logpolicy.ndim==2)
+    action_logprobas = logpolicy if given_action_probas else get_values_for_actions(logpolicy, actions)
 
     #estimate n-step advantage. Note that we use current state values here (and not e.g. state_values_target)
     observed_state_values = get_n_step_value_reference(
@@ -67,8 +66,6 @@ def get_elementwise_objective(policy,actions,rewards,
         n_steps=None,
         gamma_or_gammas=gamma_or_gammas,
         end_at_tmax=True,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
         crop_last=crop_last,
     )
 

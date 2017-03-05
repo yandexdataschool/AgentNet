@@ -15,11 +15,9 @@ def get_n_step_value_reference(state_values,rewards,
                                crop_last=True,
                                state_values_after_end="zeros",
                                end_at_tmax=False,
-                               force_n_step=False,
-                               dependencies=tuple(),
-                               strict=True):
+                               force_n_step=False):
     """
-    Computes the reference for state value function via n-step algorithm:
+    Computes the reference for state value function via n-step TD algorithm:
     
     Vref = r(t) + gamma*r(t+1) + gamma^2*r(t+2) + ... + gamma^n*V(s[t+n]) where n == n_steps
     
@@ -33,8 +31,7 @@ def get_n_step_value_reference(state_values,rewards,
         
     :param rewards: - float[batch,tick] rewards achieved by commiting actions at [batch,tick]
     
-    :param is_alive: whether the session is still active int/bool[batch_size,time]
-        
+    :param is_alive: whether the session is still active at given tick, int[batch_size,time] of ones and zeros
         
     :param n_steps: if an integer is given, the references are computed in loops of n_steps
             Every n_steps'th step reference is set to  V = r + gamma * next V_predicted
@@ -53,10 +50,6 @@ def get_n_step_value_reference(state_values,rewards,
                         use defaults and crop output's last tick ( qref[:,:-1] )
     :param end_at_tmax: if True, forces session end at last tick if there was no other session end.
     :param force_n_step: if True, does NOT fall back to 1-step algorithm if n_steps = 1
-
-    :param dependencies: everything else you need to evaluate first 3 parameters (only used if strict==True)
-    :param strict: whether to evaluate values using strict theano scan or non-strict one
-
 
     :returns: V reference [batch,action_at_tick] according n-step algorithms ~ eligibility traces
             e.g. mentioned here http://arxiv.org/pdf/1602.01783.pdf as A3c and k-step Q-learning
@@ -117,7 +110,7 @@ def get_n_step_value_reference(state_values,rewards,
 
     # initialize each reference with ZEROS after the end (won't be in output tensor)
     outputs_info = [T.zeros_like(rewards[:, 0]), ]
-    non_seqs = (gamma_or_gammas,) + tuple(dependencies)
+    non_seqs = (gamma_or_gammas,)
 
     # end indicator[batch,tick] that is 1 if this is the last state
     is_end = get_end_indicator(is_alive, force_end_at_t_max=end_at_tmax)
@@ -168,7 +161,7 @@ def get_n_step_value_reference(state_values,rewards,
                                          non_sequences=non_seqs,
                                          outputs_info=outputs_info,
                                          go_backwards=True,
-                                         strict=strict
+                                         strict=True,
                                          )[0]  # shape: [time_seq_inverted, batch]
 
     reference_state_values = reference_state_values.T[:, ::-1]  # [batch, time_seq]
@@ -187,7 +180,7 @@ def get_1_step_value_reference(state_values,rewards,
                                state_values_after_end="zeros",
                                end_at_tmax=False):
     """
-    Computes the reference for state value function via n-step algorithm:
+    Computes the reference for state value function via 1-step TD algorithm:
 
     Vref = r(t) + gamma*V(s')
 
@@ -197,7 +190,7 @@ def get_1_step_value_reference(state_values,rewards,
             - for Q-learning, it's max over Q-values
             - for state-value based methods (a2c, dpg), it's same as state_values
 
-    :param rewards: - float[batch,tick] rewards achieved by commiting actions at [batch,tick]
+    :param rewards: - float[batch,tick] rewards achieved by committing actions at [batch,tick]
 
     :param is_alive: whether the session is still active int/bool[batch_size,time]
 

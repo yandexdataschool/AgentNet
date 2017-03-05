@@ -1,7 +1,7 @@
 """
 Q-learning implementation.
 Works with discrete action space.
-Supports n-step updates and custom state value function (max(Q(s,a)), boltzmann, mellowmax, expected value sarsa)
+Supports n-step updates and custom state value function (max(Q(s,a)), double q-learning, boltzmann, mellowmax, expected value sarsa,...)
 """
 
 from __future__ import division, print_function, absolute_import
@@ -17,34 +17,42 @@ __author__ = "Konstantin Sidorov(partobs-mdp), justheuristic"
 def get_elementwise_objective(qvalues, actions, rewards,
                               is_alive="always",
                               qvalues_target=None,
+                              state_values_target=None,
                               n_steps=1,
                               gamma_or_gammas=0.99,
                               crop_last=True,
                               state_values_target_after_end="zeros",
                               consider_reference_constant=True,
-                              aggregation_function=lambda qv: T.max(qv, axis=-1),
+                              aggregation_function="deprecated",
                               force_end_at_last_tick=False,
                               return_reference=False,
-                              loss_function=squared_error,
-                              scan_dependencies=(),
-                              scan_strict=True):
+                              loss_function=squared_error):
     """
     Returns squared error between predicted and reference Q-values according to n-step Q-learning algorithm
 
         Qreference(state,action) = reward(state,action) + gamma*reward(state_1,action_1) + ... + gamma^n * max[action_n]( Q(state_n,action_n)
         loss = mean over (Qvalues - Qreference)**2
 
-    :param qvalues: [batch,tick,action_id] - predicted qvalues
+    :param qvalues: [batch,tick,actions] - predicted qvalues
     :param actions: [batch,tick] - commited actions
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
     :param is_alive: [batch,tick] - whether given session is still active at given tick. Defaults to always active.
 
-    :param qvalues_target: Older snapshot Qvalues (e.g. from a target network). If None, uses current Qvalues
+    :param qvalues_target: Q-values used when computing reference (e.g. r+gamma*Q(s',a_max). shape [batch,tick,actions]
+        examples:
+        (default) If None, uses current Qvalues.
+        Older snapshot Qvalues (e.g. from a target network)
 
-    :param n_steps: if an integer is given, the references are computed in loops of 3 states.
-            If 1 (default), this works exactly as normal Q-learning: Q(s,a) = r+gamma*max_a' Q(s',a')
-            If None: propagates rewards through whole session, only using Q(s_n,a) at the very end and on env reset.
-            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
+    :param state_values_target: state values V(s), used when computing reference (e.g. r+gamma*V(s'), shape [batch_size,seq_length,1]
+        double q-learning V(s) = Q_old(s,argmax Q_new(s,a))
+        expected_value_sarsa V(s) = E_a~pi(a|s) Q(s,a)
+        state values from teacher network (knowledge transfer)
+
+    Must provide either nothing or qvalues_target or state_values_target, not both at once
+
+    :param n_steps: if an integer is given, uses n-step q-learning algorithm
+            If 1 (default), this works exactly as normal q-learning
+            If None: propagating rewards throughout the whole sequence of state-action pairs.
 
     :param gamma_or_gammas: delayed reward discounts: a single value or array[batch,tick](can broadcast dimensions).
 
@@ -56,10 +64,6 @@ def get_elementwise_objective(qvalues, actions, rewards,
                             If you wish to simply ignore the last tick, use defaults and crop output's last tick ( qref[:,:-1] )
     :param consider_reference_constant: whether or not zero-out gradient flow through reference_qvalues
             (True is highly recommended)
-    :param aggregation_function: a function that takes all Qvalues for "next state Q-values" term and returns what
-                                is the "best next Q-value". Normally you should not touch it. Defaults to max over actions.
-                                Normally you shouldn't touch this
-                                Takes input of [batch,n_actions] Q-values
 
     :param force_end_at_last_tick: if True, forces session end at last tick unless ended otehrwise
 
@@ -68,26 +72,26 @@ def get_elementwise_objective(qvalues, actions, rewards,
     :param loss_function: loss_function(V_reference,V_predicted). Defaults to (V_reference-V_predicted)**2.
                             Use to override squared error with different loss (e.g. Huber or MAE)
 
-    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-    :param scan_strict: whether to evaluate Qvalues using strict theano scan or non-strict one
     :return: mean squared error over Q-values (using formula above for loss)
 
     """
-    #set defaults
-    if qvalues_target is None:
-        qvalues_target = qvalues
+    if aggregation_function != "deprecated":
+        raise NotImplementedError("aggregation function has beed deprecated and removed. You can now manually compute "
+                                  "any V(s) and pass it as state_state_values_target. By default it's qvalues.max(axis=-1)")
+    #set defaults and assert shapes
     if is_alive == 'always':
         is_alive = T.ones_like(rewards)
-    assert qvalues.ndim == qvalues_target.ndim == 3
-    assert actions.ndim == rewards.ndim ==2
-    assert is_alive.ndim == 2
+    assert qvalues_target is None or state_values_target is None, "Please provide only one of (qvalues_target," \
+                                                                  "state_values_target) or none of them, not both"
+    assert qvalues.ndim == 3, "q-values must have shape [batch,time,n_actions]"
+    assert actions.ndim == rewards.ndim == is_alive.ndim == 2, "actions, rewards and is_alive must have shape [batch,time]"
+    assert qvalues_target.ndim in (2,3),"qvalues_target must be action values, shape[batch,time,n_actions] or state values, shape [batch,time]"
 
 
-    # get Qvalues of best actions (used every K steps for reference Q-value computation
-    state_values_target = aggregation_function(qvalues_target)
+    #unless already given V(s), compute V(s) as Qvalues of best actions
+    state_values_target = state_values_target or T.max(qvalues_target or qvalues, axis=-1)
 
     # get predicted Q-values for committed actions by both current and target networks
-    # (to compare with reference Q-values and use for recurrent reference computation)
     action_qvalues = get_values_for_actions(qvalues, actions)
 
     # get reference Q-values via Q-learning algorithm
@@ -99,8 +103,6 @@ def get_elementwise_objective(qvalues, actions, rewards,
         gamma_or_gammas=gamma_or_gammas,
         state_values_after_end=state_values_target_after_end,
         end_at_tmax=force_end_at_last_tick,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
         crop_last=crop_last,
     )
 

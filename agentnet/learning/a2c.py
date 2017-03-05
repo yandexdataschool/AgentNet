@@ -31,8 +31,6 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                               return_separate=False,
                               treat_policy_as_logpolicy=False,
                               loss_function=squared_error,
-                              scan_dependencies=(),
-                              scan_strict=True,
                               ):
     """
     returns cross-entropy-like objective function for Actor-Critic method
@@ -51,9 +49,8 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                 If None (defualt), uses current Qvalues to compute reference
 
     :param n_steps: if an integer is given, the STATE VALUE references are computed in loops of 3 states.
-            If 1 (default), this uses a one-step TD rollout, i.e. reference_V(s) = r+gamma*V(s')
-            If None: propagating rewards throughout the whole session and only taking V(s_last) at session ends at last tensor element.
-            If you provide symbolic integer here AND strict = True, make sure you added the variable to dependencies.
+            If 1 (default), this uses a one-step TD, i.e. reference_V(s) = r+gamma*V(s')
+            If None: propagating rewards throughout the whole session and only taking V(s_last) at the session end.
 
     :param n_steps_advantage: same as n_steps, but for advantage term A(s,a) (see above). Defaults to same as n_steps
 
@@ -79,11 +76,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
                                 Use to override squared error with different loss (e.g. Huber or MAE)
 
 
-    :param scan_dependencies: everything you need to evaluate first 3 parameters (only if strict==True)
-
     :param force_end_at_last_tick: if True, forces session end at last tick unless ended otherwise
-
-    :param scan_strict: whether to evaluate values using strict theano scan or non-strict one
 
 
     :return: elementwise sum of policy_loss + state_value_loss [batch,tick]
@@ -125,8 +118,6 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         gamma_or_gammas=gamma_or_gammas,
         state_values_after_end=state_values_target_after_end,
         end_at_tmax=force_end_at_last_tick,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
         crop_last=crop_last,
     )
 
@@ -159,8 +150,6 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         gamma_or_gammas=gamma_or_gammas,
         state_values_after_end=state_values_after_end,
         end_at_tmax=force_end_at_last_tick,
-        dependencies=scan_dependencies,
-        strict=scan_strict,
         crop_last=crop_last,
     )
 
