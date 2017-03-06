@@ -83,9 +83,11 @@ def get_elementwise_objective(qvalues, actions, rewards,
         is_alive = T.ones_like(rewards)
     assert qvalues_target is None or state_values_target is None, "Please provide only one of (qvalues_target," \
                                                                   "state_values_target) or none of them, not both"
-    assert qvalues.ndim == 3, "q-values must have shape [batch,time,n_actions]"
     assert actions.ndim == rewards.ndim == is_alive.ndim == 2, "actions, rewards and is_alive must have shape [batch,time]"
-    assert qvalues_target.ndim in (2,3),"qvalues_target must be action values, shape[batch,time,n_actions] or state values, shape [batch,time]"
+
+    assert qvalues.ndim == 3, "q-values must have shape [batch,time,n_actions]"
+    assert qvalues_target is None or qvalues_target.ndim == 3,"qvalues_target must have shape[batch,time,n_actions]]"
+    assert state_values_target is None or state_values_target.ndim ==2, "state values must have shape [batch,time]"
 
 
     #unless already given V(s), compute V(s) as Qvalues of best actions
