@@ -40,7 +40,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         and Vreference is reference state values as per Temporal Difference.
 
 
-    :param policy: [batch,tick,action_id] - predicted action probabilities
+    :param policy: [batch,tick,action_id] or  [batch,tick] - predicted probabilities for all actions (3-dim) or chosen actions (2-dim).
     :param state_values: [batch,tick] - predicted state values
     :param actions: [batch,tick] - committed actions
     :param rewards: [batch,tick] - immediate rewards for taking actions at given time ticks
@@ -89,7 +89,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
         is_alive = T.ones_like(actions, dtype=theano.config.floatX)
 
     # check dimensions
-    assert policy.ndim==3
+    assert policy.ndim in (2,3)
     assert state_values.ndim in (2,3)
     assert state_values_target.ndim in (2,3)
     assert actions.ndim == rewards.ndim ==2
@@ -134,7 +134,7 @@ def get_elementwise_objective(policy,state_values,actions,rewards,
     #logprobas for all actions
     logpolicy = T.log(policy) if not treat_policy_as_logpolicy else policy
     #logprobas for actions taken
-    action_logprobas = get_values_for_actions(logpolicy, actions)
+    action_logprobas = get_values_for_actions(logpolicy, actions) if logpolicy.ndim == 3 else logpolicy
 
 
     #if n_steps_advantage is different than n_steps, compute actor advantage separately. Otherwise reuse old
