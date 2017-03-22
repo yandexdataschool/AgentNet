@@ -4,7 +4,7 @@
 ###Warnings verbosity:
 class config:
 
-    verbose=2
+    verbose=1
     # 0 = shut up
     # 1 = essential only
     # 2 = tell me everything
