@@ -17,7 +17,10 @@ from .generic import get_n_step_value_reference, get_values_for_actions
 from ..utils.grad import consider_constant
 from ..utils.logging import warn
 
-def get_elementwise_objective(policy,state_values,actions,rewards,
+def get_elementwise_objective(policy,
+                              state_values,
+                              actions,
+                              rewards,
                               is_alive="always",
                               state_values_target=None,
                               n_steps=1,
