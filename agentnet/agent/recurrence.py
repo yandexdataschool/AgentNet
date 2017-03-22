@@ -36,6 +36,8 @@ class Recurrence(DictLayer):
     Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
     Conversely, it can be used as any other lasagne layer, even as a part of another recurrence.
 
+    [tutorial on recurrence](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Custom%20rnn%20with%20recurrence.ipynb)
+
     :param input_nonsequences: inputs that are same at each time tick.
         Technically it's a dictionary that maps InputLayer from one-step graph
         to layers from the outer graph.
