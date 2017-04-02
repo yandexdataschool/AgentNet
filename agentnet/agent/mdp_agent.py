@@ -164,7 +164,8 @@ class MDPAgent(object):
         :param session_length: how many turns of interaction shall there be for each batch
         :type session_length: int
         :param batch_size: amount of independent sessions [number or symbolic].
-            irrelevant if there's at least one input or if you manually set any initial_*.
+            irrelevant if experience_replay=True (will be inferred automatically
+            also irrelevant if there's at least one input or if you manually set any initial_*.
 
         :type batch_size: int or theano.tensor.TensorVariable
 
@@ -430,9 +431,6 @@ class MDPAgent(object):
         :type environment: SessionBatchEnvironment or SessionPoolEnvironment
         :param session_length: how many turns of interaction shall there be for each batch
         :type session_length: int
-
-        :param batch_size: [required parameter] amount of independent sessions [number or symbolic].
-            irrelevant if there's at least one input or if you manually set any initial_*.
 
         :param initial_something: layers providing initial values for all variables at 0-th time step
             'zeros' default means filling variables with zeros
