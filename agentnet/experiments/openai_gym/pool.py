@@ -206,7 +206,7 @@ class EnvPool(object):
                                                    max_pool_size=max_size or self.max_size)
 
     def evaluate(self, n_games=1, save_path="./records", use_monitor=True, record_video=True, verbose=True,
-                 t_max=10000):
+                 t_max=100000):
         """Plays an entire game start to end, records the logs(and possibly mp4 video), returns reward.
 
         :param save_path: where to save the report
