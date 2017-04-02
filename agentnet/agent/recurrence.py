@@ -36,7 +36,8 @@ class Recurrence(DictLayer):
     Recurrence is a lasagne layer that takes an inner graph and rolls it for several steps using scan.
     Conversely, it can be used as any other lasagne layer, even as a part of another recurrence.
 
-    [tutorial on recurrence](https://github.com/yandexdataschool/AgentNet/blob/master/examples/Custom%20rnn%20with%20recurrence.ipynb)
+    [tutorial on recurrence](https://github.com/yandexdataschool/AgentNet/blob/master
+/examples/Custom%20rnn%20with%20recurrence.ipynb)
 
     :param input_nonsequences: inputs that are same at each time tick.
         Technically it's a dictionary that maps InputLayer from one-step graph
@@ -90,15 +91,9 @@ class Recurrence(DictLayer):
             - state variable sequences in order of dict.items()
             - tracked_outputs in given order
 
-        WARNING! can not be used further as an atomic lasagne layer.
-        Instead, consider calling .get_sequences() or unpacking it
-
-        state_sequence_layers, output_sequence_layers = Recurrence(...).get_sequences()
-        (see .get_sequences help for more info)
-
-        OR
-
-        state_seq_layer, ... , output1_seq_layer, output2_seq_layer, ... = Recurrence(...)
+        WARNING! this layer has a dictionary of outputs. 
+        It shouldn't used further as an atomic lasagne layer.
+        Instead, consider using my_recurrence[one_of_states_or_outputs] (see code below)
 
     Examples
     --------
