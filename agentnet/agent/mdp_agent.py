@@ -48,7 +48,12 @@ class MDPAgent(object):
 
     :type agent_states: collections.OrderedDict or dict
 
-    :param policy_estimators: whatever determines agent policy
+    :param policy_estimators: whatever determines agent policy (or whatever you want to work with later).
+        - Q_values (and target network q-values) for q-learning
+        - action probabilities for reinforce
+        - action probabilities and state values (also possibly target network) for actor-critic
+        - whatever intermediate state you want. e.g. if you want to penalize network for activations
+        of layer `l_dense_1` later, you will need to add it to policy_estimators.
     :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances
             (e.g. state value + action probabilities for a2c)
 
