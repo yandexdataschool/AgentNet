@@ -32,6 +32,8 @@ class MDPAgent(object):
     """
     A generic agent within MDP (markov decision process) abstraction.
     Basically wraps Recurrence layer to interact between agent and environment.
+    Note for developers: if you want to get acquainted with this code, we suggest reading 
+    [Recurrence](http://agentnet.readthedocs.io/en/master/modules/agent.html#module-agentnet.agent.recurrence) first.
 
     :param observation_layers: agent observation(s)
     :type observation_layers: lasagne.layers.InputLayer or a list of such
