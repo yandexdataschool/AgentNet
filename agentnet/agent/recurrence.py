@@ -281,7 +281,7 @@ class Recurrence(DictLayer):
                         #note: all_inptus is a list, so technically this is a O(n) lookup,
                         #but it's negligible if network has reasonable input count :)
                         message = "One of your network dependencies ({layer_name}) isn't mentioned in Recurrence inputs"
-                        raise ValueError(message.format(layer_name=layer.name))
+                        raise ValueError(message.format(layer_name=layer.name or str(layer)))
 
             # verifying shapes (assertions)
             nonseq_pairs = list(chain(self.state_variables.items(),
