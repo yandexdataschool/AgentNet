@@ -32,6 +32,8 @@ class MDPAgent(object):
     """
     A generic agent within MDP (markov decision process) abstraction.
     Basically wraps Recurrence layer to interact between agent and environment.
+    Note for developers: if you want to get acquainted with this code, we suggest reading 
+    [Recurrence](http://agentnet.readthedocs.io/en/master/modules/agent.html#module-agentnet.agent.recurrence) first.
 
     :param observation_layers: agent observation(s)
     :type observation_layers: lasagne.layers.InputLayer or a list of such
@@ -48,7 +50,12 @@ class MDPAgent(object):
 
     :type agent_states: collections.OrderedDict or dict
 
-    :param policy_estimators: whatever determines agent policy
+    :param policy_estimators: whatever determines agent policy (or whatever you want to work with later).
+        - Q_values (and target network q-values) for q-learning
+        - action probabilities for reinforce
+        - action probabilities and state values (also possibly target network) for actor-critic
+        - whatever intermediate state you want. e.g. if you want to penalize network for activations
+        of layer `l_dense_1` later, you will need to add it to policy_estimators.
     :type policy_estimators: lasagne.Layer child instance (e.g. Q-values) or a tuple of such instances
             (e.g. state value + action probabilities for a2c)
 
@@ -164,7 +171,8 @@ class MDPAgent(object):
         :param session_length: how many turns of interaction shall there be for each batch
         :type session_length: int
         :param batch_size: amount of independent sessions [number or symbolic].
-            irrelevant if there's at least one input or if you manually set any initial_*.
+            irrelevant if experience_replay=True (will be inferred automatically
+            also irrelevant if there's at least one input or if you manually set any initial_*.
 
         :type batch_size: int or theano.tensor.TensorVariable
 
@@ -430,9 +438,6 @@ class MDPAgent(object):
         :type environment: SessionBatchEnvironment or SessionPoolEnvironment
         :param session_length: how many turns of interaction shall there be for each batch
         :type session_length: int
-
-        :param batch_size: [required parameter] amount of independent sessions [number or symbolic].
-            irrelevant if there's at least one input or if you manually set any initial_*.
 
         :param initial_something: layers providing initial values for all variables at 0-th time step
             'zeros' default means filling variables with zeros
