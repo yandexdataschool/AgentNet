@@ -478,15 +478,23 @@ class Recurrence(DictLayer):
         ## initial states that are given as input
         initial_states_provided = OrderedDict(list(zip(self.state_init, initial_states_provided)))
 
-        def get_initial_state(state_out_layer,batch_size=batch_size):
-            """Pick dedicated initial state or create zeros of appropriate shape and dtype"""
+        def get_initial_state(layer, batch_size=batch_size):
+            """Pick dedicated initial state or create zeros of appropriate shape and dtype
+            :param layer: layer for new hidden state (key of self.state_variables)
+            :param batch_size: symbolic batch_size
+            """
             # if we have a dedicated init, use it
-            if state_out_layer in initial_states_provided:
-                initial_state = initial_states_provided[state_out_layer]
+            if layer in initial_states_provided:
+                initial_state = initial_states_provided[layer]
             # otherwise initialize with zeros
             else:
-                dtype = get_layer_dtype(state_out_layer)
-                initial_state = T.zeros((batch_size,) + tuple(state_out_layer.output_shape[1:]),dtype=dtype)
+                assert None not in layer.output_shape[1:],\
+                    "Some of your state layers ({}) has undefined shape along non-batch dimension. (shape: {}) " \
+                    "Therefore, it's initial value can't be inferred. Please set explicit initial value via state_init" \
+                    "".format(layer.name or layer, layer.output_shape)
+
+                dtype = get_layer_dtype(layer)
+                initial_state = T.zeros((batch_size,) + tuple(layer.output_shape[1:]), dtype=dtype)
 
                 #cast to non-broadcastable tensortype
                 t_state = T.TensorType(dtype, (False,) * initial_state.ndim)
@@ -502,7 +510,7 @@ class Recurrence(DictLayer):
         # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
         # if unroll_scan, these parameters are present. we forcibly initialize outputs to prevent
         # complications during parameter parsing in step function below.
-        initial_output_fillers = list(map(get_initial_state, self.tracked_outputs))
+        initial_output_fillers = [None]*len(self.tracked_outputs)
         
         
         outputs_info = initial_states + initial_output_fillers
@@ -510,8 +518,8 @@ class Recurrence(DictLayer):
         # recurrent step function
         def step(*args):
 
-            sequence_slices, prev_states, prev_outputs, nonsequences = \
-                unpack_list(args, [n_input_seq, n_states, n_outputs, n_input_nonseq])
+            sequence_slices, prev_states, nonsequences = \
+                unpack_list(args, [n_input_seq, n_states, n_input_nonseq])
             # make dicts of prev_states and inputs
             prev_states_dict = OrderedDict(zip(list(self.state_variables.keys()), prev_states))
 
@@ -533,10 +541,6 @@ class Recurrence(DictLayer):
             new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
                             for (prev_state,state) in zip(prev_states,new_states)]
             assert None not in new_states, "Some state variables has different dtype/shape from init ."
-
-            new_outputs = [get_type(prev_out).convert_variable(out.astype(prev_out.dtype))
-                            for (prev_out,out) in zip(prev_outputs,new_outputs)]
-            assert None not in new_outputs, "Some of the tracked outputs has shape/dtype changing over time. Please report this."
 
             return new_states + new_outputs
 
