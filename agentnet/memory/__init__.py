@@ -35,4 +35,5 @@ from .gate import GateLayer
 
 from .gru import GRUMemoryLayer
 from .logical import  CounterLayer,SwitchLayer
+from .attention import AttentionLayer
 
