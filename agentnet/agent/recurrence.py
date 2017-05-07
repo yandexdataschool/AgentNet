@@ -276,7 +276,7 @@ class Recurrence(DictLayer):
                         #note: all_inptus is a list, so technically this is a O(n) lookup,
                         #but it's negligible if network has reasonable input count :)
                         message = "One of your network dependencies ({layer_name}) isn't mentioned in Recurrence inputs"
-                        raise ValueError(message.format(layer_name=layer.name or str(layer)))
+                        raise ValueError(message.format(layer_name=layer.name))
 
             # verifying shapes (assertions)
             nonseq_pairs = list(chain(self.state_variables.items(),
@@ -437,7 +437,7 @@ class Recurrence(DictLayer):
     def get_output_for(self, inputs, accumulate_updates="warn",recurrence_flags={}, **kwargs):
         """
         returns history of agent interaction with environment for given number of turns.
-        
+
         parameters:
             inputs - [state init]  + [input_nonsequences] + [input_sequences]
                 Each part is a list of theano expressions for layers in the order they were
@@ -510,16 +510,16 @@ class Recurrence(DictLayer):
         # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
         # if unroll_scan, these parameters are present. we forcibly initialize outputs to prevent
         # complications during parameter parsing in step function below.
-        initial_output_fillers = [None]*len(self.tracked_outputs)
-        
-        
+        initial_output_fillers = list(map(get_initial_state, self.tracked_outputs))
+
+
         outputs_info = initial_states + initial_output_fillers
-        
+
         # recurrent step function
         def step(*args):
 
-            sequence_slices, prev_states, nonsequences = \
-                unpack_list(args, [n_input_seq, n_states, n_input_nonseq])
+            sequence_slices, prev_states, prev_outputs, nonsequences = \
+                unpack_list(args, [n_input_seq, n_states, n_outputs, n_input_nonseq])
             # make dicts of prev_states and inputs
             prev_states_dict = OrderedDict(zip(list(self.state_variables.keys()), prev_states))
 
@@ -541,6 +541,11 @@ class Recurrence(DictLayer):
             new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
                             for (prev_state,state) in zip(prev_states,new_states)]
             assert None not in new_states, "Some state variables has different dtype/shape from init ."
+
+            new_outputs = [get_type(prev_out).convert_variable(out.astype(prev_out.dtype))
+                            for (prev_out, out) in zip(prev_outputs, new_outputs)]
+
+            assert None not in new_outputs, "Some of the tracked outputs has shape/dtype changing over time. Please report this."
 
             return new_states + new_outputs
 
