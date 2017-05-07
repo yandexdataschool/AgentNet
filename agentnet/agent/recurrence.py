@@ -510,7 +510,7 @@ class Recurrence(DictLayer):
         # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
         # if unroll_scan, these parameters are present. we forcibly initialize outputs to prevent
         # complications during parameter parsing in step function below.
-        initial_output_fillers = [None]*len(self.tracked_outputs)
+        initial_output_fillers = list(map(get_initial_state, self.tracked_outputs))
         
         
         outputs_info = initial_states + initial_output_fillers
@@ -518,8 +518,8 @@ class Recurrence(DictLayer):
         # recurrent step function
         def step(*args):
 
-            sequence_slices, prev_states, nonsequences = \
-                unpack_list(args, [n_input_seq, n_states, n_input_nonseq])
+            sequence_slices, prev_states, prev_outputs, nonsequences = \
+                unpack_list(args, [n_input_seq, n_states, n_outputs, n_input_nonseq])
             # make dicts of prev_states and inputs
             prev_states_dict = OrderedDict(zip(list(self.state_variables.keys()), prev_states))
 
@@ -541,6 +541,11 @@ class Recurrence(DictLayer):
             new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
                             for (prev_state,state) in zip(prev_states,new_states)]
             assert None not in new_states, "Some state variables has different dtype/shape from init ."
+
+            new_outputs = [get_type(prev_out).convert_variable(out.astype(prev_out.dtype))
+                            for (prev_out, out) in zip(prev_outputs, new_outputs)]
+
+            assert None not in new_outputs, "Some of the tracked outputs has shape/dtype changing over time. Please report this."
 
             return new_states + new_outputs
 
