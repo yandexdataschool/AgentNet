@@ -267,7 +267,7 @@ class Recurrence(DictLayer):
             # all state_init correspond to defined state variables
             for state_out in list(self.state_init.keys()):
                 #TODO remove tracked_outputs option once ready
-                assert state_out in list(self.state_variables.keys()) or state_out in self.tracked_outputs.keys()
+                assert state_out in list(self.state_variables.keys()) or state_out in self.tracked_outputs
 
 
             # all input layers must be in inputs list (but not all inputs must be input layers)
