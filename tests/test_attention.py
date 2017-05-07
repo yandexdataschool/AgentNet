@@ -3,6 +3,7 @@ Tests for attention module
 """
 import numpy as np
 import theano
+import theano.tensor as T
 import agentnet
 from agentnet.memory import GRUCell
 from agentnet.memory.attention import AttentionLayer
@@ -34,6 +35,11 @@ def test_attention():
     rec = agentnet.Recurrence(input_nonsequences={step.enc_activations: encoder_activations},
                               state_variables={step.gru: step.prev_gru},
                               tracked_outputs=[step.attn_probs],
+
+                              ###temporary: agentnet can't infer initializer for variable-size states/outputs
+                              state_init={step.attn_probs:InputLayer((None,None),
+                                            T.zeros(encoder_activations.input_var.shape[:2]))},
+
                               unroll_scan=False,
                               n_steps = 10)
 
