@@ -18,9 +18,11 @@ Standard recurrent layers
 Augmentations
 -------------------------
 
-.. autofunction:: WindowAugmentation
+.. autofunction:: AttentionLayer
 
 .. autofunction:: StackAugmentation
+
+.. autofunction:: WindowAugmentation
 
 .. autofunction:: CounterLayer
 
