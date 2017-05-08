@@ -27,6 +27,7 @@ from ..utils import insert_dim
 from ..utils.format import check_list, check_ordered_dict, unpack_list, supported_sequences,is_theano_object
 from ..utils.layers import DictLayer, get_layer_dtype
 from ..utils.logging import warn
+from ..utils.tensor_ops import get_type,cast_to_type
 
 
 class Recurrence(DictLayer):
@@ -471,10 +472,7 @@ class Recurrence(DictLayer):
             raise ValueError("Need to set batch_size explicitly for recurrence")
 
 
-        # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
-        sequences = [seq.swapaxes(1, 0) for seq in sequences]
-
-        #here we create outputs_info for scan
+        #here we create outputs_info for scan, basically initial values for states and outputs
         ## initial states that are given as input
         initial_states_provided = OrderedDict(list(zip(self.state_init, initial_states_provided)))
 
@@ -495,34 +493,33 @@ class Recurrence(DictLayer):
 
                 dtype = get_layer_dtype(layer)
                 initial_state = T.zeros((batch_size,) + tuple(layer.output_shape[1:]), dtype=dtype)
-
-                #cast to non-broadcastable tensortype
-                t_state = T.TensorType(dtype, (False,) * initial_state.ndim)
-                initial_state = t_state.convert_variable(initial_state)
-                assert initial_state is not None #if None, conversion failed. report ASAP
+                #disable broadcasting along all axes (lasagne outputs are non-broadcastable)
+                initial_state = T.unbroadcast(initial_state, *range(initial_state.ndim))
 
             return initial_state
 
         initial_states = list(map(get_initial_state, self.state_variables))
 
-
-        #dummy values for initial outputs. They have no role in computation, but if nonsequences are present,
-        # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
-        # if unroll_scan, these parameters are present. we forcibly initialize outputs to prevent
-        # complications during parameter parsing in step function below.  We also need prev_outputs for step_masked.
+        # dummy initial values for tracked_outputs.
+        # We need to provide them for step_masked to be able to backtrack to them. Also unroll scan requires them.
         # Initial shapes for outputs are inferred by calling get_one_step and taking shapes from it.
-        # Theano optimizes shape computation to an exact formula, like (var1.shape[0],var1.shape[2]*3,10) so
-        # this operation is virtually zero-cost.
+        # Theano optimizes shape computation without computing get_out_step outputs themselves
+        # the resulting graph would be like (var1.shape[0],var1.shape[2]*3,10) so this operation is zero-cost.
         state_feed_dict = dict(zip(self.state_variables.keys(),initial_states))
         input_feed_dict = dict(zip(list(chain(self.input_nonsequences.keys(), self.input_sequences.keys())),
                                    list(chain(nonsequences,[seq[:,0] for seq in sequences]))))
-
         initial_output_fillers = self.get_one_step(state_feed_dict,input_feed_dict)[1]
-        initial_output_fillers = list(map(T.zeros_like, initial_output_fillers))
+        # disable broadcasting of zeros_like(v) along all axes (since lasagne outputs are non-broadcastable)
+        initial_output_fillers = [T.unbroadcast(T.zeros_like(v),*range(v.ndim))
+                                  for v in initial_output_fillers]
         #/end of that nonsense
 
         #stack all initializers together
         outputs_info = initial_states + initial_output_fillers
+
+        # reshape sequences from [batch, time, ...] to [time,batch,...] to fit scan
+        sequences = [seq.swapaxes(1, 0) for seq in sequences]
+
 
         # recurrent step function
         def step(*args):
@@ -541,20 +538,23 @@ class Recurrence(DictLayer):
             new_states, new_outputs = self.get_one_step(prev_states_dict, inputs_dict, **recurrence_flags)
 
 
-            #make sure output variable is of exactly the same type as corresponding input
+            #make sure new state variables are of exactly the same type as their initial value
+            state_names = [layer.name or str(layer) for layer in list(self.state_variables.keys())]
+            for i in range(len(state_names)):
+                try:
+                    new_states[i] = cast_to_type(new_states[i],get_type(prev_states[i]))
+                except:
+                    raise ValueError("Could not convert new state {}, of type {}, to it's declared state {}"
+                                     "".format(state_names[i],get_type(new_states[i]),get_type(prev_states[i])))
 
-            get_type = lambda tensor: T.TensorType(tensor.dtype,
-                                                   tensor.broadcastable,
-                                                   sparse_grad=getattr(tensor.type,"sparse_grad",False))
-
-            new_states = [get_type(prev_state).convert_variable(state.astype(prev_state.dtype))
-                            for (prev_state,state) in zip(prev_states,new_states)]
-            assert None not in new_states, "Some state variables has different dtype/shape from init ."
-
-            new_outputs = [get_type(prev_out).convert_variable(out.astype(prev_out.dtype))
-                            for (prev_out, out) in zip(prev_outputs, new_outputs)]
-
-            assert None not in new_outputs, "Some of the tracked outputs has shape/dtype changing over time. Please report this."
+            #make sure output variables are of exactly the same type as their initial value
+            output_names = [layer.name or str(layer) for layer in self.tracked_outputs]
+            for i in range(len(output_names)):
+                try:
+                    new_outputs[i] = cast_to_type(new_outputs[i],get_type(prev_outputs[i]))
+                except:
+                    raise ValueError("Could not convert output of {}, of type {}, to it's declared state {}"
+                                     "".format(output_names[i],get_type(new_outputs[i]),get_type(prev_outputs[i])))
 
             return new_states + new_outputs
 
