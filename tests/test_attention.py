@@ -36,10 +36,6 @@ def test_attention():
                               state_variables={step.gru: step.prev_gru},
                               tracked_outputs=[step.attn_probs],
 
-                              ###temporary: agentnet can't infer initializer for variable-size states/outputs
-                              state_init={step.attn_probs:InputLayer((None,None),
-                                            T.zeros(encoder_activations.input_var.shape[:2]))},
-
                               unroll_scan=False,
                               n_steps = 10)
 

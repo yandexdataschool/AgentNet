@@ -137,25 +137,32 @@ def test_recurrence_mask():
                   nonlinearity=lasagne.nonlinearities.linear,
                   b=lasagne.init.Constant(100.0))  # init with positive constant to make sure hiddens change
 
+    out = DenseLayer(rnn,num_units=10,nonlinearity=lasagne.nonlinearities.softmax)
+
     rec = agentnet.Recurrence(input_sequences={inp: sequence},
                               state_variables={rnn: prev_rnn},
+                              tracked_outputs=[out],
                               unroll_scan=False,
                               mask_input=mask)
 
     rnn_states = rec[rnn]
-    run = theano.function([sequence.input_var, mask.input_var], get_output(rnn_states))
+    outs = rec[out]
+
+    run = theano.function([sequence.input_var, mask.input_var], get_output([rnn_states,outs]))
 
     seq = np.random.randn(4, 5, 2)
     mask = np.zeros([4, 5])
     mask[:2, :3] = 1
     mask[2:, 2:] = 1
-    out = run(seq, mask)
 
-    assert tuple(out.shape) == (4, 5, 3)
+    h_seq, out_seq = run(seq, mask)
 
-    diff_out = np.diff(out, axis=1)
-    assert np.all(np.diff(out, axis=1)[:2, 2:] == 0)
-    assert np.all(np.diff(out, axis=1)[:2, :2] != 0)
-    assert np.all(np.diff(out, axis=1)[2:, 1:] != 0)
-    assert np.all(np.diff(out, axis=1)[2:, :1] == 0)
+    assert tuple(h_seq.shape) == (4, 5, 3)
+    assert tuple(out_seq.shape) == (4,5,10)
+
+    diff_out = np.diff(h_seq, axis=1)
+    assert np.all(np.diff(h_seq, axis=1)[:2, 2:] == 0)
+    assert np.all(np.diff(h_seq, axis=1)[:2, :2] != 0)
+    assert np.all(np.diff(h_seq, axis=1)[2:, 1:] != 0)
+    assert np.all(np.diff(h_seq, axis=1)[2:, :1] == 0)
 
