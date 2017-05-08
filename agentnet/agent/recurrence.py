@@ -266,8 +266,7 @@ class Recurrence(DictLayer):
 
             # all state_init correspond to defined state variables
             for state_out in list(self.state_init.keys()):
-                #TODO remove tracked_outputs option once ready
-                assert state_out in list(self.state_variables.keys()) or state_out in self.tracked_outputs
+                assert state_out in list(self.state_variables.keys())
 
 
             # all input layers must be in inputs list (but not all inputs must be input layers)
@@ -510,10 +509,19 @@ class Recurrence(DictLayer):
         #dummy values for initial outputs. They have no role in computation, but if nonsequences are present,
         # AND scan is not unrolled, the step function will not receive prev outputs as parameters, while
         # if unroll_scan, these parameters are present. we forcibly initialize outputs to prevent
-        # complications during parameter parsing in step function below.
-        initial_output_fillers = list(map(get_initial_state, self.tracked_outputs))
+        # complications during parameter parsing in step function below.  We also need prev_outputs for step_masked.
+        # Initial shapes for outputs are inferred by calling get_one_step and taking shapes from it.
+        # Theano optimizes shape computation to an exact formula, like (var1.shape[0],var1.shape[2]*3,10) so
+        # this operation is virtually zero-cost.
+        state_feed_dict = dict(zip(self.state_variables.keys(),initial_states))
+        input_feed_dict = dict(zip(list(chain(self.input_nonsequences.keys(), self.input_sequences.keys())),
+                                   list(chain(nonsequences,[seq[:,0] for seq in sequences]))))
 
+        initial_output_fillers = self.get_one_step(state_feed_dict,input_feed_dict)[1]
+        initial_output_fillers = list(map(T.zeros_like, initial_output_fillers))
+        #/end of that nonsense
 
+        #stack all initializers together
         outputs_info = initial_states + initial_output_fillers
 
         # recurrent step function
