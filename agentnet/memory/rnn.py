@@ -1,6 +1,6 @@
 import lasagne
 from lasagne import init
-from lasagne.layers import DenseLayer, NonlinearityLayer
+from lasagne.layers import DenseLayer, NonlinearityLayer, DropoutLayer
 
 from ..utils.format import check_list
 from ..utils.layers import clip_grads, add, mul
@@ -99,6 +99,7 @@ def GRUCell(prev_state,
             forgetgate_nonlinearity=lasagne.nonlinearities.sigmoid,
             updategate_nonlinearity=lasagne.nonlinearities.sigmoid,
             hidden_update_nonlinearity=lasagne.nonlinearities.tanh,
+            dropout=0,
             name="YetAnotherGRULayer",
             grad_clipping=5.
             ):
@@ -124,7 +125,9 @@ def GRUCell(prev_state,
         - second list of lists where
         list[i][0,1,2] = input[i] -> [forget gate, update gate, hidden update]
     :param <any>_nonlinearity: which nonlinearity to use for a particular gate
-    
+
+    :param dropout: dropout rate as per https://arxiv.org/abs/1603.05118
+
     :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
 
     :returns: updated memory layer
@@ -209,6 +212,9 @@ def GRUCell(prev_state,
     hidden_update = NonlinearityLayer(hidden_update,
                                       hidden_update_nonlinearity)
 
+    if dropout != 0:
+        hidden_update = DropoutLayer(hidden_update,p=dropout)
+
     # compute new hidden values
     new_hid = add(
         mul(inv_updategate, prev_state),
@@ -232,6 +238,7 @@ def LSTMCell(prev_cell,
              outputgate_nonlinearity=lasagne.nonlinearities.sigmoid,
              cell_nonlinearity=lasagne.nonlinearities.tanh,
              output_nonlinearity=lasagne.nonlinearities.tanh,
+             dropout=0.,
              name=None,
              grad_clipping=5.,
              ):
@@ -271,7 +278,7 @@ def LSTMCell(prev_cell,
                         [input_gate, forget gate,output gate ] weights. If peepholes=False, this is ignored.
                         
     :param <any>_nonlinearity: which nonlinearity to use for a particular gate
-
+    :param dropout: dropout rate as per https://arxiv.org/pdf/1603.05118.pdf
     :param grad_clipping: maximum gradient absolute value. 0 or None means "no clipping"
 
 
@@ -348,6 +355,9 @@ def LSTMCell(prev_cell,
     cell_input = NonlinearityLayer(cell_input,
                           nonlinearity=cell_nonlinearity,
                           name=(name or "")+'.cell_nonlinearity')
+
+    if dropout != 0:
+        cell_input = DropoutLayer(cell_input,p=dropout)
 
 
     # cell = input * ingate + prev_cell * forgetgate
