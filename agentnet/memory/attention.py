@@ -68,6 +68,7 @@ class AttentionLayer(DictLayer):
                  W_enc = GlorotUniform(),
                  W_dec = GlorotUniform(),
                  W_out = GlorotUniform(),
+                 **kwargs
             ):
         assert len(input_sequence.output_shape)==3,"input_sequence must be a 3-dimensional (batch,time,units)"
         assert len(controller_state.output_shape)==2,"controller_state must be a 2-dimensional for single tick (batch,units)"
@@ -83,7 +84,7 @@ class AttentionLayer(DictLayer):
         output_shapes = {'attn':(batch_size,enc_units),
                          'probs':(batch_size,seq_len)}
 
-        super(AttentionLayer,self).__init__(incomings,output_shapes)
+        super(AttentionLayer,self).__init__(incomings,output_shapes,**kwargs)
 
 
 
