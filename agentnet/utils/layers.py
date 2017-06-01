@@ -5,13 +5,12 @@
 import theano
 import theano.tensor as T
 
-from lasagne.layers import MergeLayer, Layer
+from lasagne.layers import MergeLayer, Layer, get_all_layers
 from lasagne.layers import NonlinearityLayer, ElemwiseMergeLayer
 from collections import OrderedDict
 
 from .format import supported_sequences, check_list, check_ordered_dict
 from ..utils.logging import warn
-
 
 # shortcut functions
 def mul(*args, **kwargs):
@@ -196,3 +195,15 @@ class DictElementLayer(Layer):
         input_dtypes = get_layer_dtype(self.input_layer)
         assert isinstance(input_dtypes, dict)
         return input_dtypes[self.key]
+
+def get_automatic_updates(layer_or_layers,treat_as_input=None,**kwargs):
+    """
+    Returns automatic updates from all the layers given and all layers they depend on.
+    :param layer_or_layers: layer(s) to collect updates from
+    :param treat_as_input: see same param in lasagne.layers.get_all_layers
+    """
+    updates = theano.OrderedUpdates()
+    for layer in get_all_layers(layer_or_layers,treat_as_input=treat_as_input):
+        if hasattr(layer,'get_automatic_updates'):
+            updates += layer.get_automatic_updates(**kwargs)
+    return updates
