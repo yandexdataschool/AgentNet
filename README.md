@@ -5,7 +5,6 @@ A lightweight library to build and train deep reinforcement learning and custom 
 [![Docs badge](https://readthedocs.org/projects/agentnet/badge)](http://agentnet.readthedocs.org/en/latest/)
 [![Gitter](https://badges.gitter.im/yandexdataschool/AgentNet.svg)](https://gitter.im/yandexdataschool/AgentNet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
-Press [![Binder](http://mybinder.org/badge.svg)](http://mybinder.org:/repo/yandexdataschool/dqn_binder) for instant dive-in.
 
 ![img](https://cs.hse.ru/mirror/pubs/share/thumb/150729584:c570x570+185+148:r150x150!)
 
