@@ -68,6 +68,9 @@ class Recurrence(DictLayer):
         Can be a list of initializer layers for states in the order of dict.items()
         if so, it's length must match len(state_variables)
 
+    :param mask_input: Boolean mask for sequences (like the same param in lasagne.layers.RecurrentLayer). 
+        When mask==1, computes next item as usual. Elif mask==0, next item is the copy of previous one.
+
     :param unroll_scan: whether or not to use lasagne.utils.unroll_scan instead of theano.scan.
         Note that if unroll_scan == False, one should use .get_rng_updates after .get_output to collect
         automatic updates
