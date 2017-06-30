@@ -513,7 +513,7 @@ class Recurrence(DictLayer):
         state_feed_dict = dict(zip(self.state_variables.keys(),initial_states))
         input_feed_dict = dict(zip(list(chain(self.input_nonsequences.keys(), self.input_sequences.keys())),
                                    list(chain(nonsequences,[seq[:,0] for seq in sequences]))))
-        initial_output_fillers = self.get_one_step(state_feed_dict,input_feed_dict)[1]
+        initial_output_fillers = self.get_one_step(state_feed_dict,input_feed_dict,**recurrence_flags)[1]
         # disable broadcasting of zeros_like(v) along all axes (since lasagne outputs are non-broadcastable)
         initial_output_fillers = [T.unbroadcast(T.zeros_like(v),*range(v.ndim))
                                   for v in initial_output_fillers]
