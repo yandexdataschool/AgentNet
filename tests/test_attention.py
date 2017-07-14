@@ -114,3 +114,62 @@ def test_attention_2d():
 
     assert gru_seq.shape == (5, 10, 15) #hidden GRU strates, 5 samples/10ticks/15units
     assert probs_seq.shape == (5, 10, 24,24) #attention sequences, 5 samples/10ticks/24width/24height
+
+from agentnet.memory.attention import DotAttentionLayer
+
+def test_dot_attention():
+    """
+    minimalstic test that showcases attentive RNN that reads some chunk
+    of input sequence on each tick and outputs nothing.
+    
+    This time it uses DotAttention [aka multiplicative attention] instead of regular one.
+    """
+
+    # step inner graph
+    class step:
+        enc_activations = InputLayer((None, None, 12), name='placeholder for encoder activations (to be attended)')
+        prev_gru = InputLayer((None, 15),name='gru prev state (15 units)')
+
+        attention = DotAttentionLayer(enc_activations,prev_gru,use_dense_layer=True)
+
+        gru = GRUCell(prev_gru, attention['attn'] , name='rnn that reads enc_sequence with attention')
+
+        attn_probs = attention['probs'] #weights from inside attention
+
+    # outer graph
+
+
+    encoder_activations = InputLayer((None,None,12),name='encoder sequence (will be sent to enc_sequence)')
+
+    rec = agentnet.Recurrence(input_nonsequences={step.enc_activations: encoder_activations},
+                              state_variables={step.gru: step.prev_gru},
+                              tracked_outputs=[step.attn_probs],
+
+                              unroll_scan=False,
+                              n_steps = 10)
+
+    weights = get_all_params(rec)
+
+    gru_states,attention_probs_seq = rec[step.gru,step.attn_probs]
+
+    run = theano.function([encoder_activations.input_var], get_output([gru_states,attention_probs_seq]),
+                          updates=rec.get_automatic_updates(),allow_input_downcast=True)
+
+    #run on surrogate data
+    gru_seq,probs_seq = run(np.random.randn(5, 25, 12))
+
+    assert gru_seq.shape == (5, 10, 15) #hidden GRU strates, 5 samples/10ticks/15units
+    assert probs_seq.shape == (5, 10, 25) #attention sequences, 5 samples/10ticks/25 input seq length
+
+    #hard attention
+    hard_outputs = get_output([gru_states,attention_probs_seq],recurrence_flags={'hard_attention':True})
+
+    hard_run = theano.function([encoder_activations.input_var], hard_outputs,
+                                updates=rec.get_automatic_updates(),allow_input_downcast=True)
+
+    #run on surrogate data
+    _,hard_probs_seq = hard_run(np.random.randn(5, 25, 12))
+
+    #check if probs are one-hot
+    assert hard_probs_seq.shape == (5, 10, 25) #attention sequences, 5 samples/10ticks/25 input seq length
+    assert len(np.unique(hard_probs_seq.ravel()))==2  #only 0's and 1's
