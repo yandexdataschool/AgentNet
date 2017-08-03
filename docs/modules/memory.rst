@@ -20,6 +20,8 @@ Augmentations
 
 .. autofunction:: AttentionLayer
 
+.. autofunction:: DotAttentionLayer
+
 .. autofunction:: StackAugmentation
 
 .. autofunction:: WindowAugmentation

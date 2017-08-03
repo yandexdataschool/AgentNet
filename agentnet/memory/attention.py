@@ -23,8 +23,8 @@ class AttentionLayer(DictLayer):
     - rnn/emb format [batch,seq_len,units] works out of the box
     - 1d convolution format [batch,units,seq_len] needs dimshuffle(conv,[0,2,1])
     - 2d convolution format [batch,units,dim1,dim2] needs two-step procedure
-      - step1 = dimshuffle(conv,[0,2,3,1])
-      - step2 = reshape(step1,[-1,dim1*dim2,units])
+    - step1 = dimshuffle(conv,[0,2,3,1])
+    - step2 = reshape(step1,[-1,dim1*dim2,units])
     - higher dimensionality follows the same principle as 2d example above
     - reshape and dimshuffle can both be found in lasagne.layers (aliases to ReshapeLayer and DimshuffleLayer)
 
