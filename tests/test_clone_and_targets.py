@@ -1,5 +1,5 @@
 import lasagne
-from lasagne.layers import DenseLayer, InputLayer
+from lasagne.layers import DenseLayer, InputLayer,ConcatLayer,get_output
 from agentnet.target_network import TargetNetwork
 
 
@@ -86,4 +86,35 @@ def test_clone():
     for nn in [full_clone, shared_clone, partial_clone, substitute_clone]:
         lasagne.layers.get_output(nn).eval()
 
+from agentnet.utils.reapply import reapply
 
+def test_reapply():
+    
+    l_in1 = InputLayer([None,10],T.zeros([5,10]))
+    l_d1 = DenseLayer(l_in1,20)
+    l_d2 = DenseLayer(l_in1,30)
+    l_cat = ConcatLayer([l_d1,l_d2])
+    l_d3 = DenseLayer(l_cat,20)
+    
+    l_in2 = InputLayer([None,10],T.zeros([5,10]))
+    
+    new_l_d3 = reapply(l_d3,{l_in1:l_in2})  #reapply the whole network to a new in 
+    get_output(new_l_d3).eval()
+
+    l_in3 = InputLayer([None,30],T.zeros([5,30]))
+    
+    new_l_d3 = reapply(l_d3,{l_d2:l_in3})
+    
+    #multiple inputs
+    new_l_cat = reapply(l_cat,{l_d2:ConcatLayer([l_d1,l_d2]),l_in1:l_in2})
+    get_output(new_l_cat).eval()
+    
+    #multiple layers
+    l1,l2 = reapply([l_d3,l_d2],{l_in1:l_in2})
+    outs = reapply({'d3':l_d3,'d2':l_d2},{l_in1:l_in2})
+    
+    assert isinstance(outs,dict)
+    
+    outs['d3'],outs['d2']
+    
+    
