@@ -7,7 +7,6 @@ class ReapplyLayer(DictLayer):
     def __init__(self,layers,replacements,output_shapes=None,output_dtypes=None,**kwargs):
         """
         Applies a part of lasagne network to a new place.
-        
         :param layers: layers to be re-applied
         :type layers: dict {key:layer} or list of layers
         :param replacemnts: a dict {old_layer:new_layer} that defines which layers should be substituted by which other layers
@@ -45,6 +44,20 @@ def reapply(layer_or_layers,replacements,**kwargs):
     
     :param layer_or_layers: a single layer, dict-like or list-like of layers to be reapplied.
     :param replacements: a dictionary of {old_layer:replacement_layer}.
+
+    Examples
+    --------
+
+    >>> #build original network
+    >>> l_in1 = InputLayer([None,10],T.zeros([5,10]))
+    >>> l_d1 = DenseLayer(l_in1,20)
+    >>> l_d2 = DenseLayer(l_in1,30)
+    >>> l_cat = ConcatLayer([l_d1,l_d2])
+    >>> l_d3 = DenseLayer(l_cat,20)
+    >>> l_in2 = InputLayer([None,10],T.zeros([5,10]))
+    >>> new_l_d3 = reapply(l_d3,{l_in1:l_in2})  #reapply the whole network to a new in 
+    >>> l_in3 = InputLayer([None,30],T.zeros([5,30]))
+    >>> new_l_d3 = reapply(l_d3,{l_d2:l_in3}) #reapply just one layer
     
     """
     

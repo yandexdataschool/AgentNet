@@ -22,6 +22,19 @@ clone network
 
 .. autofunction:: clone_network
 
+reapply
+------------------
+.. automodule:: agentnet.utils.reapply
+
+.. currentmodule:: agentnet.utils.reapply
+
+.. autofunction:: reapply
+
+.. autoclass:: ReapplyLayer
+   :members:
+   :member-order: bysource
+
+
 layers
 ------------------
 
