@@ -1,6 +1,19 @@
+"""
+An utility layer that applies in itself a custom lasagne network.
+Also contains a convenience function reapply.
+>>> #build original network
+>>> l_in1 = InputLayer([None,10],T.zeros([5,10]))
+>>> l_d1 = DenseLayer(l_in1,20)
+>>> l_d2 = DenseLayer(l_in1,30)
+>>> l_cat = ConcatLayer([l_d1,l_d2])
+>>> l_d3 = DenseLayer(l_cat,20)
+>>> l_in2 = InputLayer([None,10],T.zeros([5,10]))
+>>> new_l_d3 = reapply(l_d3,{l_in1:l_in2})  #reapply the whole network to a new in 
+>>> l_in3 = InputLayer([None,30],T.zeros([5,30]))
+>>> new_l_d3 = reapply(l_d3,{l_d2:l_in3}) #reapply just one layer
+"""
 from collections import OrderedDict
 from lasagne.layers import Layer, get_output, get_all_params
-from agentnet.utils.layers import DictLayer
 from agentnet.utils import DictLayer,get_layer_dtype,check_list,check_ordered_dict
 
 class ReapplyLayer(DictLayer):

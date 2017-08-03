@@ -1,5 +1,6 @@
 import lasagne
-from lasagne.layers import DenseLayer, InputLayer,ConcatLayer,get_output
+from lasagne.layers import DenseLayer, InputLayer, ConcatLayer, get_output
+
 from agentnet.target_network import TargetNetwork
 
 
@@ -86,7 +87,7 @@ def test_clone():
     for nn in [full_clone, shared_clone, partial_clone, substitute_clone]:
         lasagne.layers.get_output(nn).eval()
 
-from agentnet.utils.reapply import reapply
+from agentnet.utils.layers.reapply import reapply
 
 def test_reapply():
     

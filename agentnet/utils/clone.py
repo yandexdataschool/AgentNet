@@ -5,11 +5,19 @@ Utility functions that can clone lasagne network layers in a custom way.
 - DPG-like methods where critic has to process both optimal and actual actions
 
 """
-import lasagne
-from .format import check_list,check_ordered_dict
 from copy import deepcopy
+
+import lasagne
+
+from .format import check_list, check_ordered_dict
 from ..utils.logging import warn
-from ..utils.reapply import reapply
+
+
+from .layers import reapply as _reapply
+def reapply(*args,**kwargs):
+    warn("DEPRECATION: Reapply has been moved to agentnet.utils.layers.reapply (or agentnet.utils.reapply)."
+         "It will be removed from agentnet.utils.clone in the next release.")
+    return _reapply(*args,**kwargs)
 
 def clone_network(original_network, bottom_layers=None,
                   share_params=False, share_inputs=True,name_prefix = None):
@@ -77,7 +85,7 @@ def clone_network(original_network, bottom_layers=None,
     #add shared weights
     if share_params:
         warn("clone_network with share_params=True may be unreliable in some cases. "\
-             "If you want to simply apply the network elsewhere, use reapply")
+             "If you want to simply apply the network elsewhere, use agentnet.utils.layers.reapply")
         all_weights = lasagne.layers.get_all_params(original_layers)
         for weight_var in all_weights:
             #if weight already in memo
