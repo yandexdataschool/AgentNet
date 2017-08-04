@@ -14,7 +14,9 @@ Also contains a convenience function reapply.
 """
 from collections import OrderedDict
 from lasagne.layers import Layer, get_output, get_all_params
-from agentnet.utils import DictLayer,get_layer_dtype,check_list,check_ordered_dict
+from .dict import DictLayer
+from .helpers import get_layer_dtype
+from ..format import check_list,check_ordered_dict
 
 class ReapplyLayer(DictLayer):
     def __init__(self,layers,replacements,output_shapes=None,output_dtypes=None,**kwargs):

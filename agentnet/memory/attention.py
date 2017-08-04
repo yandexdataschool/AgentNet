@@ -83,22 +83,24 @@ class AttentionLayer(DictLayer):
         assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
         assert mask_input is None or len(mask_input.output_shape)==2,"mask_input must be 2-dimensional (batch,time) or None"
 
-        batch_size,seq_len,enc_units = input_sequence.output_shape
-        dec_units = query.output_shape[-1]
-
         #if no key sequence is given, use input_sequence as key
         key_sequence = key_sequence or input_sequence
+
+        batch_size,seq_len,key_units = key_sequence.output_shape
+        value_units = input_sequence.output_shape[-1]
+        dec_units = query.output_shape[-1]
+
 
         incomings = [input_sequence, key_sequence, query]
         if mask_input is not None:
             incomings.append(mask_input)
 
-        output_shapes = {'attn':(batch_size,enc_units),
+        output_shapes = {'attn':(batch_size,value_units),
                          'probs':(batch_size,seq_len)}
 
         super(AttentionLayer,self).__init__(incomings,output_shapes,**kwargs)
 
-        self.W_enc = self.add_param(W_enc,(enc_units,num_units),name='enc_to_hid')
+        self.W_enc = self.add_param(W_enc,(key_units,num_units),name='enc_to_hid')
         self.W_dec = self.add_param(W_dec,(dec_units,num_units),name='dec_to_hid')
         self.W_out = self.add_param(W_out,(num_units,1),name='hid_to_logit')
         self.nonlinearity = nonlinearity
@@ -224,10 +226,14 @@ class DotAttentionLayer(DictLayer):
         assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
         assert mask_input is None or len(mask_input.output_shape)==2,"mask_input must be 2-dimensional (batch,time) or None"
 
-        batch_size,seq_len,enc_units = input_sequence.output_shape
+        #if no key is given, use values as keys
+        key_sequence = key_sequence or input_sequence
+
+        batch_size,seq_len,key_units = key_sequence.output_shape
+        value_units = input_sequence.output_shape[-1]
         dec_units = query.output_shape[-1]
 
-        if (dec_units != enc_units) and not use_dense_layer:
+        if (dec_units != key_units) and not use_dense_layer:
             warn("Input sequence and query have different unit sizes. "
                  "Using DenseLayer from query instead of raw query."
                  "To suppress this warning, set use_dense_layer=True.")
@@ -235,18 +241,16 @@ class DotAttentionLayer(DictLayer):
         if use_dense_layer:
             name = kwargs.get('name','dotattn')
             dense_name = name+"_dense"
-            query = DenseLayer(query, enc_units,
+            query = DenseLayer(query, key_units,
                                nonlinearity=None, name=dense_name)
             dec_units = query.output_shape[-1]
 
-        #if no key is given, use values as keys
-        key_sequence = key_sequence or input_sequence
 
         incomings = [input_sequence, key_sequence, query]
         if mask_input is not None:
             incomings.append(mask_input)
 
-        output_shapes = {'attn':(batch_size,enc_units),
+        output_shapes = {'attn':(batch_size,value_units),
                          'probs':(batch_size,seq_len)}
 
         super(DotAttentionLayer,self).__init__(incomings,output_shapes,**kwargs)

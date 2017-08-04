@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from ..format import supported_sequences, check_list, check_ordered_dict
 from ...utils.logging import warn
-from . import get_layer_dtype
+from .helpers import get_layer_dtype
 
 class DictLayer(MergeLayer):
     """

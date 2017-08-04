@@ -173,3 +173,49 @@ def test_dot_attention():
     #check if probs are one-hot
     assert hard_probs_seq.shape == (5, 10, 25) #attention sequences, 5 samples/10ticks/25 input seq length
     assert len(np.unique(hard_probs_seq.ravel()))==2  #only 0's and 1's
+
+
+from agentnet.utils import BroadcastLayer, UnbroadcastLayer, UpcastLayer
+def make_self_attn(bottom_layer, key_size=None):
+    assert len(bottom_layer.output_shape) == 3, "must be [batch,time,unit]"
+    key_size = key_size or bottom_layer.output_shape[-1]
+
+    queries = DenseLayer(bottom_layer, key_size, nonlinearity=T.tanh,
+                         num_leading_axes=2)
+
+    keys = DenseLayer(bottom_layer, key_size, nonlinearity=T.tanh,
+                      num_leading_axes=2)
+
+    # broadcast each query to every (key,value) pair
+    queries_each_tick = bcast = BroadcastLayer(queries, broadcasted_axes=(0, 1))
+
+    # upcast every key and value to match the amount queries
+    key_for_each_query = UpcastLayer(keys, broadcast_layer=bcast)
+    value_for_each_query = UpcastLayer(bottom_layer, broadcast_layer=bcast)
+
+    attn_each_tick = DotAttentionLayer(value_for_each_query,
+                                       queries_each_tick,
+                                       key_for_each_query)['attn']
+
+    attn = UnbroadcastLayer(attn_each_tick, broadcast_layer=bcast)
+
+    return attn
+
+
+def test_self_attention():
+    """This tests parallel computation of self-attention, 
+    where each element of next hidden sequence casts attention into previous hidden sequence.
+
+    This is vaguely inspired by https://arxiv.org/abs/1706.03762.
+    """
+    VOCAB_SIZE = 100
+    BATCH_SIZE = 10
+    SEQ_LENGTH = 20
+    input_var = T.arange(BATCH_SIZE * SEQ_LENGTH).reshape([BATCH_SIZE, SEQ_LENGTH]) % VOCAB_SIZE
+
+    l_inp = InputLayer((None, None), input_var)
+    l_emb = EmbeddingLayer(l_inp, VOCAB_SIZE, 32)
+    l_self_attn = make_self_attn(l_emb, key_size=48)
+    l_self_attn2 = make_self_attn(l_self_attn, key_size=64)
+
+    get_output(l_self_attn2).eval()
