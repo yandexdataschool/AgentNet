@@ -5,7 +5,7 @@
 
 from .broadcast import BroadcastLayer,UnbroadcastLayer,UpcastLayer
 from .dict import DictLayer,DictElementLayer
-from helpers import *
-from reapply import ReapplyLayer,reapply
+from .helpers import *
+from .reapply import ReapplyLayer,reapply
 
 
