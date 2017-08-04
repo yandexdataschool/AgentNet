@@ -12,12 +12,12 @@ from ..memory.gate import GateLayer
 
 def RNNCell(prev_state,
             input_or_inputs=tuple(),
-            nonlinearity=lasagne.nonlinearities.sigmoid,
+            nonlinearity=lasagne.nonlinearities.rectify,
             num_units=None,
             name=None,
             grad_clipping=5.,
-            Whid = init.GlorotUniform(),
-            Winp = init.GlorotUniform(),
+            Whid = init.Uniform(),
+            Winp = init.Uniform(),
             b = init.Constant(),
             ):
     """

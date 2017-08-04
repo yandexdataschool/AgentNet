@@ -1,7 +1,7 @@
 import theano.tensor as T
 from ..utils.logging import warn
 from ..utils.layers import DictLayer
-from lasagne.init import GlorotUniform
+from lasagne import init
 from lasagne.layers import DenseLayer
 
 class AttentionLayer(DictLayer):
@@ -74,9 +74,9 @@ class AttentionLayer(DictLayer):
                  key_sequence=None,
                  nonlinearity = T.tanh,
                  probs_nonlinearity=T.nnet.softmax,
-                 W_enc = GlorotUniform(),
-                 W_dec = GlorotUniform(),
-                 W_out = GlorotUniform(),
+                 W_enc = init.Normal(),
+                 W_dec = init.Normal(),
+                 W_out = init.Normal(),
                  **kwargs
                  ):
         assert len(input_sequence.output_shape)==3,"input_sequence must be a 3-dimensional (batch,time,units)"
