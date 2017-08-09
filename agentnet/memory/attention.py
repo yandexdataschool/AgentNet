@@ -1,7 +1,7 @@
 import theano.tensor as T
 from ..utils.logging import warn
 from ..utils.layers import DictLayer
-from lasagne.init import GlorotUniform
+from lasagne import init
 from lasagne.layers import DenseLayer
 
 class AttentionLayer(DictLayer):
@@ -9,7 +9,7 @@ class AttentionLayer(DictLayer):
     A layer that implements basic Bahdanau-style attention. Implementation is inspired by tfnn@yandex.
 
     Kurzgesagt, attention lets network decide which fraction of sequence/image should it view now
-    by using small one-layer block that predicts (input_element,controller) -> do i want to see input_element
+    by using small one-layer block that predicts (input_element,query) -> do i want to see input_element
     for all input_elements. You can read more about it here - http://distill.pub/2016/augmented-rnns/ .
 
     AttentionLayer also allows you to have separate keys and values: 
@@ -33,8 +33,8 @@ class AttentionLayer(DictLayer):
     :param input_sequence: sequence of inputs to be processed with attention
     :type input_sequence: lasagne.layers.Layer with shape [batch,seq_length,units]
 
-    :param conteroller_state: single time-step state of decoder (usually lstm/gru/rnn hid)
-    :type controller_state: lasagne.layers.Layer with shape [batch,units]
+    :param query: single time-step state of decoder (usually lstm/gru/rnn hid)
+    :type query: lasagne.layers.Layer with shape [batch,units]
 
     :param num_units: number of hidden units in attention intermediate activation
     :type num_units: int
@@ -68,37 +68,39 @@ class AttentionLayer(DictLayer):
 
     def __init__(self,
                  input_sequence,
-                 controller_state,
+                 query,
                  num_units,
                  mask_input = None,
                  key_sequence=None,
                  nonlinearity = T.tanh,
                  probs_nonlinearity=T.nnet.softmax,
-                 W_enc = GlorotUniform(),
-                 W_dec = GlorotUniform(),
-                 W_out = GlorotUniform(),
+                 W_enc = init.Normal(),
+                 W_dec = init.Normal(),
+                 W_out = init.Normal(),
                  **kwargs
                  ):
         assert len(input_sequence.output_shape)==3,"input_sequence must be a 3-dimensional (batch,time,units)"
-        assert len(controller_state.output_shape)==2,"controller_state must be a 2-dimensional for single tick (batch,units)"
+        assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
         assert mask_input is None or len(mask_input.output_shape)==2,"mask_input must be 2-dimensional (batch,time) or None"
-
-        batch_size,seq_len,enc_units = input_sequence.output_shape
-        dec_units = controller_state.output_shape[-1]
 
         #if no key sequence is given, use input_sequence as key
         key_sequence = key_sequence or input_sequence
 
-        incomings = [input_sequence,key_sequence,controller_state]
+        batch_size,seq_len,key_units = key_sequence.output_shape
+        value_units = input_sequence.output_shape[-1]
+        dec_units = query.output_shape[-1]
+
+
+        incomings = [input_sequence, key_sequence, query]
         if mask_input is not None:
             incomings.append(mask_input)
 
-        output_shapes = {'attn':(batch_size,enc_units),
+        output_shapes = {'attn':(batch_size,value_units),
                          'probs':(batch_size,seq_len)}
 
         super(AttentionLayer,self).__init__(incomings,output_shapes,**kwargs)
 
-        self.W_enc = self.add_param(W_enc,(enc_units,num_units),name='enc_to_hid')
+        self.W_enc = self.add_param(W_enc,(key_units,num_units),name='enc_to_hid')
         self.W_dec = self.add_param(W_dec,(dec_units,num_units),name='dec_to_hid')
         self.W_out = self.add_param(W_out,(num_units,1),name='hid_to_logit')
         self.nonlinearity = nonlinearity
@@ -171,7 +173,7 @@ class DotAttentionLayer(DictLayer):
     it computes logits with keys, then converts them to weights(probs) and averages _values_ with those weights.
 
     Kurzgesagt, attention lets network decide which fraction of sequence/image should it view now
-    by using small one-layer block that predicts (input_element,controller) -> do i want to see input_element
+    by using small one-layer block that predicts (input_element,query) -> do i want to see input_element
     for all input_elements. You can read more about it here - http://distill.pub/2016/augmented-rnns/ .
 
     This layer outputs a dict with keys "attn" and "probs"
@@ -193,8 +195,8 @@ class DotAttentionLayer(DictLayer):
     :type input_sequence: lasagne.layers.Layer with shape [batch,seq_length,units]
 
     :param query: single time-step state of decoder that is used as query (usually custom layer or lstm/gru/rnn hid)  
-        If it matches input_sequence one-step size, controller_state is used as is. 
-        Otherwise, DotAttention is performed from DenseLayer(controller_state,input_units,nonlinearity=None). 
+        If it matches input_sequence one-step size, query is used as is. 
+        Otherwise, DotAttention is performed from DenseLayer(query,input_units,nonlinearity=None). 
     :type query: lasagne.layers.Layer with shape [batch,units]
     
     :param key_sequence: a sequence of keys to compute dot_product with. By default, uses input_sequence instead.
@@ -203,7 +205,7 @@ class DotAttentionLayer(DictLayer):
     :param mask_input: mask for input_sequence (like other lasagne masks). Default is no mask
     :type mask_input: lasagne.layers.Layer with shape [batch,seq_length]
 
-    :param use_dense_layer: if True, forcibly creates intermediate dense layer on top of controller state.
+    :param use_dense_layer: if True, forcibly creates intermediate dense layer on top of query
     
     :param probs_nonlinearity: nonlinearity that converts logits of shape [batch,seq_length] into attention weights of same shape
         (you can provide softmax with tunable temperature or gumbel-softmax or anything of the sort)
@@ -221,32 +223,34 @@ class DotAttentionLayer(DictLayer):
                  **kwargs
                  ):
         assert len(input_sequence.output_shape)==3,"input_sequence must be a 3-dimensional (batch,time,units)"
-        assert len(query.output_shape) == 2, "controller_state must be a 2-dimensional for single tick (batch,units)"
+        assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
         assert mask_input is None or len(mask_input.output_shape)==2,"mask_input must be 2-dimensional (batch,time) or None"
 
-        batch_size,seq_len,enc_units = input_sequence.output_shape
+        #if no key is given, use values as keys
+        key_sequence = key_sequence or input_sequence
+
+        batch_size,seq_len,key_units = key_sequence.output_shape
+        value_units = input_sequence.output_shape[-1]
         dec_units = query.output_shape[-1]
 
-        if (dec_units != enc_units) and not use_dense_layer:
-            warn("Input sequence and controller_state have different unit sizes. "
-                 "Using DenseLayer from controller state instead of controller_state."
+        if (dec_units != key_units) and not use_dense_layer:
+            warn("Input sequence and query have different unit sizes. "
+                 "Using DenseLayer from query instead of raw query."
                  "To suppress this warning, set use_dense_layer=True.")
             use_dense_layer=True
         if use_dense_layer:
             name = kwargs.get('name','dotattn')
             dense_name = name+"_dense"
-            query = DenseLayer(query, enc_units,
+            query = DenseLayer(query, key_units,
                                nonlinearity=None, name=dense_name)
             dec_units = query.output_shape[-1]
 
-        #if no key is given, use values as keys
-        key_sequence = key_sequence or input_sequence
 
         incomings = [input_sequence, key_sequence, query]
         if mask_input is not None:
             incomings.append(mask_input)
 
-        output_shapes = {'attn':(batch_size,enc_units),
+        output_shapes = {'attn':(batch_size,value_units),
                          'probs':(batch_size,seq_len)}
 
         super(DotAttentionLayer,self).__init__(incomings,output_shapes,**kwargs)

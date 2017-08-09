@@ -3,4 +3,4 @@ theano >= 0.8.2
 pandas >= 0.14
 numpy >= 1.9
 matplotlib >= 1.4
--e git+https://github.com/Lasagne/Lasagne.git@5f3631e0058915ab19132b9650c3eb2ebe9c6817#egg=Lasagne
+-e git+https://github.com/Lasagne/Lasagne.git@359ea1b9f12678c3523c0cb100f646528d49df9e#egg=Lasagne

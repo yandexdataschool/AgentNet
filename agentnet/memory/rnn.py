@@ -12,12 +12,12 @@ from ..memory.gate import GateLayer
 
 def RNNCell(prev_state,
             input_or_inputs=tuple(),
-            nonlinearity=lasagne.nonlinearities.sigmoid,
+            nonlinearity=lasagne.nonlinearities.tanh,
             num_units=None,
             name=None,
-            grad_clipping=5.,
-            Whid = init.GlorotUniform(),
-            Winp = init.GlorotUniform(),
+            grad_clipping=0,
+            Whid = init.Uniform(),
+            Winp = init.Uniform(),
             b = init.Constant(),
             ):
     """
@@ -101,7 +101,7 @@ def GRUCell(prev_state,
             hidden_update_nonlinearity=lasagne.nonlinearities.tanh,
             dropout=0,
             name="YetAnotherGRULayer",
-            grad_clipping=5.
+            grad_clipping=0,
             ):
     """
         
@@ -240,7 +240,7 @@ def LSTMCell(prev_cell,
              output_nonlinearity=lasagne.nonlinearities.tanh,
              dropout=0.,
              name=None,
-             grad_clipping=5.,
+             grad_clipping=0.,
              ):
 
 

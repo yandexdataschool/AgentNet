@@ -12,7 +12,7 @@ from . import resolver
 from . import utils
 from .utils.config import config
 from .agent import Agent,Recurrence
-__version__ = '0.10.5'
+__version__ = '0.10.6'
 __author__ = 'YandexDataSchool and contributors.'
 
 
