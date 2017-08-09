@@ -175,18 +175,18 @@ class UpcastLayer(Layer):
         :param kwargs: no effect
         :return: upcasted tensor
         """
-
+        
         if not hasattr(self.broadcast_layer, "symbolic_input_shape"):
             raise ValueError("UpcastLayer.get_output_for must be called after respective BroadcastLayer.get_output_for")
+        assert 0 in self.broadcast_layer.broadcasted_axes, "for upcast, broadcast_layer must broadcast over batch axis too"
 
         # symbolic shape. dirty hack to handle "None" axes
         pre_broadcast_shape = self.broadcast_layer.symbolic_input_shape
 
-        broadcasted_axes_shapes = tuple(pre_broadcast_shape[ax] for ax in self.broadcast_layer.broadcasted_axes)
-
-        n_repeats = T.prod(broadcasted_axes_shapes)
-        if 0 in self.broadcast_layer.broadcasted_axes:
-            n_repeats /= pre_broadcast_shape[0]  # if batch size is already accounted for, ignore it.
+        broadcasted_axes = self.broadcast_layer.broadcasted_axes
+        
+        #repeat batch as many times as were broadcasted, excluding broadcast over batch size.
+        n_repeats = T.prod([pre_broadcast_shape[ax] for ax in broadcasted_axes if ax != 0])
 
         return T.repeat(input, n_repeats, axis=0)
 
