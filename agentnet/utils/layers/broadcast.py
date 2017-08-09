@@ -163,10 +163,15 @@ class UpcastLayer(Layer):
     """
 
     def __init__(self, incoming, broadcast_layer, **kwargs):
+        assert 0 in broadcast_layer.broadcasted_axes, "for upcast, broadcast_layer must broadcast over batch axis too"
         self.broadcast_layer = broadcast_layer
         incoming = AwaitLayer(incoming,
                               layer_to_await=broadcast_layer)  # make sure incoming is not evaluated before broadcast_layer
+
+
         super(UpcastLayer, self).__init__(incoming, **kwargs)
+
+
 
     def get_output_for(self, input, **kwargs):
         """
@@ -175,14 +180,11 @@ class UpcastLayer(Layer):
         :param kwargs: no effect
         :return: upcasted tensor
         """
-        
-        if not hasattr(self.broadcast_layer, "symbolic_input_shape"):
+	if not hasattr(self.broadcast_layer, "symbolic_input_shape"):
             raise ValueError("UpcastLayer.get_output_for must be called after respective BroadcastLayer.get_output_for")
-        assert 0 in self.broadcast_layer.broadcasted_axes, "for upcast, broadcast_layer must broadcast over batch axis too"
 
         # symbolic shape. dirty hack to handle "None" axes
         pre_broadcast_shape = self.broadcast_layer.symbolic_input_shape
-
         broadcasted_axes = self.broadcast_layer.broadcasted_axes
         
         #repeat batch as many times as were broadcasted, excluding broadcast over batch size.
@@ -194,19 +196,12 @@ class UpcastLayer(Layer):
 
         # this one is NOT symbolic. list() is used as a shallow copy op.
         original_shape = list(self.broadcast_layer.input_shape)
-        broadcasted_dims = [original_shape[ax] for ax in self.broadcast_layer.broadcasted_axes]
-
         if input_shape[0] is None or None in broadcasted_dims:
             new_batch_size = None
 
         else:
-            new_batch_size = input_shape[0] * np.prod(broadcasted_dims)
-            if 0 in self.broadcast_layer.broadcasted_axes:
-                assert input_shape[0] == original_shape[
-                    0], "batch sizes of upcasted layer and broadcast_layer must be equal"
-                new_batch_size /= input_shape[0]  # if batch size is already accounted for, ignore it.
+            broadcasted_dims = [original_shape[ax] for ax in self.broadcast_layer.broadcasted_axes if ax != 0]
+            new_batch_size = original_shape[0] * np.prod(broadcasted_dims)
 
-        input_shape = (new_batch_size,) + tuple(input_shape)[1:]
-
-        # return updated shape
-        return input_shape
+        new_shape = (new_batch_size,) + tuple(input_shape)[1:]
+        return new_shape
