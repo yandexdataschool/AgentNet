@@ -177,7 +177,6 @@ def test_dot_attention():
 
 
 from agentnet.memory.attention import self_attention, multihead_attention
-
 def test_self_attention():
     """This tests parallel computation of self-attention, 
     where each element of next hidden sequence casts attention into previous hidden sequence.
@@ -259,3 +258,26 @@ def test_multihead_attention():
     # check if probs are one-hot
     assert hard_probs_seq.shape == (5, 10, 3, 25)  # attention sequences, 5 samples/10ticks/3heads/25 input seq length
     assert len(np.unique(hard_probs_seq.ravel())) == 2  # only 0's and 1's
+
+
+def test_multihead_self_attention():
+    """This tests parallel computation of self-attention, 
+    where each element of next hidden sequence casts attention into previous hidden sequence.
+
+    This is vaguely inspired by https://arxiv.org/abs/1706.03762.
+    """
+    VOCAB_SIZE = 100
+    BATCH_SIZE = 10
+    SEQ_LENGTH = 20
+    input_var = T.arange(BATCH_SIZE * SEQ_LENGTH).reshape([BATCH_SIZE, SEQ_LENGTH]) % VOCAB_SIZE
+
+    l_inp = InputLayer((None, None), input_var)
+    l_emb = EmbeddingLayer(l_inp, VOCAB_SIZE, 32)
+    l_self_attn = self_attention(l_emb, key_size=48,value_size=50,
+                                 attn_class=multihead_attention,num_heads=5)
+    l_self_attn2 = self_attention(l_self_attn, key_size=64,value_size=100,
+                                  attn_class=multihead_attention,num_heads=5)
+
+    out = get_output(l_self_attn2).eval()
+
+    assert tuple(out.shape)==(BATCH_SIZE,SEQ_LENGTH,100*5)
