@@ -2,7 +2,7 @@ import theano.tensor as T
 from ..utils.logging import warn
 from ..utils.layers import DictLayer
 from lasagne import init
-from lasagne.layers import DenseLayer
+from lasagne.layers import DenseLayer,SliceLayer,reshape,flatten
 
 class AttentionLayer(DictLayer):
     """
@@ -82,6 +82,8 @@ class AttentionLayer(DictLayer):
         assert len(input_sequence.output_shape)==3,"input_sequence must be a 3-dimensional (batch,time,units)"
         assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
         assert mask_input is None or len(mask_input.output_shape)==2,"mask_input must be 2-dimensional (batch,time) or None"
+        assert key_sequence is None or len(key_sequence.output_shape) == 3, "key_sequence must be 3-dimensional " \
+                                                                            "of shape (batch,time,heads,units) or None"
 
         #if no key sequence is given, use input_sequence as key
         key_sequence = key_sequence or input_sequence
@@ -225,6 +227,8 @@ class DotAttentionLayer(DictLayer):
         assert len(input_sequence.output_shape)==3,"input_sequence must be a 3-dimensional (batch,time,units)"
         assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
         assert mask_input is None or len(mask_input.output_shape)==2,"mask_input must be 2-dimensional (batch,time) or None"
+        assert key_sequence is None or len(key_sequence.output_shape) == 3, "key_sequence must be 3-dimensional " \
+                                                                            "of shape (batch,time,units) or None"
 
         #if no key is given, use values as keys
         key_sequence = key_sequence or input_sequence
@@ -306,5 +310,145 @@ class DotAttentionLayer(DictLayer):
             one_hot = T.extra_ops.to_one_hot(max_i,logits.shape[1])
 
             return {'attn': attn, 'probs': one_hot }
+
+
+#TODOs: scale by sqrt2, mask
+
+from agentnet.utils import BroadcastLayer, UnbroadcastLayer, UpcastLayer
+
+def multihead_attention(input_sequence, query,
+                        key_sequence=None, mask_input=None,
+                        num_heads=1,key_size=None,value_size=None,
+                        attn_class=DotAttentionLayer, name='multihead_attn',
+                        **kwargs):
+    """
+    A convenience function that computes K attention "heads" in parallel and concatenates them. 
+    Each "head" is based on num_heads linear transformations of input sequence, query, and keys 
+    
+    :param attn_class: what kind of attention layer to apply in multi-headed mode (Attention or DotAttention)
+    :param num heads: the amount of parallel "heads"
+    :param key_size: num units in attention query and key, defaults to key_sequence.shape[-1]
+    :param value_size: num units in attention values, defaults to input_sequence.shape[-1] 
+    
+    :param input_sequence: sequence of inputs to be processed with attention
+    :type input_sequence: lasagne.layers.Layer with shape [batch,seq_length,units]
+
+    :param query: single time-step state of decoder that is used as query (usually custom layer or lstm/gru/rnn hid)  
+        If it matches input_sequence one-step size, query is used as is. 
+        Otherwise, DotAttention is performed from DenseLayer(query,input_units,nonlinearity=None). 
+    :type query: lasagne.layers.Layer with shape [batch,units]
+    
+    :param key_sequence: a sequence of keys to compute dot_product with. By default, uses input_sequence instead.
+    :type key_sequence: lasagne.layers.Layer with shape [batch,seq_length,units] or None
+
+    :param mask_input: mask for input_sequence (like other lasagne masks). Default is no mask
+    :type mask_input: lasagne.layers.Layer with shape [batch,seq_length]
+
+    
+    Heavily inspired by https://arxiv.org/abs/1706.03762 and http://bit.ly/2vsYX0R
+    """
+    assert len(input_sequence.output_shape) == 3, "input_sequence must be a 3-dimensional (batch,time,units)"
+    assert len(query.output_shape) == 2, "query must be a 2-dimensional for single tick (batch,units)"
+    assert mask_input is None or len(
+        mask_input.output_shape) == 2, "mask_input must be 2-dimensional (batch,time) or None"
+    assert key_sequence is None or len(key_sequence.output_shape) == 3, "key_sequence must be 3-dimensional " \
+                                                                        "of shape (batch,time,units) or None"
+
+    key_sequence = key_sequence or input_sequence
+    key_size = key_size or key_sequence.output_shape[-1]
+    value_size = value_size or input_sequence.output_shape[-1]
+
+    def make_broadcasted_heads(incoming,head_size,name=None):
+        ndim = len(incoming.output_shape)
+        assert ndim in (2,3), "incoming must be 2-dimensional (query) or 3-dimensional (key or value)"
+
+        heads = DenseLayer(incoming,head_size*num_heads,nonlinearity=None,
+                           num_leading_axes=ndim-1,name=name)    #[batch,time,head_size*num_heads]
+
+        if ndim == 3:
+            heads = reshape(heads,([0],[1],head_size,num_heads), name=name)    #[batch,time,head_size,num_heads]
+            broadcasted_heads = BroadcastLayer(heads, (0, 3), name=name)         #[batch*heads,time,head_size]
+
+        else: #ndim == 2
+            heads = reshape(heads, ([0], head_size, num_heads), name=name)  # [batch,head_size,num_heads]
+            broadcasted_heads = BroadcastLayer(heads, (0, 2), name=name)    # [batch*heads, head_size]
+
+        return broadcasted_heads
+
+    query_heads = make_broadcasted_heads(query, key_size,name=name + "_query_heads")
+    value_heads = make_broadcasted_heads(input_sequence, value_size, name=name + "_value_heads")
+
+    if key_sequence is not None:
+        key_heads = make_broadcasted_heads(key_sequence, key_size, name=name + "_key_heads")
+    else:
+        key_heads = None
+
+    if mask_input is not None:
+        mask_heads  = UpcastLayer(mask_input,broadcast_layer=query_heads)
+    else:
+        mask_heads = None
+
+    attn_heads  = attn_class(value_heads,query_heads,key_sequence=key_heads,
+                             mask_input=mask_heads,name=name,**kwargs)  #[batch*heads,value_size]
+
+    attn_vectors = UnbroadcastLayer(attn_heads['attn'],broadcast_layer=query_heads) #[batch,value,heads]
+
+    attn_vectors = flatten(attn_vectors,outdim=2)
+
+    attn_probs = reshape(attn_heads['probs'],(-1,num_heads,[1]))   #[batch,head,probs]
+
+    return {'attn':  attn_vectors,  #[batch, value*heads]
+            'probs': attn_probs}
+
+
+def self_attention(incoming, key_size=None,value_size=None,mask_input=None,name='attn',
+                   attn_class=DotAttentionLayer,**kwargs):
+    """
+    A convenience function that applies attention from sequential layer to itself.
+    
+             /-> queries  -------v
+    incoming --> keys     ---> attention_probs ---v
+             \-> values   -------------------> attention response
+             
+    :param incoming: input sequence of shape [batch, time, units]
+    :param key_size: num units in attention query and key, defaults to incoming.shape[-1]
+    :param value_size: num units in attention values, defaults to key_size 
+    :param attn_class: either DotAttentionLayer or AttentionLayer or similar layer (incl. multihead attention)
+    
+    Heavily inspired by https://arxiv.org/abs/1706.03762 and http://bit.ly/2vsYX0R
+    
+    """
+    assert len(incoming.output_shape) == 3, "incoming layer must have shape [batch,time,unit]"
+    assert mask_input is None or len(mask_input.output_shape) == 2,"if mask_input is given, it must be [batch,time]"
+
+    key_size = key_size or incoming.output_shape[-1]
+    value_size = value_size or incoming.output_shape[-1]
+
+    qkv = DenseLayer(incoming, key_size*2 + value_size, nonlinearity=None,
+                         num_leading_axes=2,name=name+'.qkv')                   #[batch,time,2*key_units+value_units]
+
+    queries = SliceLayer(qkv, slice(0,key_size),axis=-1)
+    keys    = SliceLayer(qkv, slice(key_size,2*key_size), axis=-1)
+    values  = SliceLayer(qkv, slice(2*key_size,qkv.num_units), axis=-1)
+
+    # broadcast each query to every (key,value) pair
+    queries_each_tick = bcast = BroadcastLayer(queries, broadcasted_axes=(0, 1)) #[batch*time,units]
+
+    # upcast every key and value to match the amount queries
+    key_for_each_query = UpcastLayer(keys, broadcast_layer=bcast)        #[batch*time, time, units]
+    value_for_each_query = UpcastLayer(values, broadcast_layer=bcast)    #[batch*time, time, value_units]
+
+    if mask_input is not None:
+        mask_input = UpcastLayer(mask_input,broadcast_layer=bcast)       #[batch*time, time]
+
+    attn_each_tick = attn_class(value_for_each_query,
+                                queries_each_tick,
+                                key_sequence=key_for_each_query,
+                                mask_input=mask_input,
+                                name=name,**kwargs)['attn']              #[batch*time, value_units]
+
+    attn = UnbroadcastLayer(attn_each_tick, broadcast_layer=bcast)       #[batch, time, value_units]
+
+    return attn
 
 
