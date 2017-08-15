@@ -2,7 +2,7 @@ import theano.tensor as T
 from ..utils.logging import warn
 from ..utils.layers import DictLayer
 from lasagne import init
-from lasagne.layers import DenseLayer,SliceLayer,reshape,flatten
+from lasagne.layers import DenseLayer,SliceLayer,reshape,flatten,standardize
 
 class AttentionLayer(DictLayer):
     """
@@ -207,11 +207,13 @@ class DotAttentionLayer(DictLayer):
     :param mask_input: mask for input_sequence (like other lasagne masks). Default is no mask
     :type mask_input: lasagne.layers.Layer with shape [batch,seq_length]
 
+    :param scale: if True, scales query.dot(key) by key_size**-0.5 to maintain variance. Otherwise does nothing.
     :param use_dense_layer: if True, forcibly creates intermediate dense layer on top of query
     
     :param probs_nonlinearity: nonlinearity that converts logits of shape [batch,seq_length] into attention weights of same shape
         (you can provide softmax with tunable temperature or gumbel-softmax or anything of the sort)
     :type probs_nonlinearity: function(x) -> x that works with theano tensors
+    
 
     """
 
@@ -220,6 +222,7 @@ class DotAttentionLayer(DictLayer):
                  query,
                  key_sequence = None,
                  mask_input = None,
+                 scale=False,
                  use_dense_layer=False,
                  probs_nonlinearity=T.nnet.softmax,
                  **kwargs
@@ -259,6 +262,8 @@ class DotAttentionLayer(DictLayer):
 
         super(DotAttentionLayer,self).__init__(incomings,output_shapes,**kwargs)
         self.probs_nonlinearity = probs_nonlinearity
+        self.scale = scale
+        self.key_size = key_units
 
     def get_output_for(self, inputs, hard_attention=False , **kwargs):
         """
@@ -286,6 +291,8 @@ class DotAttentionLayer(DictLayer):
         # batch,1,units x batch,time,units, summed over units
         logits = T.sum(query[:, None, :] * key_seq, axis = -1)  #batch,time
 
+        if self.scale:
+            logits *= T.constant(self.key_size**-0.5,dtype='float32')
 
         if mask_provided:                  # substract large number from mask=0 time-steps
             logits -= (1 - mask) * 1000    # (written to match tfnn implementation)
@@ -311,8 +318,6 @@ class DotAttentionLayer(DictLayer):
 
             return {'attn': attn, 'probs': one_hot }
 
-
-#TODOs: scale by sqrt2, mask
 
 from agentnet.utils import BroadcastLayer, UnbroadcastLayer, UpcastLayer
 
@@ -376,6 +381,7 @@ def multihead_attention(input_sequence, query,
         return broadcasted_heads
 
     query_heads = make_broadcasted_heads(query, key_size,name=name + "_query_heads")
+
     value_heads = make_broadcasted_heads(input_sequence, value_size, name=name + "_value_heads")
 
     if key_sequence is not None:
@@ -414,6 +420,7 @@ def self_attention(incoming, key_size=None,value_size=None,mask_input=None,name=
     :param key_size: num units in attention query and key, defaults to incoming.shape[-1]
     :param value_size: num units in attention values, defaults to key_size 
     :param attn_class: either DotAttentionLayer or AttentionLayer or similar layer (incl. multihead attention)
+    :param kwargs: also accepts any parameters accepted by attn_class
     
     Heavily inspired by https://arxiv.org/abs/1706.03762 and http://bit.ly/2vsYX0R
     
