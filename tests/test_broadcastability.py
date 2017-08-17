@@ -46,4 +46,4 @@ def test_grad_1unit():
     grad = T.grad(get_output(out_seq).mean(),params)
     #check if grad does not fail on single-unit layer due to broadcastability.
     f = theano.function([l_in.input_var],grad)
-    f(np.zeros([2,3,5]))
+    f(np.zeros([2,3,5],'float32'))
